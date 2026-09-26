@@ -1,6 +1,6 @@
 # MindPPT Roadmap
 
-Status: draft implementation roadmap  
+Status: accepted v0 implementation roadmap  
 Baseline: M0 merged to `main`  
 Architecture: Cordis-native runtime, React + TypeScript host UI, Excalidraw canvas rendering
 
@@ -143,7 +143,13 @@ slide customer {
 
 ### 3.3 Content: Markdown profile
 
-Ordinary slide content uses a deliberately small Markdown profile:
+Ordinary slide content uses a deliberately small Markdown profile.
+
+Inside a slide or layout slot, Markdown is the default interpretation. MindPPT structural/layout keywords are recognized only at structural block-start positions outside fenced blocks. A closing brace ends a structural block only when it appears as the structural closing line outside a fence.
+
+This keeps ordinary Markdown, formulas, code, and graph-looking text opaque to the outer parser unless they deliberately enter a MindPPT DSL construct.
+
+Example:
 
 ```markdown
 # German Outdoor Market
@@ -306,6 +312,7 @@ Compiler work:
 - tokenizer;
 - small recursive-descent structural parser;
 - `mindppt`, `slide`, `tree`, and `-->`;
+- the minimum Markdown content needed for the visible anchor: `# heading` only;
 - stable slide semantic IDs;
 - source ranges;
 - basic reference resolution;
@@ -325,7 +332,7 @@ Visible acceptance:
 
 Explicit non-goals:
 
-- full Markdown;
+- the full Markdown profile beyond the single heading needed by M1;
 - soft links;
 - paths;
 - advanced diagnostics;
@@ -336,7 +343,7 @@ Explicit non-goals:
 
 ## M2 — Markdown Content Profile + Extension Fallback
 
-Purpose: establish the long-term content model.
+Purpose: establish the long-term content model by extending M1's single-heading support into the first intentional MindPPT Markdown Profile.
 
 Support:
 
@@ -409,6 +416,7 @@ scene    keep last-good scene
 Required behavior:
 
 - source editing in React UI;
+- at least one browser-level smoke test for the edit -> compile -> visible update path;
 - compile on source change;
 - diagnostics surfaced to UI;
 - temporary invalid input does not blank the canvas;
@@ -661,6 +669,8 @@ Possible plugin capabilities:
 Do not introduce a global singleton registry.
 
 Capability discovery should expose the extension types currently available in the runtime.
+
+If multiple plugins claim the same extension type, the runtime should report a capability conflict rather than silently choosing a last-loaded handler.
 
 If useful, a second reference plugin such as Mermaid may be added to verify that the contract is not LaTeX-specific.
 

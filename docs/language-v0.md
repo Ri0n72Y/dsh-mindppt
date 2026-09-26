@@ -770,7 +770,7 @@ slide product {
   flowchart LR
     Need[Customer need] --> Product[Product proposition]
     Product --> Proof[Proof points]
-  ~~~
+  ```
 }
 
 slide summary {

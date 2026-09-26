@@ -84,7 +84,7 @@ class Parser {
 
   private parseSlide(): ParsedSlide {
     const start = this.expect('slide-start')
-    let title: Token & { kind: 'heading' } | undefined
+    let title: Extract<Token, { kind: 'heading' }> | undefined
 
     while (this.current()?.kind !== 'block-end') {
       const token = this.current()

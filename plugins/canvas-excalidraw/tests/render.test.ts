@@ -25,8 +25,8 @@ describe('MindPptCanvasService', () => {
       inject: ['mindpptParser', serviceName],
       apply(child: Context) {
         child.mindpptParser.compile(HELLO)
-        renderedTypes = child.mindpptCanvas.elements.map((element) => element.type)
-        const text = child.mindpptCanvas.elements.find((element) => element.type === 'text')
+        renderedTypes = child.mindpptCanvas.scene.map((element) => element.type)
+        const text = child.mindpptCanvas.scene.find((element) => element.type === 'text')
         renderedText = text?.type === 'text' ? text.text : ''
       },
     })

@@ -44,35 +44,51 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 - `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
 
-## Hello-world vertical slice
+## Current vertical slice: M1
 
-The first delivery milestone deliberately supports only:
+M0 proved the Cordis -> renderer -> React/Excalidraw runtime path. M1 replaces the bootstrap regex with the first structural parser.
+
+Current fixture:
 
 ```mindppt
 mindppt
 
-slide hello {
-  title "Hello World"
+tree LR {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
 }
 ```
 
-but runs through the real plugin path:
+Delivery path:
 
 ```text
-examples/hello-world.mindppt
+examples/m1-two-slides.mindppt
         |
         v
-ctx.mindpptParser.compile(source)
-        |
-        | mindppt/compiled
-        v
-ctx.mindpptCanvas
+tokenizer -> structural parser
         |
         v
-Excalidraw elements
+MindPptStructure
+  - two slide nodes
+  - one LR tree edge
+  - stable semantic IDs
+  - source ranges
         |
         v
-apps/playground -> <Excalidraw />
+canvas-excalidraw
+        |
+        v
+Excalidraw Skeletons
+        |
+        v
+React playground -> <Excalidraw />
 ```
 
 Run the standalone playground with:
@@ -82,6 +98,6 @@ pnpm install
 pnpm dev
 ```
 
-The rendered canvas is view-only: source remains the single source of truth.
+The canvas remains a projection of source code. Direct canvas editing is not a semantic authoring path.
 
-This vertical slice is the delivery contract for subsequent parser work. New syntax should extend the same path and ship with an end-to-end fixture rather than being implemented as an isolated parser feature.
+M1 intentionally supports only the minimum `# heading` content needed by this slice. The broader Markdown profile begins in M2.

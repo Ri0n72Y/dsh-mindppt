@@ -5,13 +5,14 @@ deck {
   theme "business"
 }
 
-tree LR
+tree LR {
   intro --> market
   market --> size
   market --> customer
   market --> competitor
   customer --> product
   product --> summary
+}
 
 link competitor -.-> summary
 

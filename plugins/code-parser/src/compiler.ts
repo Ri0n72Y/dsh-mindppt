@@ -10,16 +10,11 @@ export class MindPptSyntaxError extends Error {
   }
 }
 
-/**
- * The first vertical slice intentionally recognizes only one slide containing
- * one title. Later milestones replace this implementation without changing
- * the Cordis service contract.
- */
-export function compileHelloWorld(source: string): MindPptStructure {
+export function compileSource(source: string): MindPptStructure {
   const match = HELLO_GRAMMAR.exec(source)
   if (!match) {
     throw new MindPptSyntaxError(
-      'Hello-world grammar expects: mindppt -> slide <id> { title "<text>" }',
+      'Expected: mindppt -> slide <id> { title "<text>" }',
     )
   }
 
@@ -35,9 +30,6 @@ export function compileHelloWorld(source: string): MindPptStructure {
     throw new MindPptSyntaxError('Invalid quoted title')
   }
 
-  const slideStart = source.indexOf('slide')
-  const titleStart = source.indexOf('title', slideStart)
-
   return {
     version: 0,
     slides: [
@@ -47,7 +39,6 @@ export function compileHelloWorld(source: string): MindPptStructure {
         y: 0,
         width: 1600,
         height: 900,
-        sourceRange: { start: slideStart, end: source.length },
         elements: [
           {
             kind: 'title',
@@ -57,10 +48,6 @@ export function compileHelloWorld(source: string): MindPptStructure {
             y: 350,
             width: 1280,
             height: 120,
-            sourceRange: {
-              start: titleStart,
-              end: titleStart + 'title'.length + 1 + rawTitle.length,
-            },
           },
         ],
       },

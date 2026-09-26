@@ -13,9 +13,9 @@ const SLIDE_GAP = 600
 
 export function compileSource(source: string): MindPptStructure {
   const document = parse(tokenize(source))
-  const slideById = new Map(document.slides.map((slide) => [slide.id, slide]))
+  const slideIds = new Set(document.slides.map((slide) => slide.id))
 
-  if (slideById.size !== document.slides.length) {
+  if (slideIds.size !== document.slides.length) {
     throw new MindPptSyntaxError('Slide IDs must be unique')
   }
 
@@ -40,7 +40,7 @@ export function compileSource(source: string): MindPptStructure {
     const edge = document.tree.edges[0]
     if (!edge) throw new MindPptSyntaxError('Tree edge is missing')
 
-    if (!slideById.has(edge.from) || !slideById.has(edge.to)) {
+    if (!slideIds.has(edge.from) || !slideIds.has(edge.to)) {
       throw new MindPptSyntaxError(
         `Unknown slide in tree edge: ${edge.from} --> ${edge.to}`,
       )
@@ -65,7 +65,9 @@ export function compileSource(source: string): MindPptStructure {
     if (document.slides.length !== 1) {
       throw new MindPptSyntaxError('Two-slide M1 documents require a tree')
     }
-    positions.set(document.slides[0]?.id ?? '', { x: 0, y: 0 })
+    const slide = document.slides[0]
+    if (!slide) throw new MindPptSyntaxError('M1 slide is missing')
+    positions.set(slide.id, { x: 0, y: 0 })
   }
 
   const slides: SlideNode[] = document.slides.map((slide) => {

@@ -87,11 +87,11 @@ slide competitor {
 slide product {
   # Position around comfort and clarity
 
-  ~~~mermaid
+  ```mermaid
   flowchart LR
     Need[Customer need] --> Product[Product proposition]
     Product --> Proof[Proof points]
-  ~~~
+  ```
 }
 
 slide summary {

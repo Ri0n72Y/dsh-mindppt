@@ -1,4 +1,4 @@
-import { MindPptSyntaxError } from './errors.ts'
+import { MindPptCompileError } from './errors.ts'
 import type { Token } from './tokenizer.ts'
 import type { SourceRange } from './types.ts'
 
@@ -131,7 +131,7 @@ class Parser {
   }
 
   private fail(message: string): never {
-    throw new MindPptSyntaxError(message)
+    throw new MindPptCompileError(message)
   }
 }
 

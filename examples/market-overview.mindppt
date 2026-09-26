@@ -1,0 +1,130 @@
+mindppt
+
+deck {
+  size 16:9
+  theme "business"
+}
+
+tree LR
+  intro --> market
+  market --> size
+  market --> customer
+  market --> competitor
+  customer --> product
+  product --> summary
+
+link competitor -.-> summary
+
+slide intro {
+  layout hero
+
+  title "German Outdoor Market"
+  subtitle "2026 opportunity review"
+
+  image hero {
+    src "./assets/outdoor.jpg"
+    fit cover
+  }
+}
+
+slide market {
+  layout two-column
+
+  left {
+    title "A growing premium segment"
+
+    bullets {
+      "Demand remains seasonal"
+      "Premium products gain share"
+      "Online channels continue growing"
+    }
+  }
+
+  right {
+    chart growth {
+      type bar
+      labels ["2024", "2025", "2026"]
+      series "Market" [100, 116, 137]
+    }
+  }
+}
+
+slide size {
+  title "Market expansion is visible across segments"
+
+  chart trend {
+    type line
+    labels ["Q1", "Q2", "Q3", "Q4"]
+    series "Entry" [18, 22, 24, 27]
+    series "Premium" [11, 17, 23, 31]
+  }
+}
+
+slide customer {
+  layout two-column
+
+  left {
+    image persona {
+      src "./assets/customer.png"
+      fit contain
+    }
+  }
+
+  right {
+    title "Who is buying?"
+
+    bullets {
+      "Younger outdoor users"
+      "Comfort-sensitive buyers"
+      "Online-first product discovery"
+    }
+  }
+}
+
+slide competitor {
+  title "Competitive positioning"
+
+  table comparison {
+    columns ["Segment", "Typical position", "Opportunity"]
+    row ["Entry", "Price-led", "Low"]
+    row ["Mid", "Feature-led", "Medium"]
+    row ["Premium", "Comfort-led", "High"]
+  }
+}
+
+slide product {
+  title "Position around comfort and clarity"
+
+  diagram architecture {
+    type mermaid
+
+    """
+    flowchart LR
+      Need[Customer need] --> Product[Product proposition]
+      Product --> Proof[Proof points]
+    """
+  }
+}
+
+slide summary {
+  layout hero
+
+  title "One message"
+  subtitle "Win the premium customer with a clearer comfort proposition."
+}
+
+path main {
+  intro
+  market
+  size
+  market
+  customer
+  product
+  summary
+}
+
+path short {
+  intro
+  market
+  summary
+}

@@ -1,10 +1,10 @@
 import { Service, type Context } from '@deepseek-ai/cordis'
 
 import { compileSource } from './compiler.ts'
-import { MindPptSyntaxError } from './errors.ts'
+import { MindPptCompileError } from './errors.ts'
 import type { MindPptStructure } from './types.ts'
 
-export { MindPptSyntaxError }
+export { MindPptCompileError }
 export type {
   MindPptStructure,
   SlideNode,

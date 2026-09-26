@@ -157,7 +157,7 @@ Line comments may use // outside Markdown content and fenced blocks.
 
 Inside a slide or layout slot, Markdown is the default content interpretation.
 
-MindPPT structural or layout constructs are recognized only at structural block-start positions outside fenced blocks.
+Known MindPPT structural, layout, and core structured-content constructs are recognized only at block-start positions outside fenced blocks. In v0 this includes constructs such as slide/tree/path, layout slots, table, and chart. Other slide-body text defaults to the Markdown profile.
 
 A structural closing brace ends a slide/layout block only when it appears as the structural closing line outside a fence.
 
@@ -649,7 +649,7 @@ Source ranges should exist from the first real parser milestone and later suppor
 
 ## 21. Diagnostics
 
-Diagnostics are compiler output for both humans and agents.
+Diagnostics are surfaced to both humans and agents. Parser/compiler diagnostics cover source and semantic validity; runtime capability diagnostics may additionally report missing or conflicting extension handlers.
 
 Examples:
 
@@ -666,7 +666,7 @@ slide is not reachable from the main tree
 WARN chart.growth:
 series lengths do not match labels
 
-WARN extension.latex:
+RUNTIME WARN extension.latex:
 no renderer is installed; using raw fallback
 ~~~
 

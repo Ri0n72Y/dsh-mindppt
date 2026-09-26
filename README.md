@@ -40,7 +40,8 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 ## Design documents
 
 - `docs/language-v0.md` — MindPPT Language v0 draft.
-- `docs/code-parser.md` — compiler boundary, output model, source mapping, stable identity, and first parser milestone.
+- `docs/code-parser.md` — compiler boundary, output model, source mapping, and stable identity.
+- `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
 
 ## Hello-world vertical slice

@@ -1,10 +1,9 @@
 import { Excalidraw } from '@excalidraw/excalidraw'
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 
-type InitialData = Parameters<ExcalidrawImperativeAPI['updateScene']>[0]
+import type { CompiledElements } from './runtime.ts'
 
 interface MindPptCanvasProps {
-  elements: NonNullable<InitialData['elements']>
+  elements: CompiledElements
 }
 
 export function MindPptCanvas({ elements }: MindPptCanvasProps) {

@@ -97,7 +97,7 @@ The outer language does not implement full Mermaid.
 
 Inside a slide or layout slot, Markdown is the default content interpretation.
 
-MindPPT DSL constructs are recognized only at structural block-start positions outside fenced blocks.
+Known MindPPT structural, layout, and core structured-content constructs are recognized only at block-start positions outside fenced blocks. Other slide-body text defaults to the Markdown profile.
 
 The compiler therefore treats canonical triple-backtick fenced content as opaque to the structural parser.
 
@@ -209,8 +209,9 @@ Structured content validation later includes:
 - invalid layout-slot usage;
 - table shape errors;
 - chart labels/series mismatch;
-- asset-resolution warnings;
-- extension capability conflicts or missing-renderer warnings.
+- asset-resolution warnings.
+
+Missing extension renderers and extension-handler conflicts are runtime capability diagnostics, not parser grammar or semantic-validation errors.
 
 Validation distinguishes:
 

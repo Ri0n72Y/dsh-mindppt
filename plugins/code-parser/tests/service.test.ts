@@ -6,10 +6,18 @@ import MindPptParserService, {
   serviceName,
 } from '../src/index.ts'
 
-const HELLO = `mindppt
+const M1 = `mindppt
 
-slide hello {
-  title "Hello World"
+tree LR {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
 }
 `
 
@@ -30,65 +38,106 @@ describe('MindPptParserService', () => {
     expect(observed instanceof MindPptParserService).toBe(true)
 
     await provider.dispose()
-
     expect(ctx.get(serviceName) === undefined).toBe(true)
   })
 
-  it('compiles the hello-world template into one deterministic slide', async () => {
+  it('compiles two slides and one deterministic LR tree edge', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
 
-    let structure: unknown
+    let structure: ReturnType<MindPptParserService['compile']> | undefined
     await ctx.plugin({
       name: 'mindppt-parser-compile-test',
       inject: [serviceName],
       apply(child: Context) {
-        structure = child.mindpptParser.compile(HELLO)
+        structure = child.mindpptParser.compile(M1)
       },
     })
 
-    expect(structure).toEqual({
-      version: 0,
-      slides: [
+    expect(structure?.slides).toEqual([
+      expect.objectContaining({
+        id: 'intro',
+        x: 0,
+        y: 0,
+        width: 1600,
+        height: 900,
+        elements: [
+          expect.objectContaining({
+            id: 'slide:intro/title:0',
+            kind: 'title',
+            text: 'Introduction',
+            x: 160,
+            y: 390,
+          }),
+        ],
+      }),
+      expect.objectContaining({
+        id: 'market',
+        x: 2200,
+        y: 0,
+        width: 1600,
+        height: 900,
+        elements: [
+          expect.objectContaining({
+            id: 'slide:market/title:0',
+            text: 'Market',
+          }),
+        ],
+      }),
+    ])
+
+    expect(structure?.tree).toEqual(expect.objectContaining({
+      direction: 'LR',
+      edges: [
         expect.objectContaining({
-          id: 'hello',
-          x: 0,
-          y: 0,
-          width: 1600,
-          height: 900,
-          elements: [
-            expect.objectContaining({
-              id: 'slide:hello/title:0',
-              kind: 'title',
-              text: 'Hello World',
-              x: 160,
-              y: 390,
-              width: 1280,
-              height: 120,
-            }),
-          ],
+          id: 'tree:intro->market',
+          from: 'intro',
+          to: 'market',
         }),
       ],
-    })
+    }))
+
+    expect(structure?.slides[0]?.sourceRange.end).toBeGreaterThan(
+      structure?.slides[0]?.sourceRange.start ?? 0,
+    )
+    expect(structure?.tree?.edges[0]?.sourceRange.end).toBeGreaterThan(
+      structure?.tree?.edges[0]?.sourceRange.start ?? 0,
+    )
   })
 
-  it('rejects source outside the hello-world grammar', async () => {
+  it('resolves tree references after parsing all slides', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
 
+    const source = `mindppt
+
+tree LR {
+  missing --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
     let error: unknown
     await ctx.plugin({
-      name: 'mindppt-parser-error-test',
+      name: 'mindppt-parser-reference-test',
       inject: [serviceName],
       apply(child: Context) {
         try {
-          child.mindpptParser.compile('not mindppt')
+          child.mindpptParser.compile(source)
         } catch (caught) {
           error = caught
         }
       },
     })
 
-    expect(error instanceof MindPptSyntaxError).toBe(true)
+    expect(error).toBeInstanceOf(MindPptSyntaxError)
+    expect((error as Error).message).toContain('Unknown slide in tree edge')
   })
 })

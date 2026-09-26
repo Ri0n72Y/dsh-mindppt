@@ -1,39 +1,42 @@
 import { Context } from '@deepseek-ai/cordis'
-import { Excalidraw } from '@excalidraw/excalidraw'
+import {
+  Excalidraw,
+  convertToExcalidrawElements,
+} from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import MindPptCanvasService, {
-  type RenderedElements,
+  type ExcalidrawScene,
 } from 'dsh-mindppt-canvas-excalidraw'
 import MindPptParserService from 'dsh-mindppt-code-parser'
 import source from '../../../examples/hello-world.mindppt?raw'
 
 import './style.css'
 
-async function compileHelloWorld(): Promise<RenderedElements> {
+async function compileHelloWorld() {
   const ctx = new Context()
 
   await ctx.plugin(MindPptParserService)
   await ctx.plugin(MindPptCanvasService)
 
-  let elements: RenderedElements | undefined
+  let scene: ExcalidrawScene | undefined
 
   await ctx.plugin({
     name: 'mindppt-playground-driver',
     inject: ['mindpptParser', 'mindpptCanvas'],
     apply(runtime: Context) {
       runtime.mindpptParser.compile(source)
-      elements = runtime.mindpptCanvas.elements
+      scene = runtime.mindpptCanvas.scene
     },
   })
 
-  if (!elements) {
+  if (!scene) {
     throw new Error('MindPPT renderer did not produce a scene')
   }
 
-  return elements
+  return convertToExcalidrawElements(scene, { regenerateIds: false })
 }
 
 const elements = await compileHelloWorld()

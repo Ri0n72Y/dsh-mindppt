@@ -37,4 +37,5 @@ The standalone web host will run the same Cordis plugins without requiring DSH.
 
 ## Design documents
 
-Language design is being developed in `docs/language-v0.md`.
+- `docs/language-v0.md` — MindPPT Language v0 draft.
+- `docs/code-parser.md` — compiler boundary, output model, source mapping, stable identity, and first parser milestone.

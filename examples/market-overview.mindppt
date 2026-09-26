@@ -19,26 +19,22 @@ link competitor -.-> summary
 slide intro {
   layout hero
 
-  title "German Outdoor Market"
-  subtitle "2026 opportunity review"
+  # German Outdoor Market
 
-  image hero {
-    src "./assets/outdoor.jpg"
-    fit cover
-  }
+  ## 2026 opportunity review
+
+  ![Outdoor](./assets/outdoor.jpg)
 }
 
 slide market {
   layout two-column
 
   left {
-    title "A growing premium segment"
+    # A growing premium segment
 
-    bullets {
-      "Demand remains seasonal"
-      "Premium products gain share"
-      "Online channels continue growing"
-    }
+    - Demand remains seasonal
+    - Premium products gain share
+    - Online channels continue growing
   }
 
   right {
@@ -51,7 +47,7 @@ slide market {
 }
 
 slide size {
-  title "Market expansion is visible across segments"
+  # Market expansion is visible across segments
 
   chart trend {
     type line
@@ -65,25 +61,20 @@ slide customer {
   layout two-column
 
   left {
-    image persona {
-      src "./assets/customer.png"
-      fit contain
-    }
+    ![Customer](./assets/customer.png)
   }
 
   right {
-    title "Who is buying?"
+    # Who is buying?
 
-    bullets {
-      "Younger outdoor users"
-      "Comfort-sensitive buyers"
-      "Online-first product discovery"
-    }
+    - Younger outdoor users
+    - Comfort-sensitive buyers
+    - Online-first product discovery
   }
 }
 
 slide competitor {
-  title "Competitive positioning"
+  # Competitive positioning
 
   table comparison {
     columns ["Segment", "Typical position", "Opportunity"]
@@ -94,24 +85,21 @@ slide competitor {
 }
 
 slide product {
-  title "Position around comfort and clarity"
+  # Position around comfort and clarity
 
-  diagram architecture {
-    type mermaid
-
-    """
-    flowchart LR
-      Need[Customer need] --> Product[Product proposition]
-      Product --> Proof[Proof points]
-    """
-  }
+  ```mermaid
+  flowchart LR
+    Need[Customer need] --> Product[Product proposition]
+    Product --> Proof[Proof points]
+  ```
 }
 
 slide summary {
   layout hero
 
-  title "One message"
-  subtitle "Win the premium customer with a clearer comfort proposition."
+  # One message
+
+  ## Win the premium customer with a clearer comfort proposition.
 }
 
 path main {

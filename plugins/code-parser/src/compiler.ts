@@ -1,4 +1,4 @@
-import { MindPptSyntaxError } from './errors.ts'
+import { MindPptCompileError } from './errors.ts'
 import { parse } from './parser.ts'
 import { tokenize } from './tokenizer.ts'
 import type {
@@ -16,15 +16,15 @@ export function compileSource(source: string): MindPptStructure {
   const slideIds = new Set(document.slides.map((slide) => slide.id))
 
   if (slideIds.size !== document.slides.length) {
-    throw new MindPptSyntaxError('Slide IDs must be unique')
+    throw new MindPptCompileError('Slide IDs must be unique')
   }
 
   if (document.slides.length === 0) {
-    throw new MindPptSyntaxError('Document must contain at least one slide')
+    throw new MindPptCompileError('Document must contain at least one slide')
   }
 
   if (document.slides.length > 2) {
-    throw new MindPptSyntaxError('M1 supports at most two slides')
+    throw new MindPptCompileError('M1 supports at most two slides')
   }
 
   let tree: TreeSpec | undefined
@@ -32,16 +32,16 @@ export function compileSource(source: string): MindPptStructure {
 
   if (document.tree) {
     if (document.slides.length !== 2 || document.tree.edges.length !== 1) {
-      throw new MindPptSyntaxError(
+      throw new MindPptCompileError(
         'M1 tree layout requires exactly two slides and one edge',
       )
     }
 
     const edge = document.tree.edges[0]
-    if (!edge) throw new MindPptSyntaxError('Tree edge is missing')
+    if (!edge) throw new MindPptCompileError('Tree edge is missing')
 
     if (!slideIds.has(edge.from) || !slideIds.has(edge.to)) {
-      throw new MindPptSyntaxError(
+      throw new MindPptCompileError(
         `Unknown slide in tree edge: ${edge.from} --> ${edge.to}`,
       )
     }
@@ -63,17 +63,17 @@ export function compileSource(source: string): MindPptStructure {
     }
   } else {
     if (document.slides.length !== 1) {
-      throw new MindPptSyntaxError('Two-slide M1 documents require a tree')
+      throw new MindPptCompileError('Two-slide M1 documents require a tree')
     }
     const slide = document.slides[0]
-    if (!slide) throw new MindPptSyntaxError('M1 slide is missing')
+    if (!slide) throw new MindPptCompileError('M1 slide is missing')
     positions.set(slide.id, { x: 0, y: 0 })
   }
 
   const slides: SlideNode[] = document.slides.map((slide) => {
     const position = positions.get(slide.id)
     if (!position) {
-      throw new MindPptSyntaxError(`Slide "${slide.id}" has no M1 layout position`)
+      throw new MindPptCompileError(`Slide "${slide.id}" has no M1 layout position`)
     }
 
     return {

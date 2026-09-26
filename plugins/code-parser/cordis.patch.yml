@@ -1,0 +1,4 @@
+# DSH bundle layer for the MindPPT parser service.
+- insert:
+    - id: mindppt-code-parser
+      name: "dsh-mindppt-code-parser"

@@ -332,7 +332,9 @@ This enables:
 - diagnostics attached to the relevant source range;
 - future refactoring tools.
 
-Source mapping should exist from the first parser implementation rather than being retrofitted later.
+Source mapping should exist from the first real grammar/parser milestone rather than being retrofitted after semantic IDs and diagnostics are already established.
+
+The bootstrap hello-world vertical slice intentionally omits source maps. Its only purpose is to prove the runtime delivery path before the parser grows beyond the minimal grammar.
 
 ## 6. Stable semantic identity
 
@@ -454,11 +456,35 @@ In particular, it does not decide presentation-writing quality rules such as pre
 
 The parser only enforces structural validity and produces geometry.
 
-## 10. First implementation milestone
+## 10. Implementation milestones
 
-The first parser branch should target one concrete acceptance test:
+### M0 — hello-world delivery slice
 
-> Compile `examples/market-overview.mindppt` into a deterministic `MindPptStructure` JSON representation without rendering anything.
+Before building the real parser, prove the complete runtime path with the smallest useful source:
+
+```mindppt
+mindppt
+
+slide hello {
+  title "Hello World"
+}
+```
+
+Acceptance:
+
+- load the Cordis parser and renderer plugins;
+- compile one slide with one centered title;
+- lower it to Excalidraw Skeletons;
+- open the React + TypeScript web playground;
+- render a white 16:9 slide surface with a small shadow and "Hello World" centered inside it.
+
+M0 intentionally uses the smallest possible grammar and does not yet require tokenizer, AST, source maps, diagnostics, or incremental parsing.
+
+### M1 — real parser structure
+
+After M0 is stable, the parser branch should target one concrete acceptance test:
+
+> Compile `examples/market-overview.mindppt` into a deterministic `MindPptStructure` JSON representation.
 
 That result should include:
 
@@ -475,4 +501,4 @@ That result should include:
 - source ranges;
 - zero errors for the example.
 
-Only after this output is stable should `canvas-excalidraw` become the next implementation focus.
+The existing renderer remains the delivery harness while M1 grows. Each parser capability should extend the same source -> structure -> renderer -> React web path rather than being implemented as an isolated parser feature.

@@ -1,16 +1,16 @@
 # code-parser
 
-Status: draft  
+Status: draft compiler contract aligned with docs/roadmap.md  
 Role: core MindPPT compiler plugin  
 Runtime: Cordis
 
 ## 1. Responsibility
 
-`code-parser` is the central compiler frontend of MindPPT.
+code-parser is the central compiler frontend of MindPPT.
 
-It accepts MindPPT source code and produces a resolved, validated, spatially laid-out `MindPptStructure` that is ready for downstream rendering and camera control.
+It accepts MindPPT source and produces a resolved, validated, spatially laid-out MindPptStructure for downstream rendering and camera control.
 
-```text
+~~~text
 MindPPT source
       |
       v
@@ -22,21 +22,24 @@ MindPptStructure
       +-----------> canvas-excalidraw
       |
       +-----------> camera
-```
+~~~
 
-It is intentionally more than a text-to-AST parser.
+The plugin owns the full source-to-structure boundary.
 
-The plugin owns the full source-to-structure compilation boundary so that downstream plugins do not need to understand MindPPT syntax, presentation semantics, or layout rules.
+Downstream plugins should not need to understand MindPPT syntax, Markdown content syntax, reference resolution, presentation semantics, or layout rules.
 
-## 2. What code-parser owns
+## 2. Compiler phases
 
-The first implementation keeps these phases inside one Cordis plugin:
+The initial implementation keeps compiler phases inside one Cordis plugin.
 
-```text
+~~~text
 source
   |
   v
-syntax parse
+structural tokenize / parse
+  |
+  v
+hybrid content parse
   |
   v
 AST
@@ -55,170 +58,176 @@ mind-map layout
   |
   v
 MindPptStructure
-```
+~~~
 
-These are internal compiler stages, not separate packages or plugins.
+These are implementation phases, not separate plugins or packages.
 
-### 2.1 Syntax parse
+The Ponytail principle applies: do not split them before a real lifecycle boundary exists.
 
-Parse the Mermaid-like MindPPT language into an AST while preserving source ranges.
+## 3. Structural parser
 
-The outer MindPPT language is its own small grammar.
+The outer structural grammar is intentionally small.
 
-Only graph edge notation intentionally resembles Mermaid:
+Core structure includes:
 
-```mindppt
+~~~text
+mindppt
+deck
+slide
+tree
+link
+path
+layout blocks
+~~~
+
+Graph notation intentionally borrows from Mermaid:
+
+~~~mindppt
 tree LR {
   intro --> market
   market --> customer
 }
 
 link customer -.-> summary
-```
+~~~
 
-Embedded Mermaid remains opaque source text:
+The outer language does not implement full Mermaid.
 
-```mindppt
-diagram architecture {
-  type mermaid
+## 4. Hybrid content parser
 
-  """
-  flowchart LR
-    User --> API
-    API --> DB
-  """
+Inside a slide or layout slot, Markdown is the default content interpretation.
+
+MindPPT DSL constructs are recognized only at structural block-start positions outside fenced blocks.
+
+The compiler therefore treats fenced content as opaque to the structural parser.
+
+Example:
+
+~~~~mindppt
+slide math {
+  # Formula
+
+  ~~~latex
+  f(x) = \{x \mid x > 0\}
+  A --> B
+  ~~~
 }
-```
+~~~~
 
-The MindPPT parser must not reimplement Mermaid's full diagram grammar.
+The braces and arrow inside the fence are extension payload, not MindPPT structure.
 
-### 2.2 Reference resolution
+## 5. MindPPT Markdown Profile
 
-Resolve source-level identifiers after the full document has been parsed.
+The first intentional content profile grows incrementally.
 
-Examples:
+M1 requires only:
 
-- slide IDs referenced by tree edges;
-- slide IDs referenced by soft links;
-- slide IDs referenced by paths;
-- named slide elements referenced by local arrows;
-- logical assets, diagrams, charts, and other named components.
+~~~text
+# heading
+~~~
 
-Declaration order must not control whether a reference is valid.
+M2 expands to:
 
-### 2.3 Semantic validation
+~~~text
+# heading
+## heading
+paragraph
+- unordered list
+1. ordered list
+fenced extension
+~~~
 
-The compiler reports diagnostics for invalid structures, including:
+Later milestones add images.
 
-- duplicate IDs;
+Full CommonMark parsing is not required.
+
+The parser should implement only the profile defined by docs/language-v0.md and the current roadmap milestone.
+
+## 6. Extension nodes
+
+The parser does not register extension-specific grammars.
+
+A fenced block becomes a generic semantic node conceptually like:
+
+~~~ts
+interface ExtensionNode {
+  kind: 'extension'
+  type: string
+  raw: string
+}
+~~~
+
+For example:
+
+~~~~markdown
+~~~latex
+e^{i\pi} + 1 = 0
+~~~
+~~~~
+
+becomes an ExtensionNode whose type is latex and whose raw payload is preserved.
+
+Whether a runtime plugin can render that node is not a syntax question.
+
+This preserves the architecture invariant:
+
+~~~text
+Capability != Grammar
+~~~
+
+Missing an extension plugin must not cause a parser error.
+
+## 7. Reference resolution
+
+References are resolved after the complete structural document has been parsed.
+
+Initial references include:
+
+- tree edges to slide IDs;
+- soft links to slide IDs;
+- path entries to slide IDs.
+
+Later references may include named structured components where a real feature requires them.
+
+Declaration order must not decide validity.
+
+## 8. Semantic validation
+
+Validation grows with the roadmap.
+
+Graph validation includes:
+
+- duplicate slide IDs;
 - unresolved slide references;
-- multiple parents in the primary tree;
-- cycles in the primary tree;
 - duplicate tree edges;
-- chart labels/series length mismatch;
-- invalid layout slot usage;
-- invalid component properties;
-- unreachable slides where useful as a warning.
+- multiple parents;
+- cycles;
+- unreachable slides as warnings.
 
-Validation should distinguish errors that prevent a new structure from being published from warnings that still allow compilation.
+Structured content validation later includes:
 
-### 2.4 Slide layout
+- invalid layout-slot usage;
+- table shape errors;
+- chart labels/series mismatch;
+- asset-resolution warnings;
+- extension capability conflicts or missing-renderer warnings.
 
-The compiler resolves semantic slide layout into slide-local geometry.
+Validation distinguishes:
 
-Input:
+~~~text
+error   -> do not publish unreliable new structure
+warning -> publish structure with diagnostics
+~~~
 
-```mindppt
-slide market {
-  layout two-column
+Once live editing exists, errors keep the last-good structure visible.
 
-  left {
-    title "Market"
+## 9. Output boundary
 
-    bullets {
-      "A"
-      "B"
-    }
-  }
+The output remains semantic enough for presentation-aware downstream behavior, while geometry is resolved enough that the renderer does not perform presentation layout.
 
-  right {
-    chart growth {
-      type bar
-      labels ["2024", "2025", "2026"]
-      series "Market" [100, 116, 137]
-    }
-  }
-}
-```
+Conceptually:
 
-Output conceptually contains:
-
-```text
-slide market: 1600 x 900
-
-title
-  x: ...
-  y: ...
-  width: ...
-  height: ...
-
-bullets
-  x: ...
-  y: ...
-  width: ...
-  height: ...
-
-chart growth
-  x: ...
-  y: ...
-  width: ...
-  height: ...
-```
-
-The compiler should determine geometry, but preserve semantic component identity.
-
-A chart remains a chart in `MindPptStructure`; it is not flattened into bars, lines, labels, and axes until `canvas-excalidraw` compiles it to Excalidraw elements.
-
-The same rule applies to tables and embedded diagrams.
-
-### 2.5 Mind-map layout
-
-The compiler also resolves the primary tree into world-space slide positions.
-
-Example source:
-
-```mindppt
-tree LR {
-  intro --> market
-  market --> size
-  market --> customer
-  market --> competitor
-  customer --> product
-}
-```
-
-Conceptual result:
-
-```text
-intro       (0, 0)
-market      (2200, 0)
-size        (4400, -1200)
-customer    (4400, 0)
-competitor  (4400, 1200)
-product     (6600, 0)
-```
-
-The exact layout algorithm is implementation work, but the output contract is not: every slide published to downstream plugins has a world-space position and dimensions.
-
-Tree layout should use the primary tree only. Soft links do not change parent ownership or the primary layout.
-
-## 3. Output boundary
-
-The output should be high-level enough to retain presentation semantics and concrete enough that the renderer does not perform presentation layout.
-
-A minimal shape is:
-
-```ts
+~~~ts
 interface MindPptStructure {
   deck: DeckSpec
   slides: SlideNode[]
@@ -228,11 +237,11 @@ interface MindPptStructure {
   diagnostics: Diagnostic[]
   sourceMap: SourceMap
 }
-```
+~~~
 
-Each slide contains world geometry plus slide-local elements:
+A slide contains world-space geometry and slide-local semantic nodes:
 
-```ts
+~~~ts
 interface SlideNode {
   id: string
 
@@ -243,147 +252,195 @@ interface SlideNode {
 
   elements: RenderNode[]
 }
-```
+~~~
 
-A `RenderNode` may still be semantic:
+Typical v0 RenderNode families:
 
-```text
+~~~text
+title
+subtitle
 text
+list
 image
-rectangle
-ellipse
-diamond
-line
-arrow
-group
 table
 chart
-diagram
-```
+extension
+~~~
 
-Every render node has resolved slide-local geometry.
+Tables, charts, and extensions remain semantic until renderer lowering.
 
-`canvas-excalidraw` is then responsible for the mechanical lowering step:
-
-```text
-slide -> Excalidraw frame
-text -> Excalidraw text
-table -> rectangles + lines + text
-chart -> Excalidraw chart renderer
-diagram -> Mermaid-to-Excalidraw
-...
-```
-
-## 4. Coordinate model
+## 10. Coordinate model
 
 The compiler uses two coordinate spaces.
 
-### World coordinates
+### 10.1 World space
 
-Owned by each slide:
+Each slide owns:
 
-```text
+~~~text
 slide.x
 slide.y
 slide.width
 slide.height
-```
+~~~
 
 These locate the slide on the infinite mind-map canvas.
 
-### Slide-local coordinates
+### 10.2 Slide-local space
 
-Owned by elements inside a slide:
+Each content node owns:
 
-```text
+~~~text
 element.x
 element.y
 element.width
 element.height
-```
+~~~
 
-The renderer can derive canvas coordinates mechanically:
+The renderer derives canvas coordinates mechanically:
 
-```text
+~~~text
 worldElementX = slide.x + element.x
 worldElementY = slide.y + element.y
-```
+~~~
 
-This keeps slide layout independent from mind-map placement.
+This separation keeps slide layout independent from mind-map placement.
 
-## 5. Source map
+## 11. Slide layout
 
-Source ranges are a first-class compiler output.
-
-The compiler should be able to resolve semantic IDs back to source ranges:
-
-```text
-slide:market
-  -> lines 20-42
-
-slide:market/chart:growth
-  -> lines 31-37
-```
-
-This enables:
-
-- clicking rendered content and jumping the code editor to its source;
-- precise DSH agent patches;
-- diagnostics attached to the relevant source range;
-- future refactoring tools.
-
-Source mapping should exist from the first real grammar/parser milestone rather than being retrofitted after semantic IDs and diagnostics are already established.
-
-The bootstrap hello-world vertical slice intentionally omits source maps. Its only purpose is to prove the runtime delivery path before the parser grows beyond the minimal grammar.
-
-## 6. Stable semantic identity
-
-Recompilation must not make every rendered object appear new.
-
-Named declarations naturally provide stable semantic keys:
-
-```text
-slide:market
-slide:market/chart:growth
-slide:customer/image:persona
-```
-
-Unnamed components should receive deterministic keys derived from their stable structural AST path rather than random IDs.
+code-parser owns semantic layout resolution.
 
 Example:
 
-```text
-slide:market/left/title:0
-slide:market/left/bullets:0
-```
+~~~mindppt
+slide market {
+  layout two-column
 
-The parser does not need to manufacture final Excalidraw element IDs. It must, however, publish stable semantic identity so `canvas-excalidraw` can map it deterministically to rendered IDs.
+  left {
+    # Market
 
-This is necessary for:
+    - A
+    - B
+  }
 
-- efficient diffing;
-- preserving selection where appropriate;
-- future shared-element transitions;
+  right {
+    chart growth {
+      type bar
+      labels ["2024", "2025"]
+      series "Market" [100, 116]
+    }
+  }
+}
+~~~
+
+The compiler resolves the content into slide-local boxes.
+
+canvas-excalidraw should not need to understand left/right, hero, title-content, or other presentation-layout semantics.
+
+Layout must remain content-agnostic.
+
+An extension node participates in layout as a box just like text, image, table, or chart.
+
+## 12. Mind-map layout
+
+The compiler resolves the primary tree into deterministic world positions.
+
+~~~mindppt
+tree LR {
+  intro --> market
+  market --> size
+  market --> customer
+  market --> competitor
+}
+~~~
+
+Conceptual result:
+
+~~~text
+intro       (0, 0)
+market      (2200, 0)
+size        (4400, -1200)
+customer    (4400, 0)
+competitor  (4400, 1200)
+~~~
+
+Primary layout uses the primary tree only.
+
+Soft links do not alter parent ownership or primary placement.
+
+## 13. Stable semantic identity
+
+Recompilation must not make every semantic object appear new.
+
+Named declarations naturally provide stable keys:
+
+~~~text
+slide:market
+slide:market/chart:growth
+~~~
+
+Unnamed Markdown content derives deterministic keys from stable structural position:
+
+~~~text
+slide:market/title:0
+slide:market/list:0
+~~~
+
+The parser does not need to manufacture final Excalidraw element IDs.
+
+It must provide stable semantic identity so the renderer can map those IDs deterministically.
+
+This supports:
+
+- deterministic tests;
+- selection continuity;
 - camera continuity;
-- avoiding whole-canvas replacement after small source edits.
+- future diffing;
+- precise source mapping.
 
-## 7. Live editing and last-good output
+## 14. Source map
 
-MindPPT source is edited interactively, so temporary syntax errors are normal.
+Source ranges are first-class compiler output from the first real parser milestone.
 
-A half-written block must not erase the entire preview.
+M1 starts with structural ranges.
 
-The parser service should distinguish:
+M2-M3 expand ranges to Markdown content and diagnostics.
 
-```text
+Conceptually:
+
+~~~text
+slide:market
+  -> lines 20-42
+
+slide:market/title:0
+  -> line 23
+
+slide:market/chart:growth
+  -> lines 31-37
+~~~
+
+Source maps later enable:
+
+- editor navigation;
+- diagnostics;
+- precise DSH agent patches;
+- refactoring tools.
+
+The M0 bootstrap parser intentionally omits source maps.
+
+## 15. Diagnostics and last-good output
+
+Once live editing begins, the parser service tracks:
+
+~~~text
 current source
 latest diagnostics
 last successful MindPptStructure
-```
+~~~
 
 Expected behavior:
 
-```text
+~~~text
 source change
     |
     v
@@ -392,113 +449,148 @@ compile
 success error
  |      |
  v      v
-publish  publish diagnostics
+publish  diagnostics
 new      keep last-good structure
 structure
-```
+~~~
 
-A syntax or semantic error therefore updates diagnostics while the canvas continues displaying the latest valid structure.
+A half-written block must not blank the presentation.
 
-## 8. Cordis service boundary
+## 16. Cordis service boundary
 
-The public surface should stay small and runtime-native.
+The public service stays small.
 
 Conceptually:
 
-```ts
+~~~ts
 ctx.mindpptParser.compile(source)
 ctx.mindpptParser.structure
 ctx.mindpptParser.diagnostics
 ctx.mindpptParser.sourceMap
-```
+~~~
 
-The exact names are implementation details.
+Expected events may include:
 
-Expected events are conceptually:
-
-```text
+~~~text
 mindppt/compiled
 mindppt/diagnostics
-```
+~~~
 
-Downstream behavior:
+Exact public names can evolve with implementation.
 
-```text
-code-editor
-    |
-    | source changed
-    v
-code-parser
-    |
-    | compiled structure
-    +--------------+
-    |              |
-    v              v
-canvas-excalidraw camera
-```
+No supported standalone parser API outside Cordis is required.
 
-No supported standalone parser API is required outside Cordis.
+## 17. Extension capability boundary
 
-## 9. What code-parser does not own
+code-parser always emits generic ExtensionNode values.
 
-`code-parser` does not own:
+A content plugin such as dsh-mindppt-latex may later register runtime capabilities for an extension type, but it must not alter outer grammar.
 
-- source editing UI;
+Possible extension runtime capabilities include:
+
+- semantic transformation;
+- renderer;
+- sizing hint.
+
+If no plugin handles the type, generic fallback remains valid.
+
+If multiple plugins claim one type, runtime capability resolution should report a conflict rather than silently choose a winner.
+
+## 18. What code-parser does not own
+
+code-parser does not own:
+
+- source-editor UI;
+- React composition;
 - Excalidraw element creation;
 - direct canvas mutation;
-- Excalidraw viewport state;
-- camera animation timing;
-- DSH agent prompts or authoring policy;
-- DSH sidebar mounting;
-- final PPTX export.
+- viewport animation;
+- camera timing;
+- DSH prompts and authoring policy;
+- sidebar mounting;
+- final PPTX export;
+- extension-specific grammars.
 
-In particular, it does not decide presentation-writing quality rules such as preferring balanced branching over a long sequence. Those belong to `dsh-capability`.
+It enforces structure, content-profile parsing, semantic validity, identity, source mapping, and geometry.
 
-The parser only enforces structural validity and produces geometry.
+## 19. Current implementation boundary
 
-## 10. Implementation milestones
+### M0
 
-### M0 — hello-world delivery slice
+M0 is already merged.
 
-Before building the real parser, prove the complete runtime path with the smallest useful source:
+It proves:
 
-```mindppt
-mindppt
+~~~text
+source
+-> Cordis parser service
+-> MindPptStructure
+-> Cordis renderer service
+-> Excalidraw Skeleton
+-> React web host
+~~~
 
+Its temporary source form is:
+
+~~~mindppt
 slide hello {
   title "Hello World"
 }
-```
+~~~
 
-Acceptance:
+That syntax is a bootstrap fixture and is not the final content contract.
 
-- load the Cordis parser and renderer plugins;
-- compile one slide with one centered title;
-- lower it to Excalidraw Skeletons;
-- open the React + TypeScript web playground;
-- render a white 16:9 slide surface with a small shadow and "Hello World" centered inside it.
+### M1
 
-M0 intentionally uses the smallest possible grammar and does not yet require tokenizer, AST, source maps, diagnostics, or incremental parsing.
+The next parser milestone is intentionally small:
 
-### M1 — real parser structure
+~~~mindppt
+mindppt
 
-After M0 is stable, the parser branch should target one concrete acceptance test:
+tree LR {
+  intro --> market
+}
 
-> Compile `examples/market-overview.mindppt` into a deterministic `MindPptStructure` JSON representation.
+slide intro {
+  # Introduction
+}
 
-That result should include:
+slide market {
+  # Market
+}
+~~~
 
-- deck metadata;
-- all seven slides;
-- resolved tree edges;
-- the soft link;
-- both presentation paths;
-- resolved slide dimensions;
-- deterministic world-space slide positions;
-- slide-local geometry for every component;
-- semantic chart/table/diagram nodes;
-- stable semantic IDs;
+M1 implements:
+
+- tokenizer;
+- structural recursive-descent parser;
+- mindppt, slide, tree, and primary edge syntax;
+- minimum Markdown heading support;
 - source ranges;
-- zero errors for the example.
+- stable IDs;
+- reference resolution;
+- deterministic two-slide layout;
+- renderer delivery of two slides and one tree edge.
 
-The existing renderer remains the delivery harness while M1 grows. Each parser capability should extend the same source -> structure -> renderer -> React web path rather than being implemented as an isolated parser feature.
+M1 does not attempt to compile the complete market-overview example.
+
+### M2
+
+M2 expands content into the first intentional MindPPT Markdown Profile and generic ExtensionNode fallback.
+
+The complete implementation order is defined by docs/roadmap.md.
+
+## 20. Delivery rule
+
+Every parser capability must continue through the existing delivery path.
+
+~~~text
+fixture
+-> parser / structure test
+-> renderer test
+-> React playground
+-> visible Excalidraw result
+-> CI
+~~~
+
+Avoid adding parser-only abstractions or syntax that have no current delivery consumer.

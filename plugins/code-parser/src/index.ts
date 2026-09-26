@@ -1,10 +1,18 @@
 import { Service, type Context } from '@deepseek-ai/cordis'
 
-import { compileSource, MindPptSyntaxError } from './compiler.ts'
+import { compileSource } from './compiler.ts'
+import { MindPptSyntaxError } from './errors.ts'
 import type { MindPptStructure } from './types.ts'
 
 export { MindPptSyntaxError }
-export type { MindPptStructure, SlideNode, TextNode } from './types.ts'
+export type {
+  MindPptStructure,
+  SlideNode,
+  SourceRange,
+  TextNode,
+  TreeEdge,
+  TreeSpec,
+} from './types.ts'
 
 export const serviceName = 'mindpptParser' as const
 

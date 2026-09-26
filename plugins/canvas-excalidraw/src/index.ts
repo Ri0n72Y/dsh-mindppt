@@ -5,7 +5,6 @@ import {
   type ExcalidrawScene,
 } from './scene.ts'
 
-export { renderScene }
 export type { ExcalidrawScene }
 
 export const serviceName = 'mindpptCanvas' as const

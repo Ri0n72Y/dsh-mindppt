@@ -62,7 +62,7 @@ describe('MindPptParserService', () => {
               kind: 'title',
               text: 'Hello World',
               x: 160,
-              y: 350,
+              y: 390,
               width: 1280,
               height: 120,
             }),

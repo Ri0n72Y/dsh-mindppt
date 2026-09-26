@@ -99,7 +99,7 @@ Inside a slide or layout slot, Markdown is the default content interpretation.
 
 MindPPT DSL constructs are recognized only at structural block-start positions outside fenced blocks.
 
-The compiler therefore treats fenced content as opaque to the structural parser.
+The compiler therefore treats canonical triple-backtick fenced content as opaque to the structural parser.
 
 Example:
 
@@ -107,10 +107,10 @@ Example:
 slide math {
   # Formula
 
-  ~~~latex
+  ```latex
   f(x) = \{x \mid x > 0\}
   A --> B
-  ~~~
+  ```
 }
 ~~~~
 
@@ -160,9 +160,9 @@ interface ExtensionNode {
 For example:
 
 ~~~~markdown
-~~~latex
+```latex
 e^{i\pi} + 1 = 0
-~~~
+```
 ~~~~
 
 becomes an ExtensionNode whose type is latex and whose raw payload is preserved.

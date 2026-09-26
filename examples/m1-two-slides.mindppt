@@ -1,0 +1,13 @@
+mindppt
+
+tree LR {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}

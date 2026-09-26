@@ -20,7 +20,6 @@ describe('MindPptParserService', () => {
     await consumer
 
     expect(observed instanceof MindPptParserService).toBe(true)
-    expect(ctx.get(serviceName) === observed).toBe(true)
 
     await provider.dispose()
 

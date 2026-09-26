@@ -16,6 +16,6 @@ MindPPT source
   -> <Excalidraw />
 ```
 
-Keeping the final Excalidraw browser conversion in the host avoids importing the browser-heavy Excalidraw runtime into Node-side Cordis tests while retaining Excalidraw's official programmatic element format.
+A slide currently renders as a simple shadow, white 16:9 surface, title content, and Excalidraw frame.
 
 Direct canvas editing is intentionally outside the source-of-truth path.

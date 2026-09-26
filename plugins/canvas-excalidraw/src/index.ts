@@ -10,16 +10,8 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     mindpptCanvas: MindPptCanvasService
   }
-
-  interface Events {
-    'mindppt/rendered': (scene: ExcalidrawScene) => void
-  }
 }
 
-/**
- * Mechanical renderer from resolved MindPPT structure to Excalidraw Skeletons.
- * The browser host performs Excalidraw's final skeleton-to-element conversion.
- */
 export default class MindPptCanvasService extends Service {
   static inject = ['mindpptParser']
 
@@ -30,7 +22,6 @@ export default class MindPptCanvasService extends Service {
 
     ctx.on('mindppt/compiled', (structure) => {
       this.scene = this.render(structure)
-      ctx.emit('mindppt/rendered', this.scene)
     })
 
     if (ctx.mindpptParser.structure) {
@@ -79,11 +70,6 @@ export default class MindPptCanvasService extends Service {
         verticalAlign: 'middle',
       }))
 
-      const frameChildren = [
-        surface,
-        ...content,
-      ].flatMap((child) => child.id ? [child.id] : [])
-
       const frame: ExcalidrawElementSkeleton = {
         type: 'frame',
         id: `slide:${slide.id}`,
@@ -91,7 +77,9 @@ export default class MindPptCanvasService extends Service {
         y: slide.y,
         width: slide.width,
         height: slide.height,
-        children: frameChildren,
+        children: [surface, ...content].flatMap((child) =>
+          child.id ? [child.id] : [],
+        ),
         name: slide.id,
       }
 

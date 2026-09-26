@@ -1,4 +1,4 @@
-import { MindPptSyntaxError } from './errors.ts'
+import { MindPptCompileError } from './errors.ts'
 import type { SourceRange } from './types.ts'
 
 export type Token =
@@ -58,7 +58,7 @@ export function tokenize(source: string): Token[] {
       }
 
       if (!closed) {
-        throw new MindPptSyntaxError('Unclosed fenced content block')
+        throw new MindPptCompileError('Unclosed fenced content block')
       }
       continue
     }

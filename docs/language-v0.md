@@ -1,150 +1,111 @@
 # MindPPT Language v0
 
-Status: draft  
-Scope: authoring language contract for the first MindPPT implementation  
-Runtime assumption: Cordis plugins, Excalidraw rendering, camera-driven presentation
+Status: draft language contract aligned with the accepted v0 roadmap  
+Runtime: Cordis plugins, React + TypeScript host UI, Excalidraw rendering
 
 ## 1. Purpose
 
-MindPPT is not a PowerPoint-compatible document format and is not an Excalidraw file format.
+MindPPT is a spatial presentation language.
 
-The language describes three things in one source file:
+A slide is also a mind-map node. One source file describes:
 
-1. **Presentation content** — what each slide contains.
-2. **Mind-map topology** — how slides relate spatially as a tree plus optional soft links.
-3. **Presentation routes** — optional paths through the tree for conventional next/previous playback.
+1. slide content;
+2. the primary spatial topology between slides;
+3. optional cross-links;
+4. optional presentation routes.
 
 The source file is the single source of truth.
 
-```text
+~~~text
 MindPPT source
-    |
-    v
-code-parser
-    |
-    v
+      |
+      v
+ code-parser
+      |
+      v
 MindPptStructure
-    |               |
-    v               v
-canvas-excalidraw   camera
-    |
-    v
-Excalidraw scene
-```
+   |          |
+   v          v
+canvas      camera
+   |
+   v
+Excalidraw
+~~~
 
-Users and agents edit source code. The rendered Excalidraw canvas is a projection of that source and is not directly editable in normal authoring mode.
+Excalidraw is a rendering projection. It is not a second authoring model.
 
-## 2. Design constraints
+## 2. Core language principles
 
 ### 2.1 Slide = mind-map node
 
-There is no separate "mind-map node" and "slide object".
+There is no separate slide entity and mind-map-node entity.
 
-A slide identifier is also the identifier used by the tree, links, and presentation paths.
+A slide ID is also the ID used by tree edges, soft links, paths, camera targets, diagnostics, and agent edits.
 
-```mindppt
+~~~mindppt
 tree LR {
   intro --> market
-  market --> customer
 }
 
 slide intro {
-  title "Overview"
+  # Introduction
 }
 
 slide market {
-  title "Market"
+  # Market
 }
-```
+~~~
 
-### 2.2 Slide = Excalidraw frame
+### 2.2 Open Content, Closed Structure
 
-A `slide` compiles to an Excalidraw frame plus its child elements.
+Core owns document structure:
 
-MindPPT does not introduce a new canvas primitive for slides.
+~~~text
+deck
+slide
+tree
+link
+path
+~~~
 
-### 2.3 High-level components compile to ordinary Excalidraw elements
+Third-party plugins may extend slide content, but they must not redefine slide ownership, primary-tree semantics, soft-link semantics, or path semantics.
 
-Components such as tables, charts, diagrams, titles, and bullets are compiler-level constructs.
+### 2.3 Unknown Content Is Valid
 
-They do not become custom Excalidraw element types.
+Missing an optional content plugin must not make a source file invalid.
 
-Examples:
+Unknown extension payload is preserved and shown through a generic fallback.
 
-```text
-table   -> rectangles + lines + text
-chart   -> chart renderer -> rectangles/lines/text
-diagram -> Mermaid converter -> Excalidraw skeleton
-slide   -> frame + children
-```
+### 2.4 Capability is not grammar
 
-### 2.4 The language does not expose native Excalidraw JSON
+Loading a plugin such as dsh-mindppt-latex does not change the outer MindPPT grammar.
 
-The parser may eventually emit Excalidraw element skeletons internally, but native Excalidraw JSON is not part of the MindPPT language contract.
+The core parser recognizes a generic extension block. Runtime plugins may interpret or render that block more richly.
 
-Agents must not generate raw Excalidraw elements.
+### 2.5 Structure and content use different syntax strengths
 
-### 2.5 Structure first, animation second
+MindPPT intentionally uses a hybrid language:
 
-The language describes topology and paths. Camera choreography is normally inferred by the `camera` plugin.
+~~~text
+topology     -> Mermaid-like graph notation
+layout       -> MindPPT DSL
+content      -> small Markdown profile
+extensions   -> fenced blocks
+~~~
 
-v0 does not require users or agents to hand-author camera keyframes.
+The language is neither CommonMark-compatible nor Mermaid-compatible as a whole.
 
-## 3. v0 capability surface
+## 3. File shape
 
-MindPPT v0 contains three conceptual layers.
+A document starts with:
 
-### Presentation structure
-
-- `deck`
-- `tree`
-- `link`
-- `slide`
-- `path`
-
-### Layout and content
-
-- `row`
-- `column`
-- `grid`
-- `stack`
-- `absolute`
-- `title`
-- `subtitle`
-- `text`
-- `bullets`
-- `image`
-- `table`
-- `chart`
-- `icon`
-- `diagram`
-
-### Drawing escape hatches
-
-- `shape`
-- `line`
-- `arrow`
-- `group`
-
-The supported native chart types for v0 are:
-
-- `bar`
-- `line`
-- `radar`
-
-These correspond to Excalidraw's existing open-source chart renderer. Pie, scatter, waterfall, funnel, and other chart families are intentionally deferred.
-
-## 4. File shape
-
-A source file begins with the language marker:
-
-```mindppt
+~~~mindppt
 mindppt
-```
+~~~
 
-A normal document then contains some combination of:
+A normal source file may then contain:
 
-```mindppt
+~~~mindppt
 mindppt
 
 deck {
@@ -161,506 +122,371 @@ slide ...
 slide ...
 
 path ...
-```
+~~~
 
-Declaration order should not determine semantic ownership. A slide may be declared before or after the tree line that references it.
+Declaration order does not determine semantic ownership. References are resolved after the whole document is parsed.
 
-The parser should report duplicate IDs and unresolved references.
+## 4. Structural lexical rules
 
+MindPPT is not indentation-sensitive at the structural level.
 
+Multi-line structural declarations use braces.
 
-### 4.1 Lexical and block conventions
-
-MindPPT is Mermaid-like at the graph-expression level, but it is not indentation-sensitive.
-
-Multi-line declarations use explicit braces:
-
-```mindppt
+~~~mindppt
 tree LR {
   intro --> market
-  market --> customer
+  market --> product
 }
-```
+~~~
 
-This keeps graph edges familiar while giving the rest of the language one consistent block model.
+Identifiers:
 
-v0 lexical conventions:
+- use ASCII letters, digits, underscore, and hyphen;
+- cannot begin with a digit;
+- are case-sensitive in v0.
 
-- identifiers use ASCII letters, digits, `_`, and `-`, and must not begin with a digit;
-- keywords are reserved and cannot be used as bare identifiers;
-- strings use double quotes with ordinary escaped characters;
-- triple-double-quoted strings are raw multi-line strings, primarily for embedded Mermaid;
-- arrays use `[ ... ]`;
-- integers and decimal numbers are numeric literals;
-- values such as `62%` are percentage literals interpreted relative to their layout context;
-- newlines separate statements; semicolons are not required;
-- `//` starts a MindPPT line comment outside quoted/raw strings.
+Strings use double quotes where the DSL needs a scalar string.
 
-The graph tokens intentionally reuse familiar Mermaid flowchart forms:
+Arrays use square brackets where structured data requires them.
 
-- `A --> B` — primary tree edge;
-- `A -.-> B` — dotted relation token used by MindPPT soft links.
+Newlines separate statements. Semicolons are not required.
 
-MindPPT does not otherwise attempt to parse the full Mermaid flowchart grammar inside the `tree` block. Node-shape syntax, labels, subgraphs, edge labels, styling directives, and other Mermaid constructs belong inside an explicit `diagram { type mermaid ... }` component instead.
+Line comments may use // outside Markdown content and fenced blocks.
 
-## 5. Deck
+## 5. Hybrid parsing boundary
 
-The `deck` block defines presentation-wide defaults.
+Inside a slide or layout slot, Markdown is the default content interpretation.
 
-v0:
+MindPPT structural or layout constructs are recognized only at structural block-start positions outside fenced blocks.
 
-```mindppt
+A structural closing brace ends a slide/layout block only when it appears as the structural closing line outside a fence.
+
+This means content such as the following must remain opaque to the outer parser:
+
+~~~~markdown
+~~~latex
+f(x) = \{x \mid x > 0\}
+~~~
+~~~~
+
+and:
+
+~~~~markdown
+~~~text
+A --> B
+~~~
+~~~~
+
+The outer parser must not interpret those braces or arrows as MindPPT structure.
+
+## 6. Deck
+
+The deck block defines presentation-wide defaults.
+
+Target v0 shape:
+
+~~~mindppt
 deck {
   size 16:9
   theme "default"
 }
-```
+~~~
 
-Expected fields:
+Initial fields:
 
-- `size` — initially `16:9` and `4:3`.
-- `theme` — logical theme identifier resolved by the runtime.
+- size: 16:9 or 4:3;
+- theme: a logical theme identifier.
 
-The deck block should remain intentionally small in v0. Detailed typography and palette definitions can be introduced later through theme plugins rather than turning every file into a design-system manifest.
+Detailed typography and palette authoring are not part of v0.
 
-## 6. Tree
+## 7. Tree
 
-The tree is the primary topology and must remain a tree.
+The tree is the canonical hierarchy and spatial skeleton.
 
-Example:
-
-```mindppt
+~~~mindppt
 tree LR {
   intro --> market
   market --> size
   market --> customer
   market --> competitor
-  customer --> product
-  product --> summary
 }
-```
+~~~
 
-Direction values initially follow Mermaid-style orientation:
+Direction values:
 
-- `LR`
-- `RL`
-- `TB`
-- `TD` — alias of `TB`
-- `BT`
+- LR;
+- RL;
+- TB;
+- TD as an alias of TB;
+- BT.
 
-The direction is a spatial layout hint, not a presentation sequence.
+The direction is a spatial-layout hint, not a presentation sequence.
 
-### 6.1 Tree invariants
+### 7.1 Tree invariants
 
-The parser should reject or diagnose:
+The compiler diagnoses:
 
-- multiple parents for one tree node;
-- cycles in tree edges;
-- duplicate tree edges;
-- references to undeclared slide IDs after the full document is resolved.
+- duplicate slide IDs;
+- unknown slide references;
+- duplicate primary edges;
+- multiple parents;
+- cycles.
 
-A source file may contain slides that are not attached to the main tree, but the parser should warn because such slides are unreachable through ordinary mind-map navigation.
+Slides may temporarily exist outside the tree. Once graph validation is implemented, unreachable slides should produce a warning rather than a syntax error.
 
-## 7. Soft links
+## 8. Soft links
 
-Soft links express non-tree relationships.
+Soft links express cross-branch semantic relationships.
 
-They do not affect parent/child ownership and should not participate in automatic tree layout except where a layout plugin explicitly chooses to use them as weak hints.
-
-Example:
-
-```mindppt
+~~~mindppt
 link competitor -.-> summary
-link customer -.-> appendix
-```
+~~~
 
-v0 semantics:
+They:
 
-- soft links may connect any two valid slide IDs;
-- multiple links may point to the same target;
-- soft links do not change the main tree;
-- the canvas may hide soft-link edges until relevant;
-- the camera may use a different transition style for soft-link jumps.
+- do not change parent ownership;
+- do not participate in primary tree layout;
+- may influence camera behavior when followed;
+- may coexist freely with the primary tree.
 
-The exact token `-.->` is provisional but intentionally Mermaid-like.
+The dotted-arrow spelling is intentionally Mermaid-like.
 
-## 8. Slide
+## 9. Slide
 
-Basic form:
+A slide declaration creates both a presentation page and a mind-map node.
 
-```mindppt
+~~~mindppt
 slide market {
-  title "A growing premium segment"
+  # A growing premium segment
 
-  text {
-    "Demand remains seasonal."
-  }
+  Demand remains seasonal.
 }
-```
+~~~
 
 Each slide has a globally unique ID.
 
-The ID is the shared reference used by:
+The ID is shared by tree edges, links, paths, camera targets, diagnostics, and source mapping.
 
-- tree edges;
-- soft links;
-- paths;
-- camera targets;
-- agent editing tools.
+## 10. MindPPT Markdown Profile
 
-### 8.1 Slide properties
+Ordinary slide content uses a deliberately small Markdown profile.
 
-v0 should allow:
+The initial v0 target includes only presentation-relevant blocks.
 
-```mindppt
-slide market {
-  layout two-column
-  ...
+### 10.1 Heading
+
+~~~markdown
+# German Outdoor Market
+~~~
+
+A level-one heading maps to a title semantic node.
+
+### 10.2 Subtitle
+
+~~~markdown
+## 2026 opportunity review
+~~~
+
+A level-two heading maps to a subtitle semantic node.
+
+### 10.3 Paragraph
+
+~~~markdown
+Demand remains seasonal.
+~~~
+
+A paragraph maps to a text semantic node.
+
+### 10.4 Lists
+
+~~~markdown
+- Premium products gain share
+- Online channels continue growing
+~~~
+
+and:
+
+~~~markdown
+1. First point
+2. Second point
+~~~
+
+Lists remain semantic list nodes until layout and rendering.
+
+### 10.5 Images
+
+Target v0 form:
+
+~~~markdown
+![Customer](./assets/customer.png)
+~~~
+
+The default fit policy may be contain.
+
+Advanced placement or fit belongs to MindPPT layout/component metadata rather than custom Markdown syntax.
+
+### 10.6 Explicitly deferred Markdown features
+
+The v0 Markdown profile does not require:
+
+- full CommonMark compatibility;
+- arbitrary HTML;
+- blockquotes;
+- reference links;
+- complex nested lists;
+- Markdown tables;
+- mixed inline rich-text layout.
+
+Additional Markdown features should be added only when a presentation use case requires them.
+
+## 11. Extension blocks
+
+Fenced blocks are the generic content-extension envelope.
+
+~~~~markdown
+~~~latex
+e^{i\pi} + 1 = 0
+~~~
+~~~~
+
+The core parser preserves an extension node conceptually like:
+
+~~~ts
+interface ExtensionNode {
+  kind: 'extension'
+  type: string
+  raw: string
 }
-```
+~~~
 
-and later explicit metadata may be added without changing the node identity model.
+Without a matching plugin:
 
-## 9. Text
+~~~text
+ExtensionNode
+  -> generic raw text/code fallback
+~~~
 
-The simplest text form is:
+With a matching plugin:
 
-```mindppt
-text {
-  "Demand remains seasonal."
-}
-```
+~~~text
+ExtensionNode
+  -> Cordis extension capability
+  -> optional semantic transform
+  -> renderer
+  -> Excalidraw-compatible output
+~~~
 
-A named element is preferred when the text is likely to be revised independently:
+Raw content must never be discarded.
 
-```mindppt
-text insight {
-  "Premium demand is increasing."
-}
-```
+A plugin conflict is a runtime capability error. Multiple plugins must not silently compete for the same extension type.
 
-v0 text styling should apply to the whole text element:
+## 12. Layout DSL
 
-```mindppt
-text insight {
-  value "Premium demand is increasing."
-  size 28
-  align left
-  color accent
-}
-```
+Markdown expresses content. MindPPT DSL expresses presentation layout.
 
-### 9.1 No inline rich text in v0
+### 12.1 Presets
 
-Excalidraw text elements do not provide PowerPoint-like mixed formatting inside a single text element.
+Initial planned presets:
 
-The following is therefore not a v0 requirement:
-
-```text
-Revenue grew by **37%** year over year.
-```
-
-Authors should instead use separate text elements when visual emphasis matters:
-
-```mindppt
-row {
-  text { "Revenue grew by" }
-
-  text growth {
-    value "+37%"
-    size 48
-    color accent
-  }
-
-  text { "year over year" }
-}
-```
-
-This avoids implementing a custom inline rich-text layout engine in the first release.
-
-## 10. Title, subtitle, and bullets
-
-These are semantic convenience components.
-
-```mindppt
-title "German Outdoor Market"
-
-subtitle "2026 opportunity review"
-
-bullets {
-  "Demand remains seasonal"
-  "Premium products gain share"
-  "Online channels continue growing"
-}
-```
-
-They compile to ordinary Excalidraw text elements with theme-defined defaults.
-
-The value of these constructs is not that Excalidraw cannot render text. Their value is that themes, layout rules, QA, and agent authoring policies can recognize their semantic roles.
-
-## 11. Images
+- hero;
+- title-content;
+- two-column.
 
 Example:
 
-```mindppt
-image hero {
-  src "./assets/outdoor.jpg"
-  fit cover
-}
-```
-
-v0 image properties should include:
-
-- `src`
-- `fit`: `contain` | `cover`
-- optional element ID through the declaration name
-- sizing and placement inherited from the surrounding layout container or explicit geometry
-
-Remote URL behavior should be a runtime policy rather than a language guarantee.
-
-## 12. Layout
-
-The language should prefer semantic layout over explicit coordinates.
-
-### 12.1 Row
-
-```mindppt
-row {
-  ...
-}
-```
-
-### 12.2 Column
-
-```mindppt
-column {
-  ...
-}
-```
-
-### 12.3 Grid
-
-```mindppt
-grid 2 {
-  ...
-}
-```
-
-The integer is the number of columns in v0.
-
-### 12.4 Stack
-
-```mindppt
-stack {
-  ...
-}
-```
-
-A stack places children in the same layout region, useful for overlays and background/foreground composition.
-
-### 12.5 Named layout presets
-
-Slides may select a higher-level preset:
-
-```mindppt
-slide market {
+~~~mindppt
+slide customer {
   layout two-column
 
   left {
-    ...
+    # Customer
+
+    - Younger outdoor users
+    - Comfort-sensitive buyers
   }
 
   right {
-    ...
+    ![Customer](./assets/customer.png)
   }
 }
-```
+~~~
 
-Initial useful presets:
+The exact long-term slot syntax remains provisional.
 
-- `hero`
-- `title-content`
-- `two-column`
-- `three-column`
-- `full-bleed`
+### 12.2 Layout is content-agnostic
 
-Presets are intentionally few in v0.
+Layout acts on content boxes.
 
-### 12.6 Absolute escape hatch
+It must not need to understand whether a child is text, image, chart, LaTeX, Mermaid, or another extension.
 
-Explicit geometry exists for cases semantic layout cannot express.
+### 12.3 Advanced layout
 
-```mindppt
-absolute {
-  text note {
-    at 62% 75%
-    size 28% 10%
-    value "Source: internal analysis"
-  }
+Row, column, grid, stack, absolute positioning, and explicit geometry remain valid future directions, but they are not required before a concrete milestone needs them.
+
+## 13. Assets
+
+Local assets are resolved relative to the MindPPT document.
+
+The runtime is responsible for loading those assets into the representation required by Excalidraw.
+
+Remote URL behavior is runtime policy, not a language guarantee.
+
+Stable asset identity should be preserved across recompiles where practical.
+
+## 14. Tables
+
+Tables are core structured presentation content rather than Markdown tables.
+
+Target shape:
+
+~~~mindppt
+table comparison {
+  columns ["Segment", "Typical position", "Opportunity"]
+  row ["Entry", "Price-led", "Low"]
+  row ["Mid", "Feature-led", "Medium"]
+  row ["Premium", "Comfort-led", "High"]
 }
-```
+~~~
 
-Percent-based slide-relative geometry is preferred for source readability.
+A table remains semantic in MindPptStructure until renderer lowering.
 
-The compiler eventually resolves semantic and explicit layout into concrete coordinates before generating Excalidraw elements.
-
-## 13. Shapes
-
-v0 native shape families should match Excalidraw's stable primitives:
-
-- `rectangle`
-- `ellipse`
-- `diamond`
-
-Example:
-
-```mindppt
-shape callout {
-  type rectangle
-  label "Key insight"
-  fill accent-soft
-  stroke accent
-}
-```
-
-Expected common style properties:
-
-- `fill`
-- `stroke`
-- `strokeWidth`
-- `strokeStyle`
-- `opacity`
-- `roughness`
-- optional label
-
-Unsupported Mermaid-style exotic shapes should not be elevated into MindPPT v0 primitives.
-
-## 14. Lines and arrows
-
-Examples:
-
-```mindppt
-line divider {
-  stroke muted
-}
-
-arrow flow {
-  from problem
-  to solution
-  label "drives"
-}
-```
-
-Arrows may bind to named elements when both live inside one slide or component.
-
-Tree edges are not authored through this primitive. `arrow` is slide content; `tree` and `link` are presentation topology.
-
-## 15. Groups
-
-Example:
-
-```mindppt
-group metric {
-  shape {
-    type rectangle
-  }
-
-  text {
-    "+37%"
-  }
-}
-```
-
-A group compiles into grouped Excalidraw elements.
-
-It is primarily useful as:
-
-- a reusable visual unit;
-- a target for layout;
-- a target for camera/morph experiments later;
-- a way to preserve semantic identity through compilation.
-
-## 16. Tables
-
-Excalidraw has no native table element, so MindPPT treats a table as a compiler macro.
-
-Example:
-
-```mindppt
-table metrics {
-  columns ["Metric", "2025", "2026"]
-
-  row ["Revenue", 12, 18]
-  row ["Margin", "22%", "29%"]
-}
-```
-
-Compilation:
-
-```text
-table
-  -> cell rectangles / grid lines
-  -> text elements
-  -> group
-```
-
-v0 should support:
+Initial support:
 
 - header row;
 - row data;
 - string and numeric cells;
-- theme-level header/body styling;
-- automatic equal-width columns by default.
+- equal-width columns;
+- theme-level basic styling.
 
 Deferred:
 
+- formulas;
 - merged cells;
 - nested tables;
-- formulas;
 - spreadsheet editing;
 - arbitrary per-cell rich formatting.
 
-## 17. Charts
+## 15. Charts
 
-MindPPT charts are semantic data objects.
+Charts are core structured presentation content.
 
-Example:
+Target shape:
 
-```mindppt
+~~~mindppt
 chart growth {
   type bar
-
   labels ["2024", "2025", "2026"]
-
   series "Market" [100, 116, 137]
-  series "Premium" [22, 31, 44]
 }
-```
+~~~
 
-v0 chart types:
+Initial v0 chart families:
 
-```text
-bar
-line
-radar
-```
+- bar;
+- line;
+- radar.
 
-These align with Excalidraw's existing open-source chart renderer.
-
-The parser should preserve structured chart data rather than flattening a chart immediately into drawing primitives. The renderer plugin may then delegate to Excalidraw's chart renderer.
-
-v0 chart data model:
-
-```text
-title?       string
-labels?      string[]
-series[] {
-  title?     string
-  values     number[]
-}
-```
-
-A chart should remain a semantic object in `MindPptStructure` even though it ultimately compiles to ordinary Excalidraw elements.
+A chart remains semantic in MindPptStructure until renderer lowering.
 
 Deferred:
 
@@ -670,67 +496,33 @@ Deferred:
 - funnel;
 - combo charts;
 - secondary axes;
-- PowerPoint embedded workbook compatibility.
+- embedded workbook compatibility.
 
-## 18. Diagrams
+## 16. Mermaid as slide content
 
-MindPPT should support embedding Mermaid diagrams as a high-level component.
+Mermaid-like graph notation for the primary tree remains part of Core.
 
-Example:
+Mermaid diagrams inside slides are not a special Core grammar.
 
-```mindppt
-diagram architecture {
-  type mermaid
+They use the generic extension envelope:
 
-  """
-  flowchart LR
-    User --> API
-    API --> Database
-  """
-}
-```
+~~~~markdown
+~~~mermaid
+flowchart LR
+  Need --> Product
+  Product --> Proof
+~~~
+~~~~
 
-The renderer can route Mermaid content through `@excalidraw/mermaid-to-excalidraw`.
+Without a Mermaid content plugin, the source remains visible through fallback.
 
-Expected behavior:
+A future dsh-mindppt-mermaid plugin may lower supported Mermaid content to Excalidraw-compatible output.
 
-- diagram content remains source text inside MindPPT;
-- conversion output becomes Excalidraw skeleton/elements;
-- supported Mermaid diagram families may become editable native shapes;
-- unsupported families may degrade to an image according to the converter's behavior.
+## 17. Path
 
-MindPPT does not need to duplicate Mermaid's diagram grammar.
+A path defines an optional ordered presentation route through the spatial document.
 
-## 19. Icons and Excalidraw libraries
-
-Icons are logical references resolved by a library provider.
-
-Example:
-
-```mindppt
-icon cloud {
-  source "aws/ec2"
-}
-```
-
-The language should not encode raw Excalidraw library JSON.
-
-Possible providers include:
-
-- bundled MindPPT libraries;
-- Excalidraw libraries;
-- Iconify-like providers;
-- domain-specific icon packs.
-
-Exact provider syntax remains provisional for v0.
-
-## 20. Path
-
-A path defines an optional ordered playback route through the graph.
-
-Example:
-
-```mindppt
+~~~mindppt
 path main {
   intro
   market
@@ -740,67 +532,151 @@ path main {
   product
   summary
 }
-```
+~~~
 
-Another path may reuse the same tree:
+Another path may reuse the same slides:
 
-```mindppt
+~~~mindppt
 path short {
   intro
   market
   summary
 }
-```
+~~~
 
 A path:
 
 - does not modify tree structure;
-- may revisit a node;
-- may use tree edges or soft links;
-- may contain arbitrary jumps if the camera supports them.
+- may revisit a slide;
+- may follow tree edges, soft links, or arbitrary jumps;
+- is not the canonical document hierarchy.
 
-Traditional "next slide" behavior is therefore a path through a spatial structure rather than the primary document model.
-
-## 21. Camera semantics
+## 18. Camera semantics
 
 Camera behavior is not authored in detail in v0.
 
-The `camera` plugin receives:
+The camera plugin consumes:
 
-- node geometry;
-- tree parent/child relationships;
+- slide world geometry;
+- tree relationships;
 - soft links;
-- selected presentation path;
-- current and target node.
+- selected path;
+- current and target slide;
+- viewport state.
 
-The default transition families are expected to be:
+Initial transition families:
 
-### Parent -> child
+~~~text
+parent -> child
+child -> parent
+soft-link / arbitrary jump
+~~~
 
-```text
-focus current
--> zoom out enough to reveal the relationship
--> move along the branch
--> zoom into target
-```
+Default choreography can infer zoom-out, travel, and zoom-in from geometry.
 
-### Child -> parent
+User-authored camera keyframes are deferred.
 
-The inverse of parent -> child.
+## 19. Semantic output boundary
 
-### Soft-link or arbitrary jump
+The exact TypeScript contract may evolve, but the compiler output keeps high-level semantics.
 
-```text
-zoom out
--> traverse quickly with broader spatial context
--> zoom into target
-```
+Conceptually:
 
-The language may gain explicit transition hints later only when automatic choreography proves insufficient.
+~~~ts
+interface MindPptStructure {
+  deck: DeckSpec
+  slides: SlideNode[]
+  tree: TreeEdge[]
+  links: SoftLink[]
+  paths: PresentationPath[]
+  diagnostics: Diagnostic[]
+  sourceMap: SourceMap
+}
+~~~
 
-## 22. Example: complete seven-slide document
+A slide contains world geometry plus semantic content with slide-local geometry.
 
-```mindppt
+~~~ts
+interface SlideNode {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+  elements: RenderNode[]
+}
+~~~
+
+Typical render-node families:
+
+~~~text
+title
+subtitle
+text
+list
+image
+table
+chart
+extension
+~~~
+
+Renderer plugins mechanically lower these semantic nodes into Excalidraw-compatible scene data.
+
+## 20. Stable identity and source mapping
+
+Named declarations naturally provide stable keys:
+
+~~~text
+slide:market
+slide:market/chart:growth
+~~~
+
+Unnamed Markdown nodes receive deterministic keys from structural position:
+
+~~~text
+slide:market/title:0
+slide:market/list:0
+~~~
+
+Semantic IDs must remain stable where the source structure is stable.
+
+Source ranges should exist from the first real parser milestone and later support:
+
+- diagnostics;
+- code-editor navigation;
+- precise agent patches;
+- future refactoring tools.
+
+## 21. Diagnostics
+
+Diagnostics are compiler output for both humans and agents.
+
+Examples:
+
+~~~text
+ERROR tree:
+node "customer" has multiple parents
+
+ERROR path.main:
+unknown slide "pricing"
+
+WARN slide.market:
+slide is not reachable from the main tree
+
+WARN chart.growth:
+series lengths do not match labels
+
+WARN extension.latex:
+no renderer is installed; using raw fallback
+~~~
+
+Warnings may still publish a new structure.
+
+Errors that make semantics unreliable should preserve the last-good structure once live editing is implemented.
+
+## 22. Complete hybrid example
+
+~~~mindppt
 mindppt
 
 deck {
@@ -822,26 +698,22 @@ link competitor -.-> summary
 slide intro {
   layout hero
 
-  title "German Outdoor Market"
-  subtitle "2026 opportunity review"
+  # German Outdoor Market
 
-  image hero {
-    src "./assets/outdoor.jpg"
-    fit cover
-  }
+  ## 2026 opportunity review
+
+  ![Outdoor](./assets/outdoor.jpg)
 }
 
 slide market {
   layout two-column
 
   left {
-    title "A growing premium segment"
+    # A growing premium segment
 
-    bullets {
-      "Demand remains seasonal"
-      "Premium products gain share"
-      "Online channels continue growing"
-    }
+    - Demand remains seasonal
+    - Premium products gain share
+    - Online channels continue growing
   }
 
   right {
@@ -854,7 +726,7 @@ slide market {
 }
 
 slide size {
-  title "Market expansion is visible across segments"
+  # Market expansion is visible across segments
 
   chart trend {
     type line
@@ -868,25 +740,20 @@ slide customer {
   layout two-column
 
   left {
-    image persona {
-      src "./assets/customer.png"
-      fit contain
-    }
+    ![Customer](./assets/customer.png)
   }
 
   right {
-    title "Who is buying?"
+    # Who is buying?
 
-    bullets {
-      "Younger outdoor users"
-      "Comfort-sensitive buyers"
-      "Online-first product discovery"
-    }
+    - Younger outdoor users
+    - Comfort-sensitive buyers
+    - Online-first product discovery
   }
 }
 
 slide competitor {
-  title "Competitive positioning"
+  # Competitive positioning
 
   table comparison {
     columns ["Segment", "Typical position", "Opportunity"]
@@ -897,24 +764,21 @@ slide competitor {
 }
 
 slide product {
-  title "Position around comfort and clarity"
+  # Position around comfort and clarity
 
-  diagram architecture {
-    type mermaid
-
-    """
-    flowchart LR
-      Need[Customer need] --> Product[Product proposition]
-      Product --> Proof[Proof points]
-    """
-  }
+  ~~~mermaid
+  flowchart LR
+    Need[Customer need] --> Product[Product proposition]
+    Product --> Proof[Proof points]
+  ~~~
 }
 
 slide summary {
   layout hero
 
-  title "One message"
-  subtitle "Win the premium customer with a clearer comfort proposition."
+  # One message
+
+  ## Win the premium customer with a clearer comfort proposition.
 }
 
 path main {
@@ -932,139 +796,62 @@ path short {
   market
   summary
 }
-```
+~~~
 
-## 23. Parser output shape
+The Mermaid fence remains valid even when no Mermaid content plugin is installed.
 
-The exact TypeScript contract is implementation work, but the semantic boundary should look roughly like:
+## 23. Explicit v0 non-goals
 
-```ts
-interface MindPptStructure {
-  deck: DeckSpec
-  slides: SlideNode[]
-  tree: TreeEdge[]
-  links: SoftLink[]
-  paths: PresentationPath[]
-  diagnostics: Diagnostic[]
-}
-```
+The language does not attempt to support:
 
-A slide should preserve high-level components until the canvas renderer compiles them:
-
-```ts
-interface SlideNode {
-  id: string
-  layout?: SlideLayout
-  children: ComponentNode[]
-}
-```
-
-This is deliberate. Flattening everything to Excalidraw primitives in the parser would make table/chart/diagram semantics disappear too early.
-
-## 24. Diagnostics
-
-The parser/compiler should produce diagnostics suitable for both humans and agents.
-
-Examples:
-
-```text
-ERROR tree:
-node "customer" has multiple parents
-
-ERROR path.main:
-unknown slide "pricing"
-
-WARN slide.market:
-slide is not reachable from the main tree
-
-WARN slide.customer:
-content density may exceed the selected layout
-
-WARN chart.growth:
-series lengths do not match labels
-```
-
-Diagnostics should carry source ranges so `code-editor` and `dsh-capability` can patch the correct region.
-
-## 25. Agent authoring implications
-
-The language is designed for machine editing as much as human editing.
-
-Important properties:
-
-- stable IDs;
-- named elements;
-- local declarative blocks;
-- semantic layout;
-- structured chart/table data;
-- source-range diagnostics;
-- no requirement to calculate every pixel coordinate;
-- no raw Excalidraw JSON.
-
-The DSH capability layer should additionally teach presentation-structure principles that are not parser rules.
-
-Examples:
-
-- prefer a broad, shallow tree over a deep sequence;
-- avoid degrading the mind-map into `A -> B -> C -> D -> E` unless the content is genuinely sequential;
-- prefer balanced branching where the material supports it;
-- reuse a parent node as a spatial hub when moving between sibling arguments;
-- use soft links for meaningful cross-references rather than forcing multiple parents;
-- create short alternative paths instead of duplicating slide content.
-
-These are authoring policies, not syntax constraints.
-
-## 26. Explicit v0 non-goals
-
-The first language version does **not** attempt to support:
-
-- arbitrary native Excalidraw JSON;
-- direct canvas editing as source;
-- inline mixed rich-text formatting;
-- PowerPoint SmartArt;
-- video/audio;
+- full CommonMark;
+- full Mermaid outer-language compatibility;
+- raw Excalidraw JSON authoring;
+- direct canvas editing as semantic source;
+- inline mixed rich-text layout;
+- arbitrary HTML or CSS;
 - arbitrary JavaScript;
-- arbitrary CSS;
 - user-authored camera keyframes;
 - PowerPoint animation compatibility;
-- every Mermaid diagram as editable native shapes;
-- every chart type;
+- PowerPoint SmartArt;
+- audio/video;
 - spreadsheet formulas;
 - merged table cells;
-- full PPTX import/export fidelity.
+- every chart type;
+- PPTX round-trip fidelity;
+- third-party extensions to document topology.
 
-These may be added by later plugins without changing the basic source -> structure -> canvas architecture.
+## 24. Open questions
 
-## 27. Open questions
+The following remain intentionally open until a milestone creates a concrete need:
 
-These decisions should remain intentionally open until the parser and renderer prototypes exist:
+1. whether left/right remain dedicated two-column slots or become generic named slots;
+2. exact syntax for advanced layout primitives;
+3. theme configuration syntax and whether themes belong in source files;
+4. how much rendered diffing canvas-excalidraw performs versus rebuilding an affected slide;
+5. chart-renderer reuse versus adaptation;
+6. icon-provider addressing;
+7. whether multiple independent primary trees are ever needed;
+8. exact metadata syntax for advanced image fit and placement.
 
-1. Whether `left { }` / `right { }` remain dedicated two-column slot syntax or evolve into a generic named-slot form.
-2. Exact parser implementation strategy for the small MindPPT graph subset; v0 no longer requires reuse of Mermaid internals for the outer language.
-3. Exact geometry syntax for the `absolute` escape hatch.
-4. Theme property syntax and whether theme definitions belong in source files at all.
-5. Icon provider addressing.
-6. How source element IDs map to stable Excalidraw element IDs across recompilation.
-7. How much rendered diffing `canvas-excalidraw` should perform versus rebuilding one affected slide.
-8. Whether diagrams remain semantic objects after rendering or are treated as generated child groups.
-9. Whether chart output should directly reuse Excalidraw's internal chart code or copy/adapt the relevant renderer behind a Cordis service.
-10. Whether multiple independent trees are ever needed. v0 assumes one primary tree.
+## 25. v0 acceptance target
 
-## 28. v0 acceptance test
-
-The language is sufficient for the first milestone when one source file can express and render:
+The language is sufficient for v0 when one project can express and render:
 
 - at least six slides;
-- one branching tree;
+- a branching primary tree;
+- Markdown-authored ordinary content;
+- semantic layout;
+- local images;
+- one table;
+- one bar or line chart;
+- one unknown extension through fallback;
+- one installed extension through a plugin;
 - one soft link;
 - two presentation paths;
-- text/title/bullets;
-- image;
-- table;
-- bar or line chart;
-- Mermaid flowchart;
-- semantic two-column layout;
-- one explicit geometry override;
-- camera navigation between parent, child, and non-parent target.
+- camera traversal;
+- live source editing with diagnostics and last-good rendering;
+- stable semantic IDs and usable source ranges;
+- DSH/Agent source editing without raw Excalidraw JSON.
 
-That milestone is intentionally about proving the authoring and spatial-presentation model, not reproducing PowerPoint.
+Implementation order and delivery milestones are defined in docs/roadmap.md.

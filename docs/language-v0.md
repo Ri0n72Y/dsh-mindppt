@@ -43,9 +43,10 @@ There is no separate "mind-map node" and "slide object".
 A slide identifier is also the identifier used by the tree, links, and presentation paths.
 
 ```mindppt
-tree LR
+tree LR {
   intro --> market
   market --> customer
+}
 
 slide intro {
   title "Overview"
@@ -150,8 +151,9 @@ deck {
   ...
 }
 
-tree LR
+tree LR {
   ...
+}
 
 link ...
 
@@ -164,6 +166,42 @@ path ...
 Declaration order should not determine semantic ownership. A slide may be declared before or after the tree line that references it.
 
 The parser should report duplicate IDs and unresolved references.
+
+
+
+### 4.1 Lexical and block conventions
+
+MindPPT is Mermaid-like at the graph-expression level, but it is not indentation-sensitive.
+
+Multi-line declarations use explicit braces:
+
+```mindppt
+tree LR {
+  intro --> market
+  market --> customer
+}
+```
+
+This keeps graph edges familiar while giving the rest of the language one consistent block model.
+
+v0 lexical conventions:
+
+- identifiers use ASCII letters, digits, `_`, and `-`, and must not begin with a digit;
+- keywords are reserved and cannot be used as bare identifiers;
+- strings use double quotes with ordinary escaped characters;
+- triple-double-quoted strings are raw multi-line strings, primarily for embedded Mermaid;
+- arrays use `[ ... ]`;
+- integers and decimal numbers are numeric literals;
+- values such as `62%` are percentage literals interpreted relative to their layout context;
+- newlines separate statements; semicolons are not required;
+- `//` starts a MindPPT line comment outside quoted/raw strings.
+
+The graph tokens intentionally reuse familiar Mermaid flowchart forms:
+
+- `A --> B` — primary tree edge;
+- `A -.-> B` — dotted relation token used by MindPPT soft links.
+
+MindPPT does not otherwise attempt to parse the full Mermaid flowchart grammar inside the `tree` block. Node-shape syntax, labels, subgraphs, edge labels, styling directives, and other Mermaid constructs belong inside an explicit `diagram { type mermaid ... }` component instead.
 
 ## 5. Deck
 
@@ -192,13 +230,14 @@ The tree is the primary topology and must remain a tree.
 Example:
 
 ```mindppt
-tree LR
+tree LR {
   intro --> market
   market --> size
   market --> customer
   market --> competitor
   customer --> product
   product --> summary
+}
 ```
 
 Direction values initially follow Mermaid-style orientation:
@@ -206,6 +245,7 @@ Direction values initially follow Mermaid-style orientation:
 - `LR`
 - `RL`
 - `TB`
+- `TD` — alias of `TB`
 - `BT`
 
 The direction is a spatial layout hint, not a presentation sequence.
@@ -768,13 +808,14 @@ deck {
   theme "business"
 }
 
-tree LR
+tree LR {
   intro --> market
   market --> size
   market --> customer
   market --> competitor
   customer --> product
   product --> summary
+}
 
 link competitor -.-> summary
 
@@ -858,7 +899,7 @@ slide competitor {
 slide product {
   title "Position around comfort and clarity"
 
-  diagram {
+  diagram architecture {
     type mermaid
 
     """
@@ -998,8 +1039,8 @@ These may be added by later plugins without changing the basic source -> structu
 
 These decisions should remain intentionally open until the parser and renderer prototypes exist:
 
-1. Whether the parser should reuse Mermaid internals or only adopt Mermaid-like graph syntax.
-2. Whether `left { }` / `right { }` are special syntax or named slots provided by layout presets.
+1. Whether `left { }` / `right { }` remain dedicated two-column slot syntax or evolve into a generic named-slot form.
+2. Exact parser implementation strategy for the small MindPPT graph subset; v0 no longer requires reuse of Mermaid internals for the outer language.
 3. Exact geometry syntax for the `absolute` escape hatch.
 4. Theme property syntax and whether theme definitions belong in source files at all.
 5. Icon provider addressing.

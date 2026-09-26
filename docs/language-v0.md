@@ -164,17 +164,17 @@ A structural closing brace ends a slide/layout block only when it appears as the
 This means content such as the following must remain opaque to the outer parser:
 
 ~~~~markdown
-~~~latex
+```latex
 f(x) = \{x \mid x > 0\}
-~~~
+```
 ~~~~
 
 and:
 
 ~~~~markdown
-~~~text
+```text
 A --> B
-~~~
+```
 ~~~~
 
 The outer parser must not interpret those braces or arrows as MindPPT structure.
@@ -341,12 +341,12 @@ Additional Markdown features should be added only when a presentation use case r
 
 ## 11. Extension blocks
 
-Fenced blocks are the generic content-extension envelope.
+Triple-backtick fenced blocks are the canonical v0 content-extension envelope.
 
 ~~~~markdown
-~~~latex
+```latex
 e^{i\pi} + 1 = 0
-~~~
+```
 ~~~~
 
 The core parser preserves an extension node conceptually like:
@@ -507,11 +507,11 @@ Mermaid diagrams inside slides are not a special Core grammar.
 They use the generic extension envelope:
 
 ~~~~markdown
-~~~mermaid
+```mermaid
 flowchart LR
   Need --> Product
   Product --> Proof
-~~~
+```
 ~~~~
 
 Without a Mermaid content plugin, the source remains visible through fallback.
@@ -676,7 +676,7 @@ Errors that make semantics unreliable should preserve the last-good structure on
 
 ## 22. Complete hybrid example
 
-~~~mindppt
+~~~~mindppt
 mindppt
 
 deck {
@@ -766,7 +766,7 @@ slide competitor {
 slide product {
   # Position around comfort and clarity
 
-  ~~~mermaid
+  ```mermaid
   flowchart LR
     Need[Customer need] --> Product[Product proposition]
     Product --> Proof[Proof points]
@@ -796,7 +796,7 @@ path short {
   market
   summary
 }
-~~~
+~~~~
 
 The Mermaid fence remains valid even when no Mermaid content plugin is installed.
 

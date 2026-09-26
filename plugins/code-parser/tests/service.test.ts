@@ -2,7 +2,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 
 import MindPptParserService, {
-  MindPptSyntaxError,
+  MindPptCompileError,
   serviceName,
 } from '../src/index.ts'
 
@@ -97,11 +97,18 @@ describe('MindPptParserService', () => {
       ],
     }))
 
-    expect(structure?.slides[0]?.sourceRange.end).toBeGreaterThan(
-      structure?.slides[0]?.sourceRange.start ?? 0,
+    const introRange = structure?.slides[0]?.sourceRange
+    const titleRange = structure?.slides[0]?.elements[0]?.sourceRange
+    const edgeRange = structure?.tree?.edges[0]?.sourceRange
+
+    expect(introRange && M1.slice(introRange.start, introRange.end)).toBe(
+      'slide intro {\n  # Introduction\n}',
     )
-    expect(structure?.tree?.edges[0]?.sourceRange.end).toBeGreaterThan(
-      structure?.tree?.edges[0]?.sourceRange.start ?? 0,
+    expect(titleRange && M1.slice(titleRange.start, titleRange.end)).toBe(
+      '  # Introduction',
+    )
+    expect(edgeRange && M1.slice(edgeRange.start, edgeRange.end)).toBe(
+      '  intro --> market',
     )
   })
 
@@ -137,7 +144,7 @@ slide market {
       },
     })
 
-    expect(error).toBeInstanceOf(MindPptSyntaxError)
+    expect(error).toBeInstanceOf(MindPptCompileError)
     expect((error as Error).message).toContain('Unknown slide in tree edge')
   })
 })

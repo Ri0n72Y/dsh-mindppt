@@ -35,6 +35,8 @@ A slide is rendered as an Excalidraw frame. Tree edges define the primary spatia
 
 The standalone web host will run the same Cordis plugins without requiring DSH.
 
+Web graphical interfaces are written in React + TypeScript. React owns host UI composition; Excalidraw remains the canvas renderer rather than the application state model.
+
 ## Design documents
 
 - `docs/language-v0.md` — MindPPT Language v0 draft.

@@ -1,10 +1,10 @@
 import { Service, type Context } from '@deepseek-ai/cordis'
 
-import { compileHelloWorld, MindPptSyntaxError } from './compiler.ts'
+import { compileSource, MindPptSyntaxError } from './compiler.ts'
 import type { MindPptStructure } from './types.ts'
 
 export { MindPptSyntaxError }
-export type { MindPptStructure, SlideNode, SourceRange, TextNode } from './types.ts'
+export type { MindPptStructure, SlideNode, TextNode } from './types.ts'
 
 export const serviceName = 'mindpptParser' as const
 
@@ -18,12 +18,6 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-/**
- * Cordis-owned compiler service.
- *
- * The hello-world slice keeps the public boundary we will retain as the real
- * tokenizer, parser, resolver, validator, and layout stages are added behind it.
- */
 export default class MindPptParserService extends Service {
   structure: MindPptStructure | undefined
 
@@ -32,7 +26,7 @@ export default class MindPptParserService extends Service {
   }
 
   compile(source: string): MindPptStructure {
-    const structure = compileHelloWorld(source)
+    const structure = compileSource(source)
     this.structure = structure
     this.ctx.emit('mindppt/compiled', structure)
     return structure

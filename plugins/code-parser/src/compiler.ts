@@ -45,7 +45,7 @@ export function compileSource(source: string): MindPptStructure {
             id: `slide:${slideId}/title:0`,
             text: title,
             x: 160,
-            y: 350,
+            y: 390,
             width: 1280,
             height: 120,
           },

@@ -1,13 +1,12 @@
-import type { ReactElement } from 'react'
-
 import { MindPptCanvas } from './MindPptCanvas.tsx'
+import type { CompiledElements } from './runtime.ts'
 
 interface AppProps {
   source: string
-  canvas: ReactElement
+  elements: CompiledElements
 }
 
-export function App({ source, canvas }: AppProps) {
+export function App({ source, elements }: AppProps) {
   return (
     <main className="playground">
       <aside className="source-panel">
@@ -15,7 +14,7 @@ export function App({ source, canvas }: AppProps) {
         <pre>{source}</pre>
       </aside>
 
-      {canvas}
+      <MindPptCanvas elements={elements} />
     </main>
   )
 }

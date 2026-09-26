@@ -1,10 +1,10 @@
 import { Service, type Context } from '@deepseek-ai/cordis'
-import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
+import type { ExcalidrawElementSkeleton } from '@excalidraw/excalidraw/data/transform'
 import type { MindPptStructure } from 'dsh-mindppt-code-parser'
 
 export const serviceName = 'mindpptCanvas' as const
 
-export type RenderedElements = ReturnType<typeof convertToExcalidrawElements>
+export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -12,36 +12,36 @@ declare module '@deepseek-ai/cordis' {
   }
 
   interface Events {
-    'mindppt/rendered': (elements: RenderedElements) => void
+    'mindppt/rendered': (scene: ExcalidrawScene) => void
   }
 }
 
 /**
- * Mechanical renderer from resolved MindPPT structure to Excalidraw elements.
- * Presentation semantics and layout stay in code-parser.
+ * Mechanical renderer from resolved MindPPT structure to Excalidraw Skeletons.
+ * The browser host performs Excalidraw's final skeleton-to-element conversion.
  */
 export default class MindPptCanvasService extends Service {
   static inject = ['mindpptParser']
 
-  elements: RenderedElements = []
+  scene: ExcalidrawScene = []
 
   constructor(ctx: Context) {
     super(ctx, serviceName)
 
     ctx.on('mindppt/compiled', (structure) => {
-      this.elements = this.render(structure)
-      ctx.emit('mindppt/rendered', this.elements)
+      this.scene = this.render(structure)
+      ctx.emit('mindppt/rendered', this.scene)
     })
 
     if (ctx.mindpptParser.structure) {
-      this.elements = this.render(ctx.mindpptParser.structure)
+      this.scene = this.render(ctx.mindpptParser.structure)
     }
   }
 
-  render(structure: MindPptStructure): RenderedElements {
-    const skeletons = structure.slides.flatMap((slide) => {
-      const children = slide.elements.map((element) => ({
-        type: 'text' as const,
+  render(structure: MindPptStructure): ExcalidrawScene {
+    return structure.slides.flatMap((slide) => {
+      const children: ExcalidrawElementSkeleton[] = slide.elements.map((element) => ({
+        type: 'text',
         id: element.id,
         x: slide.x + element.x,
         y: slide.y + element.y,
@@ -49,25 +49,22 @@ export default class MindPptCanvasService extends Service {
         height: element.height,
         text: element.text,
         fontSize: 72,
-        textAlign: 'center' as const,
-        verticalAlign: 'middle' as const,
+        textAlign: 'center',
+        verticalAlign: 'middle',
       }))
 
-      return [
-        ...children,
-        {
-          type: 'frame' as const,
-          id: `slide:${slide.id}`,
-          x: slide.x,
-          y: slide.y,
-          width: slide.width,
-          height: slide.height,
-          children: children.map((child) => child.id),
-          name: slide.id,
-        },
-      ]
-    })
+      const frame: ExcalidrawElementSkeleton = {
+        type: 'frame',
+        id: `slide:${slide.id}`,
+        x: slide.x,
+        y: slide.y,
+        width: slide.width,
+        height: slide.height,
+        children: children.flatMap((child) => child.id ? [child.id] : []),
+        name: slide.id,
+      }
 
-    return convertToExcalidrawElements(skeletons, { regenerateIds: false })
+      return [...children, frame]
+    })
   }
 }

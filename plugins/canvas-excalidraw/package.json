@@ -11,6 +11,7 @@
   "types": "./lib/index.d.ts",
   "exports": {
     ".": {
+      "development": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
@@ -48,6 +49,15 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./lib/index.d.ts",
+        "default": "./lib/index.js"
+      },
+      "./package.json": "./package.json"
     }
   }
 }

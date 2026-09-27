@@ -367,6 +367,15 @@ competitor  (4400, 1200)
 
 Primary layout uses the primary tree only.
 
+Supported direction projections are:
+
+- `LR`: children advance right;
+- `RL`: children advance left;
+- `TB` / `TD`: children advance downward;
+- `BT`: children advance upward.
+
+Sibling/subtree ordering is deterministic, and identical source produces identical semantic IDs and coordinates.
+
 Soft links do not alter parent ownership or primary placement.
 
 ## 13. Stable semantic identity

@@ -14,7 +14,8 @@
     "dsh-mindppt-canvas-excalidraw": "workspace:*",
     "dsh-mindppt-code-parser": "workspace:*",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "dsh-mindppt-code-editor": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

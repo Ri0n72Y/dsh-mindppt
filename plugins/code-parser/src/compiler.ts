@@ -151,21 +151,12 @@ function layoutContent(
         items: block.items,
       })
     } else if (block.kind === 'extension') {
-      const node = {
+      nodes.push({
         ...box,
-        kind: 'extension' as const,
+        kind: 'extension',
         type: block.type,
         raw: block.raw,
-      }
-      debugText('compiler:extension-node', node.raw, {
-        id: node.id,
-        type: node.type,
-        x: node.x,
-        y: node.y,
-        width: node.width,
-        height: node.height,
       })
-      nodes.push(node)
     } else {
       nodes.push({
         ...box,
@@ -195,23 +186,3 @@ function blockHeight(block: ParsedContent): number {
   }
 }
 
-function debugText(
-  stage: string,
-  text: string,
-  details: Record<string, unknown>,
-): void {
-  if (
-    (globalThis as { __MINDPPT_DEBUG__?: boolean }).__MINDPPT_DEBUG__ !== true
-  ) return
-
-  const lastChar = text.at(-1) ?? ''
-  console.info('[mindppt:pipeline]', {
-    stage,
-    ...details,
-    text,
-    length: text.length,
-    lastChar,
-    lastCodePoint: lastChar ? lastChar.codePointAt(0) : undefined,
-    suffix: text.slice(-16),
-  })
-}

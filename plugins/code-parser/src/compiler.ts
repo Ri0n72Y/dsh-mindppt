@@ -1,13 +1,19 @@
 import { MindPptCompileError } from './errors.ts'
-import { parse } from './parser.ts'
+import { parse, type ParsedContent } from './parser.ts'
 import { tokenize } from './tokenizer.ts'
-import type { MindPptStructure, SlideNode, TreeSpec } from './types.ts'
+import type {
+  ContentNode,
+  MindPptStructure,
+  SlideNode,
+  TreeSpec,
+} from './types.ts'
 
 const SLIDE_WIDTH = 1280
 const SLIDE_HEIGHT = 720
 const SLIDE_GAP = 600
-const TITLE_WIDTH = SLIDE_WIDTH * 0.8
-const TITLE_HEIGHT = 120
+const CONTENT_X = 96
+const CONTENT_WIDTH = SLIDE_WIDTH - CONTENT_X * 2
+const CONTENT_GAP = 20
 
 export function compileSource(source: string): MindPptStructure {
   const document = parse(tokenize(source))
@@ -22,7 +28,7 @@ export function compileSource(source: string): MindPptStructure {
   }
 
   if (document.slides.length > 2) {
-    throw new MindPptCompileError('M1 supports at most two slides')
+    throw new MindPptCompileError('M2 supports at most two slides')
   }
 
   let tree: TreeSpec | undefined
@@ -31,7 +37,7 @@ export function compileSource(source: string): MindPptStructure {
   if (document.tree) {
     if (document.slides.length !== 2 || document.tree.edges.length !== 1) {
       throw new MindPptCompileError(
-        'M1 tree layout requires exactly two slides and one edge',
+        'M2 tree layout requires exactly two slides and one edge',
       )
     }
 
@@ -61,10 +67,10 @@ export function compileSource(source: string): MindPptStructure {
     }
   } else {
     if (document.slides.length !== 1) {
-      throw new MindPptCompileError('Two-slide M1 documents require a tree')
+      throw new MindPptCompileError('Two-slide M2 documents require a tree')
     }
     const slide = document.slides[0]
-    if (!slide) throw new MindPptCompileError('M1 slide is missing')
+    if (!slide) throw new MindPptCompileError('M2 slide is missing')
     positions.set(slide.id, { x: 0, y: 0 })
   }
 
@@ -72,7 +78,7 @@ export function compileSource(source: string): MindPptStructure {
     const position = positions.get(slide.id)
     if (!position) {
       throw new MindPptCompileError(
-        `Slide "${slide.id}" has no M1 layout position`,
+        `Slide "${slide.id}" has no M2 layout position`,
       )
     }
 
@@ -83,22 +89,98 @@ export function compileSource(source: string): MindPptStructure {
       width: SLIDE_WIDTH,
       height: SLIDE_HEIGHT,
       sourceRange: slide.range,
-      elements: [
-        {
-          kind: 'title',
-          id: `slide:${slide.id}/title:0`,
-          text: slide.title,
-          x: (SLIDE_WIDTH - TITLE_WIDTH) / 2,
-          y: (SLIDE_HEIGHT - TITLE_HEIGHT) / 2,
-          width: TITLE_WIDTH,
-          height: TITLE_HEIGHT,
-          sourceRange: slide.titleRange,
-        },
-      ],
+      elements: layoutContent(slide.id, slide.content),
     }
   })
 
   const structure: MindPptStructure = { version: 0, slides }
   if (tree) structure.tree = tree
   return structure
+}
+
+function layoutContent(
+  slideId: string,
+  content: ParsedContent[],
+): ContentNode[] {
+  const only = content[0]
+  if (content.length === 1 && only?.kind === 'title') {
+    const width = SLIDE_WIDTH * 0.8
+    const height = 120
+    return [
+      {
+        kind: 'title',
+        id: `slide:${slideId}/title:0`,
+        text: only.text,
+        x: (SLIDE_WIDTH - width) / 2,
+        y: (SLIDE_HEIGHT - height) / 2,
+        width,
+        height,
+        sourceRange: only.range,
+      },
+    ]
+  }
+
+  const counts = {
+    title: 0,
+    subtitle: 0,
+    text: 0,
+    list: 0,
+    extension: 0,
+  }
+  const nodes: ContentNode[] = []
+  let y = 56
+
+  for (const block of content) {
+    const id = `slide:${slideId}/${block.kind}:${counts[block.kind]++}`
+    const height = blockHeight(block)
+    const box = {
+      id,
+      x: CONTENT_X,
+      y,
+      width: CONTENT_WIDTH,
+      height,
+      sourceRange: block.range,
+    }
+
+    if (block.kind === 'list') {
+      nodes.push({
+        ...box,
+        kind: 'list',
+        ordered: block.ordered,
+        items: block.items,
+      })
+    } else if (block.kind === 'extension') {
+      nodes.push({
+        ...box,
+        kind: 'extension',
+        type: block.type,
+        raw: block.raw,
+      })
+    } else {
+      nodes.push({
+        ...box,
+        kind: block.kind,
+        text: block.text,
+      })
+    }
+
+    y += height + CONTENT_GAP
+  }
+
+  return nodes
+}
+
+function blockHeight(block: ParsedContent): number {
+  switch (block.kind) {
+    case 'title':
+      return 84
+    case 'subtitle':
+      return 56
+    case 'text':
+      return 72
+    case 'list':
+      return Math.max(72, block.items.length * 38 + 24)
+    case 'extension':
+      return Math.max(112, (block.raw.split('\n').length + 1) * 30 + 24)
+  }
 }

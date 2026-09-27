@@ -297,16 +297,16 @@ tree LR {
   intro --> market
 }
 
+slide orphan {
+  # Orphan
+}
+
 slide intro {
   # Introduction
 }
 
 slide market {
   # Market
-}
-
-slide orphan {
-  # Orphan
 }
 `
 
@@ -317,9 +317,9 @@ slide orphan {
         const structure = child.mindpptParser.compile(source)
 
         expect(structure.slides.map((slide) => slide.id)).toEqual([
+          'orphan',
           'intro',
           'market',
-          'orphan',
         ])
         expect(child.mindpptParser.structure).toBe(structure)
         expect(child.mindpptParser.diagnostics).toHaveLength(1)

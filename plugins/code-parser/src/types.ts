@@ -4,7 +4,7 @@ export interface SourceRange {
 }
 
 export interface MindPptDiagnostic {
-  severity: 'error'
+  severity: 'error' | 'warning'
   message: string
   sourceRange?: SourceRange
 }

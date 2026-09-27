@@ -2,8 +2,10 @@ import { MindPptCompileError } from './errors.ts'
 import type { ParsedContent } from './content-parser.ts'
 import { parse } from './parser.ts'
 import { tokenize } from './tokenizer.ts'
+import { validatePrimaryTree, validateSlideIds } from './tree-validation.ts'
 import type {
   ContentNode,
+  MindPptDiagnostic,
   MindPptStructure,
   SlideNode,
   SourceRange,
@@ -19,13 +21,12 @@ const CONTENT_X = 96
 const CONTENT_WIDTH = SLIDE_WIDTH - CONTENT_X * 2
 const CONTENT_GAP = 20
 
-export function compileSource(source: string): MindPptStructure {
+export function compileSource(
+  source: string,
+  diagnostics: MindPptDiagnostic[] = [],
+): MindPptStructure {
   const document = parse(tokenize(source))
-  const slideIds = new Set(document.slides.map((slide) => slide.id))
-
-  if (slideIds.size !== document.slides.length) {
-    throw new MindPptCompileError('Slide IDs must be unique')
-  }
+  const slideIds = validateSlideIds(document.slides)
 
   if (document.slides.length === 0) {
     throw new MindPptCompileError('Document must contain at least one slide')
@@ -35,21 +36,13 @@ export function compileSource(source: string): MindPptStructure {
   const positions = new Map<string, { x: number; y: number }>()
 
   if (document.tree) {
-    const edges: TreeEdge[] = document.tree.edges.map((edge) => {
-      if (!slideIds.has(edge.from) || !slideIds.has(edge.to)) {
-        throw new MindPptCompileError(
-          `Unknown slide in tree edge: ${edge.from} --> ${edge.to}`,
-          edge.range,
-        )
-      }
-
-      return {
-        id: `tree:${edge.from}->${edge.to}`,
-        from: edge.from,
-        to: edge.to,
-        sourceRange: edge.range,
-      }
-    })
+    const validated = validatePrimaryTree(
+      document.slides,
+      document.tree.edges,
+      slideIds,
+    )
+    const edges = validated.edges
+    diagnostics.push(...validated.warnings)
 
     layoutLrTree(
       document.slides.map((slide) => slide.id),

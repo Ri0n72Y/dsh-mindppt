@@ -205,7 +205,7 @@ function debugText(
   ) return
 
   const lastChar = text.at(-1) ?? ''
-  console.debug('[mindppt:pipeline]', {
+  console.info('[mindppt:pipeline]', {
     stage,
     ...details,
     text,

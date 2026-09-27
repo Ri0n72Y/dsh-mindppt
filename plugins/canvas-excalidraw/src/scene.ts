@@ -8,7 +8,7 @@ import type {
 
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
-// Excalidraw 0.18 EXCALIDRAW_SYSTEM_FONT_FAMILY. Kept local so the renderer does not
+// Excalidraw 0.18 FONT_FAMILY.Helvetica. Kept local so the renderer does not
 // pull the browser runtime into Node-based tests just to access an enum value.
 const EXCALIDRAW_SYSTEM_FONT_FAMILY = 2
 

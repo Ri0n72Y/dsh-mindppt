@@ -2,7 +2,7 @@ import '@excalidraw/excalidraw/index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import source from '../../../examples/m2-content-profile.mindppt?raw'
+import source from '../../../examples/m4-branching-lr-tree.mindppt?raw'
 import { App } from './App.tsx'
 import { createPlaygroundRuntime } from './runtime.ts'
 import './style.css'

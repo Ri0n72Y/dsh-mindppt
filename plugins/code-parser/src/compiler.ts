@@ -8,7 +8,7 @@ import type {
   MindPptDiagnostic,
   MindPptStructure,
   SlideNode,
-  SourceRange,
+  TreeDirection,
   TreeEdge,
   TreeSpec,
 } from './types.ts'
@@ -44,15 +44,15 @@ export function compileSource(
     const edges = validated.edges
     diagnostics.push(...validated.warnings)
 
-    layoutLrTree(
+    layoutTree(
       document.slides.map((slide) => slide.id),
       edges,
-      document.tree.range,
+      document.tree.direction,
       positions,
     )
 
     tree = {
-      direction: 'LR',
+      direction: document.tree.direction,
       sourceRange: document.tree.range,
       edges,
     }
@@ -89,10 +89,10 @@ export function compileSource(
   return structure
 }
 
-function layoutLrTree(
+function layoutTree(
   slideIds: string[],
   edges: TreeEdge[],
-  treeRange: SourceRange,
+  direction: TreeDirection,
   positions: Map<string, { x: number; y: number }>,
 ): void {
   const children = new Map<string, string[]>()
@@ -105,42 +105,32 @@ function layoutLrTree(
     targets.add(edge.to)
   }
 
-  const state = new Map<string, 'visiting' | 'done'>()
+  const positioned = new Set<string>()
   let nextLeaf = 0
+  const crossStep = isHorizontal(direction)
+    ? SLIDE_HEIGHT + SLIDE_VERTICAL_GAP
+    : SLIDE_WIDTH + SLIDE_HORIZONTAL_GAP
 
   const visit = (slideId: string, depth: number): number => {
-    const status = state.get(slideId)
-    if (status === 'visiting') {
-      throw new MindPptCompileError(
-        'M4 LR layout cannot lay out a cyclic primary tree',
-        treeRange,
-      )
+    const existing = positions.get(slideId)
+    if (positioned.has(slideId) && existing) {
+      return crossCoordinate(existing, direction)
     }
 
-    const existing = positions.get(slideId)
-    if (status === 'done' && existing) return existing.y
-
-    state.set(slideId, 'visiting')
     const childIds = children.get(slideId) ?? []
+    let cross: number
 
-    let y: number
     if (childIds.length === 0) {
-      y = nextLeaf * (SLIDE_HEIGHT + SLIDE_VERTICAL_GAP)
+      cross = nextLeaf * crossStep
       nextLeaf += 1
     } else {
-      const childYs = childIds.map((childId) => visit(childId, depth + 1))
-      y = (childYs[0]! + childYs.at(-1)!) / 2
+      const childCrosses = childIds.map((childId) => visit(childId, depth + 1))
+      cross = (childCrosses[0]! + childCrosses.at(-1)!) / 2
     }
 
-    if (!positions.has(slideId)) {
-      positions.set(slideId, {
-        x: depth * (SLIDE_WIDTH + SLIDE_HORIZONTAL_GAP),
-        y,
-      })
-    }
-
-    state.set(slideId, 'done')
-    return positions.get(slideId)!.y
+    positions.set(slideId, projectPosition(direction, depth, cross))
+    positioned.add(slideId)
+    return cross
   }
 
   for (const slideId of slideIds) {
@@ -148,8 +138,40 @@ function layoutLrTree(
   }
 
   for (const slideId of slideIds) {
-    if (state.get(slideId) !== 'done') visit(slideId, 0)
+    if (!positioned.has(slideId)) visit(slideId, 0)
   }
+}
+
+function projectPosition(
+  direction: TreeDirection,
+  depth: number,
+  cross: number,
+): { x: number; y: number } {
+  const horizontalDepth = depth * (SLIDE_WIDTH + SLIDE_HORIZONTAL_GAP)
+  const verticalDepth = depth * (SLIDE_HEIGHT + SLIDE_VERTICAL_GAP)
+
+  switch (direction) {
+    case 'LR':
+      return { x: horizontalDepth, y: cross }
+    case 'RL':
+      return { x: -horizontalDepth, y: cross }
+    case 'TB':
+    case 'TD':
+      return { x: cross, y: verticalDepth }
+    case 'BT':
+      return { x: cross, y: -verticalDepth }
+  }
+}
+
+function crossCoordinate(
+  position: { x: number; y: number },
+  direction: TreeDirection,
+): number {
+  return isHorizontal(direction) ? position.y : position.x
+}
+
+function isHorizontal(direction: TreeDirection): boolean {
+  return direction === 'LR' || direction === 'RL'
 }
 
 function layoutContent(

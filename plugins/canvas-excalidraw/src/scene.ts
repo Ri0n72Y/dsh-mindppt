@@ -100,7 +100,6 @@ function renderContent(
     fillStyle: 'solid',
     roughness: 0,
     label: {
-      id: element.id,
       text: contentText(element),
       fontSize: contentFontSize(element),
       textAlign:

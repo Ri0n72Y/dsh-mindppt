@@ -48,7 +48,7 @@ class Parser {
       if (!token) break
 
       if (token.kind === 'tree-start') {
-        if (tree) this.fail('M2 supports one primary tree')
+        if (tree) this.fail('MindPPT supports one primary tree')
         tree = this.parseTree()
         continue
       }
@@ -67,7 +67,7 @@ class Parser {
   private parseTree(): ParsedTree {
     const start = this.expect('tree-start')
     if (start.direction !== 'LR') {
-      this.fail('M2 supports tree direction LR only', start.range)
+      this.fail('M4 currently supports tree direction LR only', start.range)
     }
 
     const edges: ParsedTreeEdge[] = []

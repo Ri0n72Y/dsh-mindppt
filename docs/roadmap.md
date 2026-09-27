@@ -454,6 +454,13 @@ Support:
 - tree cycles;
 - unreachable-slide warning.
 
+Current M4 progress:
+
+- complete: deterministic LR branching layout;
+- complete: duplicate slide, unknown reference, duplicate edge, multiple-parent, and cycle errors;
+- complete: non-blocking unreachable-slide warnings;
+- remaining: `RL`, `TB`, `TD`, and `BT` spatial layout.
+
 Tree layout uses only the primary tree.
 
 Soft links do not exist yet.

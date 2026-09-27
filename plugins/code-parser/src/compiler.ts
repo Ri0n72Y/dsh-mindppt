@@ -48,6 +48,7 @@ export function compileSource(source: string): MindPptStructure {
     if (!slideIds.has(edge.from) || !slideIds.has(edge.to)) {
       throw new MindPptCompileError(
         `Unknown slide in tree edge: ${edge.from} --> ${edge.to}`,
+        edge.range,
       )
     }
 

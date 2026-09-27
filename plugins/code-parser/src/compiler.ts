@@ -1,14 +1,10 @@
 import { MindPptCompileError } from './errors.ts'
 import { parse } from './parser.ts'
 import { tokenize } from './tokenizer.ts'
-import type {
-  MindPptStructure,
-  SlideNode,
-  TreeSpec,
-} from './types.ts'
+import type { MindPptStructure, SlideNode, TreeSpec } from './types.ts'
 
-const SLIDE_WIDTH = 1600
-const SLIDE_HEIGHT = 900
+const SLIDE_WIDTH = 1280
+const SLIDE_HEIGHT = 720
 const SLIDE_GAP = 600
 
 export function compileSource(source: string): MindPptStructure {
@@ -73,7 +69,9 @@ export function compileSource(source: string): MindPptStructure {
   const slides: SlideNode[] = document.slides.map((slide) => {
     const position = positions.get(slide.id)
     if (!position) {
-      throw new MindPptCompileError(`Slide "${slide.id}" has no M1 layout position`)
+      throw new MindPptCompileError(
+        `Slide "${slide.id}" has no M1 layout position`,
+      )
     }
 
     return {

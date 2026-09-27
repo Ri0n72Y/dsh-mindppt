@@ -8,10 +8,7 @@ import type {
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
 export function renderScene(structure: MindPptStructure): ExcalidrawScene {
-  return [
-    ...renderTree(structure),
-    ...structure.slides.flatMap(renderSlide),
-  ]
+  return [...renderTree(structure), ...structure.slides.flatMap(renderSlide)]
 }
 
 function renderTree(structure: MindPptStructure): ExcalidrawScene {
@@ -51,20 +48,6 @@ function renderTreeEdge(
 }
 
 function renderSlide(slide: SlideNode): ExcalidrawScene {
-  const shadow: ExcalidrawElementSkeleton = {
-    type: 'rectangle',
-    id: `slide:${slide.id}/shadow`,
-    x: slide.x + 18,
-    y: slide.y + 18,
-    width: slide.width,
-    height: slide.height,
-    backgroundColor: '#000000',
-    strokeColor: 'transparent',
-    fillStyle: 'solid',
-    opacity: 14,
-    roughness: 0,
-  }
-
   const surface: ExcalidrawElementSkeleton = {
     type: 'rectangle',
     id: `slide:${slide.id}/surface`,
@@ -77,18 +60,22 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
     fillStyle: 'solid',
     strokeWidth: 1,
     roughness: 0,
+    roundness: { type: 3 },
   }
 
-  const content: ExcalidrawElementSkeleton[] = slide.elements.map((element) => ({
-    type: 'text',
-    id: element.id,
-    x: slide.x + element.x + element.width / 2,
-    y: slide.y + element.y + element.height / 2,
-    text: element.text,
-    fontSize: 72,
-    textAlign: 'center',
-    verticalAlign: 'middle',
-  }))
+  const content: ExcalidrawElementSkeleton[] = slide.elements.map(
+    (element) => ({
+      type: 'text',
+      id: element.id,
+      x: slide.x + element.x + element.width / 2,
+      y: slide.y + element.y + element.height / 2,
+      text: element.text,
+      fontSize: 72,
+      textAlign: 'center',
+      verticalAlign: 'middle',
+      roundness: { type: 3 },
+    }),
+  )
 
   const frame: ExcalidrawElementSkeleton = {
     type: 'frame',
@@ -97,7 +84,8 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
       child.id ? [child.id] : [],
     ),
     name: slide.id,
+    roundness: { type: 3 },
   }
 
-  return [shadow, surface, ...content, frame]
+  return [surface, ...content, frame]
 }

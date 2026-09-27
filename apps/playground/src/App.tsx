@@ -16,6 +16,8 @@ export function App({ runtime }: AppProps) {
     runtime.getSnapshot,
   )
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  const hasError = snapshot.diagnostics.some((diagnostic) => diagnostic.severity === 'error')
+  const hasWarning = snapshot.diagnostics.some((diagnostic) => diagnostic.severity === 'warning')
 
   const focusDiagnostic = (diagnostic: MindPptDiagnostic) => {
     const editor = editorRef.current
@@ -36,9 +38,19 @@ export function App({ runtime }: AppProps) {
         <div className="panel-heading">
           <span className="panel-label">MindPPT source</span>
           <span
-            className={snapshot.diagnostics.length ? 'status-error' : 'status-ok'}
+            className={
+              hasError
+                ? 'status-error'
+                : hasWarning
+                  ? 'status-warning'
+                  : 'status-ok'
+            }
           >
-            {snapshot.diagnostics.length ? 'Compile error' : 'Compiled'}
+            {hasError
+              ? 'Compile error'
+              : hasWarning
+                ? 'Compiled with warning'
+                : 'Compiled'}
           </span>
         </div>
 
@@ -54,7 +66,7 @@ export function App({ runtime }: AppProps) {
         <div className="diagnostics" aria-live="polite">
           {snapshot.diagnostics.map((diagnostic, index) => (
             <button
-              className="diagnostic"
+              className={`diagnostic diagnostic-${diagnostic.severity}`}
               key={index}
               type="button"
               onClick={() => focusDiagnostic(diagnostic)}

@@ -21,10 +21,7 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Show lockfile changes
-        run: git diff -U1 -- pnpm-lock.yaml
+        run: pnpm install --frozen-lockfile
 
       - name: Remove generated plugin output
         run: rm -rf plugins/*/lib

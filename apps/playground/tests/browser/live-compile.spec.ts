@@ -62,7 +62,19 @@ test('M4 branching fixture live-edits and invalid source keeps the last-good sce
   }).toBe(false)
 
   const recoveredScene = await canvas.screenshot()
-  const warningEdit = `${recoveredEdit}
+  const directionEdit = recoveredEdit.replace('tree LR {', 'tree BT {')
+  await editor.fill(directionEdit)
+
+  await expect(page.getByText('Compiled', { exact: true })).toBeVisible()
+  await expect(page.locator('.diagnostic')).toHaveCount(0)
+
+  await expect.poll(async () => {
+    const current = await canvas.screenshot()
+    return current.equals(recoveredScene)
+  }).toBe(false)
+
+  const directionScene = await canvas.screenshot()
+  const warningEdit = `${directionEdit}
 slide orphan {
   # Orphan
 }
@@ -76,6 +88,6 @@ slide orphan {
 
   await expect.poll(async () => {
     const current = await canvas.screenshot()
-    return current.equals(recoveredScene)
+    return current.equals(directionScene)
   }).toBe(false)
 })

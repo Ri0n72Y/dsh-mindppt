@@ -60,4 +60,22 @@ test('M4 branching fixture live-edits and invalid source keeps the last-good sce
     const current = await canvas.screenshot()
     return current.equals(lastGood)
   }).toBe(false)
+
+  const recoveredScene = await canvas.screenshot()
+  const warningEdit = `${recoveredEdit}
+slide orphan {
+  # Orphan
+}
+`
+  await editor.fill(warningEdit)
+
+  await expect(page.getByText('Compiled with warning', { exact: true })).toBeVisible()
+  await expect(page.locator('.diagnostic-warning')).toContainText(
+    'Slide "orphan" is unreachable from primary tree root "intro"',
+  )
+
+  await expect.poll(async () => {
+    const current = await canvas.screenshot()
+    return current.equals(recoveredScene)
+  }).toBe(false)
 })

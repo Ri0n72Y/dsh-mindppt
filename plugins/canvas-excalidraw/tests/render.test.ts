@@ -25,9 +25,9 @@ slide overview {
 }
 
 slide math {
-  # Euler Identity
-
   A compact mathematical example.
+
+  Need --> Product
 
   \`\`\`latex
   e^{i\\pi} + 1 = 0
@@ -71,8 +71,8 @@ describe('MindPptCanvasService', () => {
       'Demand remains seasonal.',
       '• Premium products gain share\n• Online channels continue growing',
       '1. Confirm positioning\n2. Compare substitutes',
-      'Euler Identity',
       'A compact mathematical example.',
+      'Need --> Product',
       '[latex]\n  e^{i\\pi} + 1 = 0',
     ]))
   })

@@ -44,28 +44,40 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 - `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
 
-## Current vertical slice: M2
+## Current vertical slice: M3
 
-M1 established the structural parser, two-slide LR topology, stable semantic IDs, source ranges, and real Excalidraw delivery. M2 extends the same path with the first intentional Markdown content profile.
+M2 established the Markdown content profile and generic extension fallback. M3 turns the playground into the first live authoring loop.
 
-Current fixture:
+The same canonical fixture remains:
 
 `examples/m2-content-profile.mindppt`
 
-The fixture intentionally includes both a titleless slide and arrow-shaped prose such as `Need --> Product` so the same source exercises M2 content-context rules in parser tests, renderer tests, and the playground.
-
-M2 content currently lowers through semantic nodes:
+The runtime now follows:
 
 ```text
-# heading        -> title
-## heading       -> subtitle
-paragraph        -> text
-- item           -> unordered list
-1. item          -> ordered list
-fenced block     -> extension
+edit source
+    |
+    v
+code-editor
+    |
+    v
+code-parser
+   / \
+success error
+ |       |
+ v       v
+canvas   diagnostics
+ |       |
+ v       v
+new      keep last-good
+scene    scene
 ```
 
-Unknown extensions remain valid and render through a readable fallback. No extension-specific parser registration exists.
+The parser tracks the current source, diagnostics, and the last successful structure. Diagnostics carry source ranges where available, and the React editor uses those ranges for click-to-focus navigation.
+
+The Excalidraw canvas updates after successful source edits. Invalid intermediate source does not clear the previous valid presentation.
+
+A Chromium smoke test covers the real browser path from editing a title through visible canvas update, followed by an invalid edit that surfaces diagnostics while preserving the last-good canvas.
 
 Run the standalone playground with:
 

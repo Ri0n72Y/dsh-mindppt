@@ -133,8 +133,13 @@ function layoutTree(
     return cross
   }
 
+  const primaryRoot = edges.find((edge) => !targets.has(edge.from))?.from
+  if (primaryRoot) visit(primaryRoot, 0)
+
   for (const slideId of slideIds) {
-    if (!targets.has(slideId)) visit(slideId, 0)
+    if (slideId !== primaryRoot && !targets.has(slideId)) {
+      visit(slideId, 0)
+    }
   }
 
   for (const slideId of slideIds) {

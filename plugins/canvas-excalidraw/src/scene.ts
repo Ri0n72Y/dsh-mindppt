@@ -3,6 +3,7 @@ import type {
   ContentNode,
   MindPptStructure,
   SlideNode,
+  TreeDirection,
   TreeEdge,
 } from 'dsh-mindppt-code-parser'
 
@@ -35,22 +36,53 @@ function renderTreeEdge(
     throw new Error(`Resolved tree edge references missing slide: ${edge.id}`)
   }
 
-  const x = source.x + source.width
-  const y = source.y + source.height / 2
-  const targetX = target.x
-  const targetY = target.y + target.height / 2
+  const [start, end] = treeEdgeEndpoints(
+    structure.tree?.direction ?? 'LR',
+    source,
+    target,
+  )
 
   return {
     type: 'arrow',
     id: edge.id,
-    x,
-    y,
+    x: start.x,
+    y: start.y,
     points: [
       [0, 0],
-      [targetX - x, targetY - y],
+      [end.x - start.x, end.y - start.y],
     ],
     endArrowhead: 'arrow',
     strokeWidth: 2,
+  }
+}
+
+function treeEdgeEndpoints(
+  direction: TreeDirection,
+  source: SlideNode,
+  target: SlideNode,
+): [{ x: number; y: number }, { x: number; y: number }] {
+  switch (direction) {
+    case 'LR':
+      return [
+        { x: source.x + source.width, y: source.y + source.height / 2 },
+        { x: target.x, y: target.y + target.height / 2 },
+      ]
+    case 'RL':
+      return [
+        { x: source.x, y: source.y + source.height / 2 },
+        { x: target.x + target.width, y: target.y + target.height / 2 },
+      ]
+    case 'TB':
+    case 'TD':
+      return [
+        { x: source.x + source.width / 2, y: source.y + source.height },
+        { x: target.x + target.width / 2, y: target.y },
+      ]
+    case 'BT':
+      return [
+        { x: source.x + source.width / 2, y: source.y },
+        { x: target.x + target.width / 2, y: target.y + target.height },
+      ]
   }
 }
 

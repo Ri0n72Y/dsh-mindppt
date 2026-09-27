@@ -6,12 +6,15 @@ import type {
   ContentNode,
   MindPptStructure,
   SlideNode,
+  SourceRange,
+  TreeEdge,
   TreeSpec,
 } from './types.ts'
 
 const SLIDE_WIDTH = 1280
 const SLIDE_HEIGHT = 720
-const SLIDE_GAP = 600
+const SLIDE_HORIZONTAL_GAP = 600
+const SLIDE_VERTICAL_GAP = 320
 const CONTENT_X = 96
 const CONTENT_WIDTH = SLIDE_WIDTH - CONTENT_X * 2
 const CONTENT_GAP = 20
@@ -28,51 +31,44 @@ export function compileSource(source: string): MindPptStructure {
     throw new MindPptCompileError('Document must contain at least one slide')
   }
 
-  if (document.slides.length > 2) {
-    throw new MindPptCompileError('M2 supports at most two slides')
-  }
-
   let tree: TreeSpec | undefined
   const positions = new Map<string, { x: number; y: number }>()
 
   if (document.tree) {
-    if (document.slides.length !== 2 || document.tree.edges.length !== 1) {
-      throw new MindPptCompileError(
-        'M2 tree layout requires exactly two slides and one edge',
-      )
-    }
+    const edges: TreeEdge[] = document.tree.edges.map((edge) => {
+      if (!slideIds.has(edge.from) || !slideIds.has(edge.to)) {
+        throw new MindPptCompileError(
+          `Unknown slide in tree edge: ${edge.from} --> ${edge.to}`,
+          edge.range,
+        )
+      }
 
-    const edge = document.tree.edges[0]
-    if (!edge) throw new MindPptCompileError('Tree edge is missing')
+      return {
+        id: `tree:${edge.from}->${edge.to}`,
+        from: edge.from,
+        to: edge.to,
+        sourceRange: edge.range,
+      }
+    })
 
-    if (!slideIds.has(edge.from) || !slideIds.has(edge.to)) {
-      throw new MindPptCompileError(
-        `Unknown slide in tree edge: ${edge.from} --> ${edge.to}`,
-        edge.range,
-      )
-    }
-
-    positions.set(edge.from, { x: 0, y: 0 })
-    positions.set(edge.to, { x: SLIDE_WIDTH + SLIDE_GAP, y: 0 })
+    layoutLrTree(
+      document.slides.map((slide) => slide.id),
+      edges,
+      document.tree.range,
+      positions,
+    )
 
     tree = {
       direction: 'LR',
       sourceRange: document.tree.range,
-      edges: [
-        {
-          id: `tree:${edge.from}->${edge.to}`,
-          from: edge.from,
-          to: edge.to,
-          sourceRange: edge.range,
-        },
-      ],
+      edges,
     }
   } else {
     if (document.slides.length !== 1) {
-      throw new MindPptCompileError('Two-slide M2 documents require a tree')
+      throw new MindPptCompileError('Multiple-slide documents require a tree')
     }
     const slide = document.slides[0]
-    if (!slide) throw new MindPptCompileError('M2 slide is missing')
+    if (!slide) throw new MindPptCompileError('Slide is missing')
     positions.set(slide.id, { x: 0, y: 0 })
   }
 
@@ -80,7 +76,7 @@ export function compileSource(source: string): MindPptStructure {
     const position = positions.get(slide.id)
     if (!position) {
       throw new MindPptCompileError(
-        `Slide "${slide.id}" has no M2 layout position`,
+        `Slide "${slide.id}" has no layout position`,
       )
     }
 
@@ -98,6 +94,69 @@ export function compileSource(source: string): MindPptStructure {
   const structure: MindPptStructure = { version: 0, slides }
   if (tree) structure.tree = tree
   return structure
+}
+
+function layoutLrTree(
+  slideIds: string[],
+  edges: TreeEdge[],
+  treeRange: SourceRange,
+  positions: Map<string, { x: number; y: number }>,
+): void {
+  const children = new Map<string, string[]>()
+  const targets = new Set<string>()
+
+  for (const edge of edges) {
+    const siblings = children.get(edge.from) ?? []
+    siblings.push(edge.to)
+    children.set(edge.from, siblings)
+    targets.add(edge.to)
+  }
+
+  const state = new Map<string, 'visiting' | 'done'>()
+  let nextLeaf = 0
+
+  const visit = (slideId: string, depth: number): number => {
+    const status = state.get(slideId)
+    if (status === 'visiting') {
+      throw new MindPptCompileError(
+        'M4 LR layout cannot lay out a cyclic primary tree',
+        treeRange,
+      )
+    }
+
+    const existing = positions.get(slideId)
+    if (status === 'done' && existing) return existing.y
+
+    state.set(slideId, 'visiting')
+    const childIds = children.get(slideId) ?? []
+
+    let y: number
+    if (childIds.length === 0) {
+      y = nextLeaf * (SLIDE_HEIGHT + SLIDE_VERTICAL_GAP)
+      nextLeaf += 1
+    } else {
+      const childYs = childIds.map((childId) => visit(childId, depth + 1))
+      y = (childYs[0]! + childYs.at(-1)!) / 2
+    }
+
+    if (!positions.has(slideId)) {
+      positions.set(slideId, {
+        x: depth * (SLIDE_WIDTH + SLIDE_HORIZONTAL_GAP),
+        y,
+      })
+    }
+
+    state.set(slideId, 'done')
+    return positions.get(slideId)!.y
+  }
+
+  for (const slideId of slideIds) {
+    if (!targets.has(slideId)) visit(slideId, 0)
+  }
+
+  for (const slideId of slideIds) {
+    if (state.get(slideId) !== 'done') visit(slideId, 0)
+  }
 }
 
 function layoutContent(
@@ -186,4 +245,3 @@ function blockHeight(block: ParsedContent): number {
       return Math.max(112, (block.raw.split('\n').length + 1) * 30 + 24)
   }
 }
-

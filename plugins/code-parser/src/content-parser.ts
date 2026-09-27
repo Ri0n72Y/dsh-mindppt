@@ -147,7 +147,18 @@ class ContentParser {
   }
 
   private fail(message: string): never {
-    throw new MindPptCompileError(`Slide "${this.slideId}" ${message}`)
+    const current = this.current()?.range
+    const previous = this.tokens[this.index - 1]?.range
+    const sourceRange = current ?? (
+      previous
+        ? { start: previous.end, end: previous.end }
+        : undefined
+    )
+
+    throw new MindPptCompileError(
+      `Slide "${this.slideId}" ${message}`,
+      sourceRange,
+    )
   }
 }
 

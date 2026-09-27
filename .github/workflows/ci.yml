@@ -28,3 +28,9 @@ jobs:
 
       - name: Verify
         run: pnpm run check
+
+      - name: Install Chromium
+        run: pnpm --filter dsh-mindppt-playground exec playwright install --with-deps chromium
+
+      - name: Browser smoke test
+        run: pnpm run test:browser

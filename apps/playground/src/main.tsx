@@ -4,11 +4,10 @@ import { createRoot } from 'react-dom/client'
 
 import source from '../../../examples/m2-content-profile.mindppt?raw'
 import { App } from './App.tsx'
-import { compileMindPpt } from './runtime.ts'
+import { createPlaygroundRuntime } from './runtime.ts'
 import './style.css'
 
-
-const elements = await compileMindPpt(source)
+const runtime = await createPlaygroundRuntime(source)
 const root = document.getElementById('root')
 
 if (!root) {
@@ -17,6 +16,6 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App source={source} elements={elements} />
+    <App runtime={runtime} />
   </StrictMode>,
 )

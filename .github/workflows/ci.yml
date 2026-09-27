@@ -21,10 +21,16 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Remove generated plugin output
         run: rm -rf plugins/*/lib
 
       - name: Verify
         run: pnpm run check
+
+      - name: Install Chromium
+        run: pnpm --filter dsh-mindppt-playground exec playwright install --with-deps chromium
+
+      - name: Browser smoke test
+        run: pnpm run test:browser

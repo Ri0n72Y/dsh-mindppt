@@ -3,6 +3,12 @@ export interface SourceRange {
   end: number
 }
 
+export interface MindPptDiagnostic {
+  severity: 'error'
+  message: string
+  sourceRange?: SourceRange
+}
+
 interface ContentNodeBase {
   id: string
   x: number

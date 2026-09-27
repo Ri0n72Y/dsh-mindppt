@@ -1,0 +1,4 @@
+- insert:
+    - id: mindppt-code-editor
+      name: "dsh-mindppt-code-editor"
+      inject: [mindpptParser]

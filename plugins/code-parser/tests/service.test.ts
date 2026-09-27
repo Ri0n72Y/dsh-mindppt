@@ -97,7 +97,93 @@ describe('MindPptParserService', () => {
     )
   })
 
-  it('resolves tree references after parsing all slides', async () => {
+  it('anchors unsupported tree direction diagnostics to the tree declaration', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree TB {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    let diagnosticSlice: string | undefined
+
+    await ctx.plugin({
+      name: 'mindppt-parser-direction-range-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        try {
+          child.mindpptParser.compile(source)
+        } catch {
+          // Expected compile failure.
+        }
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.message).toContain('tree direction LR only')
+
+        const range = diagnostic?.sourceRange
+        diagnosticSlice = range
+          ? source.slice(range.start, range.end)
+          : undefined
+      },
+    })
+
+    expect(diagnosticSlice).toBe('tree TB {')
+  })
+
+  it('anchors empty tree diagnostics to the empty tree block', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+}
+
+slide intro {
+  # Introduction
+}
+`
+
+    let diagnosticSlice: string | undefined
+
+    await ctx.plugin({
+      name: 'mindppt-parser-empty-tree-range-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        try {
+          child.mindpptParser.compile(source)
+        } catch {
+          // Expected compile failure.
+        }
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.message).toContain(
+          'Tree must contain at least one edge',
+        )
+
+        const range = diagnostic?.sourceRange
+        diagnosticSlice = range
+          ? source.slice(range.start, range.end)
+          : undefined
+      },
+    })
+
+    expect(diagnosticSlice).toBe(`tree LR {
+}`)
+  })
+
+  it('keeps the last successful structure when live compilation fails', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
 
@@ -117,15 +203,29 @@ slide market {
 `
 
     let error: unknown
+    let lastGood: ReturnType<MindPptParserService['compile']> | undefined
+
     await ctx.plugin({
       name: 'mindppt-parser-reference-test',
       inject: [serviceName],
       apply(child: Context) {
+        lastGood = child.mindpptParser.compile(M2)
+
         try {
           child.mindpptParser.compile(source)
         } catch (caught) {
           error = caught
         }
+
+        expect(child.mindpptParser.source).toBe(source)
+        expect(child.mindpptParser.structure).toBe(lastGood)
+        expect(child.mindpptParser.diagnostics).toEqual([
+          expect.objectContaining({
+            severity: 'error',
+            message: expect.stringContaining('Unknown slide in tree edge'),
+            sourceRange: expect.any(Object),
+          }),
+        ])
       },
     })
 

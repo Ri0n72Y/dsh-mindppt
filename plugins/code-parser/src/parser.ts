@@ -67,7 +67,7 @@ class Parser {
   private parseTree(): ParsedTree {
     const start = this.expect('tree-start')
     if (start.direction !== 'LR') {
-      this.fail('M2 supports tree direction LR only')
+      this.fail('M2 supports tree direction LR only', start.range)
     }
 
     const edges: ParsedTreeEdge[] = []
@@ -79,7 +79,12 @@ class Parser {
     }
 
     const end = this.expect('block-end')
-    if (edges.length === 0) this.fail('Tree must contain at least one edge')
+    if (edges.length === 0) {
+      this.fail(
+        'Tree must contain at least one edge',
+        { start: start.range.start, end: end.range.end },
+      )
+    }
 
     return {
       direction: 'LR',
@@ -126,7 +131,15 @@ class Parser {
     return token as Extract<Token, { kind: K }>
   }
 
-  private fail(message: string): never {
-    throw new MindPptCompileError(message)
+  private fail(message: string, sourceRange?: SourceRange): never {
+    const current = this.current()?.range
+    const previous = this.tokens[this.index - 1]?.range
+    const resolvedRange = sourceRange ?? current ?? (
+      previous
+        ? { start: previous.end, end: previous.end }
+        : undefined
+    )
+
+    throw new MindPptCompileError(message, resolvedRange)
   }
 }

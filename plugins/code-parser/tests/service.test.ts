@@ -342,7 +342,7 @@ slide market {
 
     expect(diagnosticSlice).toBe('  market --> missing')
   })
-)
+})
 
 function rectanglesOverlap(
   left: { x: number; y: number; width: number; height: number },

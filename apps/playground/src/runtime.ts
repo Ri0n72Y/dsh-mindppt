@@ -48,6 +48,10 @@ export async function createPlaygroundRuntime(
     throw new Error('MindPPT runtime services were not initialized')
   }
 
+  const editorService = editor
+  const parserService = parser
+  const canvasService = canvas
+
   const listeners = new Set<() => void>()
   let snapshot: PlaygroundSnapshot = {
     source: '',
@@ -56,13 +60,13 @@ export async function createPlaygroundRuntime(
   }
 
   const setSource = (source: string) => {
-    const compiled = editor.setSource(source)
+    const compiled = editorService.setSource(source)
 
     snapshot = {
-      source: editor.source,
-      diagnostics: [...parser.diagnostics],
+      source: editorService.source,
+      diagnostics: [...parserService.diagnostics],
       elements: compiled
-        ? convertToExcalidrawElements(canvas.scene, { regenerateIds: false })
+        ? convertToExcalidrawElements(canvasService.scene, { regenerateIds: false })
         : snapshot.elements,
     }
 

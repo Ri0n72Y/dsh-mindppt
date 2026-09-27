@@ -2,11 +2,29 @@ import { MindPptCompileError } from './errors.ts'
 import type { Token } from './tokenizer.ts'
 import type { SourceRange } from './types.ts'
 
+export type ParsedContent =
+  | {
+      kind: 'title' | 'subtitle' | 'text'
+      text: string
+      range: SourceRange
+    }
+  | {
+      kind: 'list'
+      ordered: boolean
+      items: string[]
+      range: SourceRange
+    }
+  | {
+      kind: 'extension'
+      type: string
+      raw: string
+      range: SourceRange
+    }
+
 export interface ParsedSlide {
   id: string
-  title: string
+  content: ParsedContent[]
   range: SourceRange
-  titleRange: SourceRange
 }
 
 export interface ParsedTreeEdge {
@@ -36,20 +54,24 @@ class Parser {
   constructor(private readonly tokens: Token[]) {}
 
   parseDocument(): ParsedDocument {
+    this.skipBlanks()
     this.expect('marker')
 
     const slides: ParsedSlide[] = []
     let tree: ParsedTree | undefined
 
     while (this.current()) {
+      this.skipBlanks()
       const token = this.current()
-      if (token?.kind === 'tree-start') {
-        if (tree) this.fail('M1 supports one primary tree')
+      if (!token) break
+
+      if (token.kind === 'tree-start') {
+        if (tree) this.fail('M2 supports one primary tree')
         tree = this.parseTree()
         continue
       }
 
-      if (token?.kind === 'slide-start') {
+      if (token.kind === 'slide-start') {
         slides.push(this.parseSlide())
         continue
       }
@@ -63,11 +85,13 @@ class Parser {
   private parseTree(): ParsedTree {
     const start = this.expect('tree-start')
     if (start.direction !== 'LR') {
-      this.fail('M1 supports tree direction LR only')
+      this.fail('M2 supports tree direction LR only')
     }
 
     const edges: ParsedTreeEdge[] = []
-    while (this.current()?.kind !== 'block-end') {
+    while (true) {
+      this.skipBlanks()
+      if (this.current()?.kind === 'block-end') break
       const edge = this.expect('edge')
       edges.push({ from: edge.from, to: edge.to, range: edge.range })
     }
@@ -84,34 +108,101 @@ class Parser {
 
   private parseSlide(): ParsedSlide {
     const start = this.expect('slide-start')
-    let title: Extract<Token, { kind: 'heading' }> | undefined
+    const content: ParsedContent[] = []
+    let titles = 0
 
-    while (this.current()?.kind !== 'block-end') {
+    while (true) {
+      this.skipBlanks()
       const token = this.current()
+      if (!token) this.fail(`Unclosed slide "${start.id}"`)
+      if (token.kind === 'block-end') break
 
-      if (token?.kind === 'heading') {
-        if (title) this.fail('M1 supports one # heading per slide')
-        title = token
+      if (token.kind === 'heading') {
+        const kind = token.level === 1 ? 'title' : 'subtitle'
+        if (kind === 'title' && ++titles > 1) {
+          this.fail(`Slide "${start.id}" supports one # heading`)
+        }
+        content.push({ kind, text: token.text, range: token.range })
         this.index += 1
         continue
       }
 
-      if (token?.kind === 'fence') {
-        this.fail('Fenced slide content is introduced in M2')
+      if (token.kind === 'text') {
+        content.push(this.parseParagraph())
+        continue
       }
 
-      this.fail(`Unsupported M1 slide content: ${describe(token)}`)
+      if (token.kind === 'list-item') {
+        content.push(this.parseList(token.ordered))
+        continue
+      }
+
+      if (token.kind === 'fence') {
+        content.push({
+          kind: 'extension',
+          type: token.type,
+          raw: token.raw,
+          range: token.range,
+        })
+        this.index += 1
+        continue
+      }
+
+      this.fail(`Unsupported slide content: ${describe(token)}`)
     }
 
     const end = this.expect('block-end')
-    if (!title) this.fail(`Slide "${start.id}" requires one # heading`)
+    if (titles === 0) this.fail(`Slide "${start.id}" requires one # heading`)
 
     return {
       id: start.id,
-      title: title.text,
+      content,
       range: { start: start.range.start, end: end.range.end },
-      titleRange: title.range,
     }
+  }
+
+  private parseParagraph(): ParsedContent {
+    const first = this.expect('text')
+    const lines = [first.text]
+    let end = first.range.end
+
+    while (this.current()?.kind === 'text') {
+      const line = this.expect('text')
+      lines.push(line.text)
+      end = line.range.end
+    }
+
+    return {
+      kind: 'text',
+      text: lines.join(' '),
+      range: { start: first.range.start, end },
+    }
+  }
+
+  private parseList(ordered: boolean): ParsedContent {
+    const first = this.expect('list-item')
+    const items = [first.text]
+    let end = first.range.end
+
+    while (
+      this.current()?.kind === 'list-item' &&
+      this.current()?.ordered === ordered
+    ) {
+      const item = this.expect('list-item')
+      items.push(item.text)
+      end = item.range.end
+    }
+
+    return {
+      kind: 'list',
+      ordered,
+      items,
+      range: { start: first.range.start, end },
+    }
+  }
+
+  private skipBlanks(): void {
+    while (this.current()?.kind === 'blank') this.index += 1
   }
 
   private current(): Token | undefined {
@@ -136,7 +227,5 @@ class Parser {
 }
 
 function describe(token: Token | undefined): string {
-  if (!token) return 'end of source'
-  if (token.kind === 'unknown') return token.text
-  return token.kind
+  return token?.kind ?? 'end of source'
 }

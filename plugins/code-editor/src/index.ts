@@ -1,15 +1,11 @@
 import { Service, type Context } from '@deepseek-ai/cordis'
-import {
-  MindPptCompileError,
-  type MindPptParserService,
-} from 'dsh-mindppt-code-parser'
+import { MindPptCompileError } from 'dsh-mindppt-code-parser'
 
 export const serviceName = 'mindpptEditor' as const
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
     mindpptEditor: MindPptEditorService
-    mindpptParser: MindPptParserService
   }
 }
 

@@ -44,52 +44,53 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 - `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
 
-## Current vertical slice: M1
+## Current vertical slice: M2
 
-M0 proved the Cordis -> renderer -> React/Excalidraw runtime path. M1 replaces the bootstrap regex with the first structural parser.
+M1 established the structural parser, two-slide LR topology, stable semantic IDs, source ranges, and real Excalidraw delivery. M2 extends the same path with the first intentional Markdown content profile.
 
 Current fixture:
 
-```mindppt
+````mindppt
 mindppt
 
 tree LR {
-  intro --> market
+  overview --> math
 }
 
-slide intro {
-  # Introduction
+slide overview {
+  # Outdoor Market
+
+  ## 2026 snapshot
+
+  Demand remains seasonal.
+
+  - Premium products gain share
+  - Online channels continue growing
 }
 
-slide market {
-  # Market
-}
-```
+slide math {
+  # Euler Identity
 
-Delivery path:
+  A compact mathematical example.
+
+  ```latex
+  e^{i\pi} + 1 = 0
+  ```
+}
+````
+
+M2 content currently lowers through semantic nodes:
 
 ```text
-examples/m1-two-slides.mindppt
-        |
-        v
-tokenizer -> structural parser
-        |
-        v
-MindPptStructure
-  - two slide nodes
-  - one LR tree edge
-  - stable semantic IDs
-  - source ranges
-        |
-        v
-canvas-excalidraw
-        |
-        v
-Excalidraw Skeletons
-        |
-        v
-React playground -> <Excalidraw />
+# heading        -> title
+## heading       -> subtitle
+paragraph        -> text
+- item           -> unordered list
+1. item          -> ordered list
+fenced block     -> extension
 ```
+
+Unknown extensions remain valid and render through a readable fallback. No extension-specific parser registration exists.
 
 Run the standalone playground with:
 
@@ -99,5 +100,3 @@ pnpm dev
 ```
 
 The canvas remains a projection of source code. Direct canvas editing is not a semantic authoring path.
-
-M1 intentionally supports only the minimum `# heading` content needed by this slice. The broader Markdown profile begins in M2.

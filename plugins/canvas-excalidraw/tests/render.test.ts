@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs'
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 
-import MindPptParserService from 'dsh-mindppt-code-parser'
+import MindPptParserService, {
+  type SlideNode,
+  type TreeDirection,
+} from 'dsh-mindppt-code-parser'
 import MindPptCanvasService, { serviceName } from '../src/index.ts'
 
 const M2 = readFileSync(
@@ -105,4 +108,69 @@ describe('MindPptCanvasService', () => {
       'tree:problem->solution',
     ]))
   })
+  it('anchors primary tree arrows to the correct slide edges in every direction', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+    await ctx.plugin(MindPptCanvasService)
+
+    await ctx.plugin({
+      name: 'mindppt-m4-direction-render-test-driver',
+      inject: ['mindpptParser', serviceName],
+      apply(child: Context) {
+        for (const direction of ['LR', 'RL', 'TB', 'TD', 'BT'] as const) {
+          const source = M4.replace('tree LR {', `tree ${direction} {`)
+          const structure = child.mindpptParser.compile(source)
+          const scene = child.mindpptCanvas.scene
+          const arrow = scene.find(
+            (element) =>
+              element.type === 'arrow'
+              && element.id === 'tree:intro->market',
+          )
+          const from = structure.slides.find((slide) => slide.id === 'intro')!
+          const to = structure.slides.find((slide) => slide.id === 'market')!
+          const [start, end] = expectedEndpoints(direction, from, to)
+
+          expect(arrow).toEqual(expect.objectContaining({
+            x: start.x,
+            y: start.y,
+            points: [
+              [0, 0],
+              [end.x - start.x, end.y - start.y],
+            ],
+          }))
+        }
+      },
+    })
+  })
+
 })
+
+function expectedEndpoints(
+  direction: TreeDirection,
+  source: SlideNode,
+  target: SlideNode,
+): [{ x: number; y: number }, { x: number; y: number }] {
+  switch (direction) {
+    case 'LR':
+      return [
+        { x: source.x + source.width, y: source.y + source.height / 2 },
+        { x: target.x, y: target.y + target.height / 2 },
+      ]
+    case 'RL':
+      return [
+        { x: source.x, y: source.y + source.height / 2 },
+        { x: target.x + target.width, y: target.y + target.height / 2 },
+      ]
+    case 'TB':
+    case 'TD':
+      return [
+        { x: source.x + source.width / 2, y: source.y + source.height },
+        { x: target.x + target.width / 2, y: target.y },
+      ]
+    case 'BT':
+      return [
+        { x: source.x + source.width / 2, y: source.y },
+        { x: target.x + target.width / 2, y: target.y + target.height },
+      ]
+  }
+}

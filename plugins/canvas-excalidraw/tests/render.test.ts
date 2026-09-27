@@ -4,62 +4,66 @@ import { describe, expect, it } from 'vitest'
 import MindPptParserService from 'dsh-mindppt-code-parser'
 import MindPptCanvasService, { serviceName } from '../src/index.ts'
 
-const HELLO = `mindppt
+const M1 = `mindppt
 
-slide hello {
-  title "Hello World"
+tree LR {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
 }
 `
 
 describe('MindPptCanvasService', () => {
-  it('renders parser output as a slide surface with centered title', async () => {
+  it('renders two slide frames connected by one tree arrow', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
     await ctx.plugin(MindPptCanvasService)
 
-    let renderedTypes: string[] = []
-    let renderedText = ''
-    let surface: Record<string, unknown> | undefined
-    let shadow: Record<string, unknown> | undefined
+    let scene: MindPptCanvasService['scene'] = []
 
     await ctx.plugin({
       name: 'mindppt-render-test-driver',
       inject: ['mindpptParser', serviceName],
       apply(child: Context) {
-        child.mindpptParser.compile(HELLO)
-
-        renderedTypes = child.mindpptCanvas.scene.map((element) => element.type)
-
-        const text = child.mindpptCanvas.scene.find((element) => element.type === 'text')
-        renderedText = text?.type === 'text' ? text.text : ''
-
-        surface = child.mindpptCanvas.scene.find(
-          (element) => element.id === 'slide:hello/surface',
-        ) as Record<string, unknown> | undefined
-
-        shadow = child.mindpptCanvas.scene.find(
-          (element) => element.id === 'slide:hello/shadow',
-        ) as Record<string, unknown> | undefined
+        child.mindpptParser.compile(M1)
+        scene = child.mindpptCanvas.scene
       },
     })
 
-    expect(renderedTypes).toEqual(['rectangle', 'rectangle', 'text', 'frame'])
-    expect(renderedText).toBe('Hello World')
+    expect(scene.map((element) => element.type)).toEqual([
+      'arrow',
+      'rectangle',
+      'rectangle',
+      'frame',
+      'rectangle',
+      'rectangle',
+      'frame',
+    ])
 
-    expect(surface).toEqual(expect.objectContaining({
-      x: 0,
-      y: 0,
-      width: 1600,
-      height: 900,
-      backgroundColor: '#ffffff',
+    const arrow = scene.find((element) => element.type === 'arrow')
+    expect(arrow).toEqual(expect.objectContaining({
+      id: 'tree:intro->market',
+      x: 1280,
+      y: 360,
+      endArrowhead: 'arrow',
     }))
+    expect((arrow as { points?: unknown }).points).toEqual([
+      [0, 0],
+      [600, 0],
+    ])
 
-    expect(shadow).toEqual(expect.objectContaining({
-      x: 18,
-      y: 18,
-      width: 1600,
-      height: 900,
-      opacity: 14,
-    }))
+    const titles = scene.flatMap((element) =>
+      element.type === 'rectangle' && 'label' in element && element.label?.text
+        ? [element.label.text]
+        : [],
+    )
+
+    expect(titles).toEqual(['Introduction', 'Market'])
   })
 })

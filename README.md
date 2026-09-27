@@ -50,34 +50,9 @@ M1 established the structural parser, two-slide LR topology, stable semantic IDs
 
 Current fixture:
 
-````mindppt
-mindppt
+`examples/m2-content-profile.mindppt`
 
-tree LR {
-  overview --> math
-}
-
-slide overview {
-  # Outdoor Market
-
-  ## 2026 snapshot
-
-  Demand remains seasonal.
-
-  - Premium products gain share
-  - Online channels continue growing
-}
-
-slide math {
-  # Euler Identity
-
-  A compact mathematical example.
-
-  ```latex
-  e^{i\pi} + 1 = 0
-  ```
-}
-````
+The fixture intentionally includes both a titleless slide and arrow-shaped prose such as `Need --> Product` so the same source exercises M2 content-context rules in parser tests, renderer tests, and the playground.
 
 M2 content currently lowers through semantic nodes:
 

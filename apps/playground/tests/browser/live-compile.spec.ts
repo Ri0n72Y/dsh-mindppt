@@ -41,4 +41,17 @@ test('live edit updates the canvas and invalid source keeps the last-good scene'
   await page.waitForTimeout(100)
   const afterError = await canvas.screenshot()
   expect(afterError.equals(lastGood)).toBe(true)
+
+  const recoveredEdit = `${invalidEdit}}
+`
+  await editor.fill(recoveredEdit)
+
+  await expect(page.getByText('Compiled', { exact: true })).toBeVisible()
+  await expect(page.locator('.diagnostic')).toHaveCount(0)
+  await expect(editor).toHaveValue(validEdit)
+
+  await expect.poll(async () => {
+    const current = await canvas.screenshot()
+    return current.equals(lastGood)
+  }).toBe(true)
 })

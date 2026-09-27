@@ -15,6 +15,7 @@ export type {
   SlideNode,
   SourceRange,
   TextNode,
+  TreeDirection,
   TreeEdge,
   TreeSpec,
 } from './types.ts'

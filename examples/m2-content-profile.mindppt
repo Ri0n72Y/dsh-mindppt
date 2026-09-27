@@ -19,9 +19,9 @@ slide overview {
 }
 
 slide math {
-  # Euler Identity
-
   A compact mathematical example.
+
+  Need --> Product
 
   ```latex
   e^{i\pi} + 1 = 0

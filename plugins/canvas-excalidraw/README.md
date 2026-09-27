@@ -13,8 +13,7 @@ MindPptStructure
         |
         v
 canvas-excalidraw
-  - slide shadow
-  - white slide surface
+  - white slide surface as the only visible PPT boundary
   - centered title text
   - Excalidraw frame
   - arrow between slide boundaries

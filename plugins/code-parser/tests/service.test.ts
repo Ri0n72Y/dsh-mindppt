@@ -163,6 +163,183 @@ describe('MindPptParserService', () => {
     expect(secondPositions).toEqual(firstPositions)
   })
 
+  it('rejects duplicate slide IDs at the duplicate declaration', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+
+slide intro {
+  # Duplicate Introduction
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-duplicate-slide-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        expect(() => child.mindpptParser.compile(source)).toThrow(
+          'Duplicate slide ID: intro',
+        )
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.severity).toBe('error')
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe(`slide intro {
+  # Duplicate Introduction
+}`)
+      },
+    })
+  })
+
+  it('rejects duplicate primary tree edges at the duplicate edge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-duplicate-edge-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        expect(() => child.mindpptParser.compile(source)).toThrow(
+          'Duplicate tree edge: intro --> market',
+        )
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe('  intro --> market')
+      },
+    })
+  })
+
+  it('rejects multiple parents at the second parent edge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  problem --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide problem {
+  # Problem
+}
+
+slide market {
+  # Market
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-multiple-parent-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        expect(() => child.mindpptParser.compile(source)).toThrow(
+          'Slide "market" has multiple parents',
+        )
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe('  problem --> market')
+      },
+    })
+  })
+
+  it('keeps unreachable slides as successful compile warnings', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+
+slide orphan {
+  # Orphan
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-unreachable-warning-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        const structure = child.mindpptParser.compile(source)
+
+        expect(structure.slides.map((slide) => slide.id)).toEqual([
+          'intro',
+          'market',
+          'orphan',
+        ])
+        expect(child.mindpptParser.structure).toBe(structure)
+        expect(child.mindpptParser.diagnostics).toHaveLength(1)
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic).toEqual(expect.objectContaining({
+          severity: 'warning',
+          message: 'Slide "orphan" is unreachable from primary tree root "intro"',
+        }))
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe(`slide orphan {
+  # Orphan
+}`)
+      },
+    })
+  })
+
   it('anchors unsupported tree direction diagnostics to the tree declaration', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
@@ -298,7 +475,7 @@ slide market {
     expect(error).toBeInstanceOf(MindPptCompileError)
     expect((error as Error).message).toContain('Unknown slide in tree edge')
   })
-  it('fails cyclic primary trees instead of recursing indefinitely', async () => {
+  it('rejects primary tree cycles at the closing edge', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
 
@@ -321,7 +498,7 @@ slide market {
     let error: unknown
 
     await ctx.plugin({
-      name: 'mindppt-parser-cycle-guard-test',
+      name: 'mindppt-parser-cycle-validation-test',
       inject: [serviceName],
       apply(child: Context) {
         try {
@@ -329,11 +506,18 @@ slide market {
         } catch (caught) {
           error = caught
         }
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe('  market --> intro')
       },
     })
 
     expect(error).toBeInstanceOf(MindPptCompileError)
-    expect((error as Error).message).toContain('cyclic primary tree')
+    expect((error as Error).message).toContain('Primary tree contains a cycle')
   })
 
   it('resolves every tree edge and anchors a later unknown reference to that edge', async () => {

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('live edit updates the canvas and invalid source keeps the last-good scene', async ({ page }) => {
+test('M4 branching fixture live-edits and invalid source keeps the last-good scene', async ({ page }) => {
   await page.goto('/')
 
   const editor = page.getByRole('textbox', { name: 'MindPPT source editor' })
@@ -12,6 +12,9 @@ test('live edit updates the canvas and invalid source keeps the last-good scene'
   await page.evaluate(() => document.fonts.ready)
 
   const initialSource = await editor.inputValue()
+  expect(initialSource).toContain('market --> customer')
+  expect(initialSource.match(/^slide /gm)).toHaveLength(6)
+
   const beforeEdit = await canvas.screenshot()
 
   const validEdit = initialSource.replace('# Outdoor Market', '# Live Market')

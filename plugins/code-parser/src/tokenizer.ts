@@ -5,7 +5,7 @@ export type Token =
   | { kind: 'marker'; range: SourceRange }
   | { kind: 'tree-start'; direction: string; range: SourceRange }
   | { kind: 'slide-start'; id: string; range: SourceRange }
-  | { kind: 'edge'; from: string; to: string; range: SourceRange }
+  | { kind: 'edge'; from: string; to: string; text: string; range: SourceRange }
   | { kind: 'heading'; level: 1 | 2; text: string; range: SourceRange }
   | { kind: 'list-item'; ordered: boolean; text: string; range: SourceRange }
   | { kind: 'text'; text: string; range: SourceRange }
@@ -92,7 +92,7 @@ export function tokenize(source: string): Token[] {
 
     const edge = EDGE.exec(text)
     if (edge?.[1] && edge[2]) {
-      tokens.push({ kind: 'edge', from: edge[1], to: edge[2], range })
+      tokens.push({ kind: 'edge', from: edge[1], to: edge[2], text, range })
       continue
     }
 

@@ -45,7 +45,7 @@ export async function compileMindPpt(source: string): Promise<CompiledElements> 
 function debugSource(source: string): void {
   if (!debugEnabled()) return
 
-  console.debug('[mindppt:pipeline]', {
+  console.info('[mindppt:pipeline]', {
     stage: 'source',
     length: source.length,
     suffix: source.slice(-80),
@@ -140,7 +140,7 @@ function debugText(
   if (!debugEnabled()) return
 
   const lastChar = text.at(-1) ?? ''
-  console.debug('[mindppt:pipeline]', {
+  console.info('[mindppt:pipeline]', {
     stage,
     ...details,
     text,

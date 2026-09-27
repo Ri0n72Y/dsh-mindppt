@@ -7,8 +7,6 @@ import type { MindPptStructure } from './types.ts'
 export { MindPptCompileError }
 export type {
   ContentNode,
-  ExtensionNode,
-  ListNode,
   MindPptStructure,
   SlideNode,
   SourceRange,

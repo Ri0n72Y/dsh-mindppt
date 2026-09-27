@@ -59,6 +59,7 @@ describe('MindPptCanvasService', () => {
         type: 'text',
         id: 'slide:math/extension:0/text',
         text: '[latex]\n  e^{i\\pi} + 1 = 0',
+        fontFamily: 2,
       }),
     ]))
   })

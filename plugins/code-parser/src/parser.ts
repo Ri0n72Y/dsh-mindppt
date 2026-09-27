@@ -1,25 +1,7 @@
+import { parseSlideContent, type ParsedContent } from './content-parser.ts'
 import { MindPptCompileError } from './errors.ts'
 import type { Token } from './tokenizer.ts'
 import type { SourceRange } from './types.ts'
-
-export type ParsedContent =
-  | {
-      kind: 'title' | 'subtitle' | 'text'
-      text: string
-      range: SourceRange
-    }
-  | {
-      kind: 'list'
-      ordered: boolean
-      items: string[]
-      range: SourceRange
-    }
-  | {
-      kind: 'extension'
-      type: string
-      raw: string
-      range: SourceRange
-    }
 
 export interface ParsedSlide {
   id: string
@@ -76,7 +58,7 @@ class Parser {
         continue
       }
 
-      this.fail(`Unexpected document statement: ${describe(token)}`)
+      this.fail(`Unexpected document statement: ${token.kind}`)
     }
 
     return tree ? { slides, tree } : { slides }
@@ -108,96 +90,19 @@ class Parser {
 
   private parseSlide(): ParsedSlide {
     const start = this.expect('slide-start')
-    const content: ParsedContent[] = []
-    let titles = 0
+    const body: Token[] = []
 
-    while (true) {
-      this.skipBlanks()
+    while (this.current() && this.current()?.kind !== 'block-end') {
       const token = this.current()
-      if (!token) this.fail(`Unclosed slide "${start.id}"`)
-      if (token.kind === 'block-end') break
-
-      if (token.kind === 'heading') {
-        const kind = token.level === 1 ? 'title' : 'subtitle'
-        if (kind === 'title' && ++titles > 1) {
-          this.fail(`Slide "${start.id}" supports one # heading`)
-        }
-        content.push({ kind, text: token.text, range: token.range })
-        this.index += 1
-        continue
-      }
-
-      if (token.kind === 'text') {
-        content.push(this.parseParagraph())
-        continue
-      }
-
-      if (token.kind === 'list-item') {
-        content.push(this.parseList(token.ordered))
-        continue
-      }
-
-      if (token.kind === 'fence') {
-        content.push({
-          kind: 'extension',
-          type: token.type,
-          raw: token.raw,
-          range: token.range,
-        })
-        this.index += 1
-        continue
-      }
-
-      this.fail(`Unsupported slide content: ${describe(token)}`)
+      if (token) body.push(token)
+      this.index += 1
     }
 
     const end = this.expect('block-end')
-    if (titles === 0) this.fail(`Slide "${start.id}" requires one # heading`)
-
     return {
       id: start.id,
-      content,
+      content: parseSlideContent(body, start.id),
       range: { start: start.range.start, end: end.range.end },
-    }
-  }
-
-  private parseParagraph(): ParsedContent {
-    const first = this.expect('text')
-    const lines = [first.text]
-    let end = first.range.end
-
-    while (this.current()?.kind === 'text') {
-      const line = this.expect('text')
-      lines.push(line.text)
-      end = line.range.end
-    }
-
-    return {
-      kind: 'text',
-      text: lines.join(' '),
-      range: { start: first.range.start, end },
-    }
-  }
-
-  private parseList(ordered: boolean): ParsedContent {
-    const first = this.expect('list-item')
-    const items = [first.text]
-    let end = first.range.end
-
-    while (true) {
-      const token = this.current()
-      if (token?.kind !== 'list-item' || token.ordered !== ordered) break
-
-      const item = this.expect('list-item')
-      items.push(item.text)
-      end = item.range.end
-    }
-
-    return {
-      kind: 'list',
-      ordered,
-      items,
-      range: { start: first.range.start, end },
     }
   }
 
@@ -214,7 +119,7 @@ class Parser {
   ): Extract<Token, { kind: K }> {
     const token = this.current()
     if (token?.kind !== kind) {
-      this.fail(`Expected ${kind}, received ${describe(token)}`)
+      this.fail(`Expected ${kind}, received ${token?.kind ?? 'end of source'}`)
     }
 
     this.index += 1
@@ -224,8 +129,4 @@ class Parser {
   private fail(message: string): never {
     throw new MindPptCompileError(message)
   }
-}
-
-function describe(token: Token | undefined): string {
-  return token?.kind ?? 'end of source'
 }

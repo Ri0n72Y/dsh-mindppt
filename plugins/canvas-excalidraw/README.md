@@ -4,19 +4,22 @@ Cordis-native renderer that subscribes to `mindppt/compiled` and mechanically lo
 
 The renderer does not parse source and does not perform presentation layout.
 
-## Current M1 scene
+## Current M2 scene
 
 ```text
 MindPptStructure
-  - two 1280x720 slides
-  - one resolved LR tree edge
+  - 1280x720 slide surfaces
+  - resolved LR tree edge
+  - title / subtitle / text / list semantic boxes
+  - generic extension semantic boxes
         |
         v
 canvas-excalidraw
-  - white slide surface as the only visible PPT boundary
-  - centered title lowered through an invisible text container
-  - Excalidraw frame
-  - arrow between slide boundaries
+  - visible slide surface
+  - text containers + labels
+  - readable unknown-extension fallback
+  - invisible Excalidraw grouping frame
+  - tree arrow
         |
         v
 browser host: convertToExcalidrawElements()
@@ -25,6 +28,6 @@ browser host: convertToExcalidrawElements()
 <Excalidraw />
 ```
 
-Scene lowering lives separately from the Cordis service lifecycle so each file keeps one focused responsibility.
+Unknown extension types are not interpreted by this package. Their type and raw payload are shown through a generic fallback until a later runtime capability handles them.
 
-Direct canvas editing remains outside the source-of-truth path.
+Scene lowering lives separately from the Cordis service lifecycle. Direct canvas editing remains outside the source-of-truth path.

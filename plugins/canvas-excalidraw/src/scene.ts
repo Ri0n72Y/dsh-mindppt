@@ -8,7 +8,10 @@ import type {
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
 export function renderScene(structure: MindPptStructure): ExcalidrawScene {
-  return [...renderTree(structure), ...structure.slides.flatMap(renderSlide)]
+  return [
+    ...renderTree(structure),
+    ...structure.slides.flatMap(renderSlide),
+  ]
 }
 
 function renderTree(structure: MindPptStructure): ExcalidrawScene {
@@ -60,22 +63,20 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
     fillStyle: 'solid',
     strokeWidth: 1,
     roughness: 0,
-    roundness: { type: 3 },
   }
 
-  const content: ExcalidrawElementSkeleton[] = slide.elements.map(
-    (element) => ({
-      type: 'text',
-      id: element.id,
-      x: slide.x + element.x + element.width / 2,
-      y: slide.y + element.y + element.height / 2,
-      text: element.text,
-      fontSize: 72,
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      roundness: { type: 3 },
-    }),
-  )
+  const content: ExcalidrawElementSkeleton[] = slide.elements.map((element) => ({
+    type: 'text',
+    id: element.id,
+    x: slide.x + element.x,
+    y: slide.y + element.y,
+    width: element.width,
+    height: element.height,
+    text: element.text,
+    fontSize: 72,
+    textAlign: 'center',
+    verticalAlign: 'middle',
+  }))
 
   const frame: ExcalidrawElementSkeleton = {
     type: 'frame',
@@ -84,7 +85,6 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
       child.id ? [child.id] : [],
     ),
     name: slide.id,
-    roundness: { type: 3 },
   }
 
   return [surface, ...content, frame]

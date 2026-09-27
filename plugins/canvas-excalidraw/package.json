@@ -16,7 +16,11 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib", "README.md"],
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsdown --config tsdown.config.ts",
     "typecheck": "tsc --noEmit",
@@ -40,5 +44,10 @@
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
   }
 }

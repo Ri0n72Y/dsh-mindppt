@@ -85,6 +85,7 @@ function debugConvertedElements(elements: CompiledElements): void {
       width: element.width,
       height: element.height,
       fontSize: element.fontSize,
+      fontFamily: element.fontFamily,
       lineHeight: element.lineHeight,
       containerId: element.containerId,
       frameId: element.frameId,
@@ -102,6 +103,7 @@ interface DebugElement {
   text?: unknown
   originalText?: unknown
   fontSize?: unknown
+  fontFamily?: unknown
   lineHeight?: unknown
   containerId?: unknown
   frameId?: unknown
@@ -125,6 +127,7 @@ export function debugMountedElements(
       width: element.width,
       height: element.height,
       fontSize: element.fontSize,
+      fontFamily: element.fontFamily,
       lineHeight: element.lineHeight,
       containerId: element.containerId,
       frameId: element.frameId,

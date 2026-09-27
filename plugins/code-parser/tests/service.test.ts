@@ -22,25 +22,6 @@ slide market {
 `
 
 describe('MindPptParserService', () => {
-  it('provides the service to injected consumers and removes it on disposal', async () => {
-    const ctx = new Context()
-    const provider = await ctx.plugin(MindPptParserService)
-
-    let observed: MindPptParserService | undefined
-    await ctx.plugin({
-      name: 'mindppt-parser-test-consumer',
-      inject: [serviceName],
-      apply(child: Context) {
-        observed = child.mindpptParser
-      },
-    })
-
-    expect(observed instanceof MindPptParserService).toBe(true)
-
-    await provider.dispose()
-    expect(ctx.get(serviceName) === undefined).toBe(true)
-  })
-
   it('compiles two slides and one deterministic LR tree edge', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)

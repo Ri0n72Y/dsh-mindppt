@@ -39,10 +39,8 @@ describe('MindPptCanvasService', () => {
     expect(scene.map((element) => element.type)).toEqual([
       'arrow',
       'rectangle',
-      'rectangle',
       'text',
       'frame',
-      'rectangle',
       'rectangle',
       'text',
       'frame',

@@ -1,7 +1,7 @@
 # MindPPT Roadmap
 
 Status: accepted v0 implementation roadmap  
-Baseline: M2 merged to `main`  
+Baseline: M3 merged to `main`  
 Architecture: Cordis-native runtime, React + TypeScript host UI, Excalidraw canvas rendering
 
 ## 1. Product direction
@@ -398,7 +398,7 @@ Explicit non-goals:
 
 ## M3 — Code Editor + Live Compile
 
-Status: in progress
+Status: complete
 
 Purpose: turn the static playground into the actual authoring development loop.
 
@@ -437,6 +437,8 @@ Source mapping begins to become operational here for diagnostics and editor navi
 ---
 
 ## M4 — Branching MindMap + Validation + Spatial Layout
+
+Status: in progress
 
 Purpose: prove the mind-map model beyond a linear pair of slides.
 

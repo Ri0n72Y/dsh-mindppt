@@ -9,8 +9,6 @@ import MindPptParserService from 'dsh-mindppt-code-parser'
 export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
 
 export async function compileMindPpt(source: string): Promise<CompiledElements> {
-  debugSource(source)
-
   const ctx = new Context()
 
   await ctx.plugin(MindPptParserService)
@@ -31,8 +29,6 @@ export async function compileMindPpt(source: string): Promise<CompiledElements> 
     throw new Error('MindPPT renderer did not produce a scene')
   }
 
-  debugSkeleton(scene)
-
   const elements = convertToExcalidrawElements(scene, {
     regenerateIds: false,
   })
@@ -42,115 +38,52 @@ export async function compileMindPpt(source: string): Promise<CompiledElements> 
   return elements
 }
 
-function debugSource(source: string): void {
-  if (!debugEnabled()) return
-
-  console.info('[mindppt:pipeline]', {
-    stage: 'source',
-    length: source.length,
-    suffix: source.slice(-80),
-  })
-}
-
-function debugSkeleton(scene: ExcalidrawScene): void {
-  if (!debugEnabled()) return
-
-  for (const element of scene) {
-    if (element.type !== 'text' || !element.id?.includes('/extension:')) continue
-
-    debugText('renderer:skeleton-observed', element.text, {
-      id: element.id,
-      x: element.x,
-      y: element.y,
-      width: element.width,
-      height: element.height,
-      fontSize: element.fontSize,
-    })
-  }
-}
-
 function debugConvertedElements(elements: CompiledElements): void {
   if (!debugEnabled()) return
 
   for (const element of elements) {
     if (element.type !== 'text' || !element.id.includes('/extension:')) continue
 
-    debugText('excalidraw:converted-element', element.text, {
-      id: element.id,
-      originalText: element.originalText,
-      originalLength: element.originalText.length,
-      originalLastChar: element.originalText.at(-1) ?? '',
-      x: element.x,
-      y: element.y,
-      width: element.width,
-      height: element.height,
-      fontSize: element.fontSize,
-      fontFamily: element.fontFamily,
-      lineHeight: element.lineHeight,
-      containerId: element.containerId,
-      frameId: element.frameId,
-    })
+    logTextElement('excalidraw:converted-element', element)
   }
 }
 
-interface DebugElement {
+interface DebugTextElement {
   id: string
   type: string
-  x: number
-  y: number
+  text?: unknown
   width: number
   height: number
-  text?: unknown
-  originalText?: unknown
   fontSize?: unknown
   fontFamily?: unknown
   lineHeight?: unknown
-  containerId?: unknown
-  frameId?: unknown
 }
 
 export function debugMountedElements(
-  elements: readonly DebugElement[],
+  elements: readonly DebugTextElement[],
 ): void {
   if (!debugEnabled()) return
 
   for (const element of elements) {
     if (element.type !== 'text' || !element.id.includes('/extension:')) continue
 
-    const text = typeof element.text === 'string' ? element.text : ''
-    debugText('excalidraw:mounted-scene', text, {
-      id: element.id,
-      originalText:
-        typeof element.originalText === 'string' ? element.originalText : undefined,
-      x: element.x,
-      y: element.y,
-      width: element.width,
-      height: element.height,
-      fontSize: element.fontSize,
-      fontFamily: element.fontFamily,
-      lineHeight: element.lineHeight,
-      containerId: element.containerId,
-      frameId: element.frameId,
-    })
+    logTextElement('excalidraw:mounted-scene', element)
   }
 }
 
-function debugText(
-  stage: string,
-  text: string,
-  details: Record<string, unknown>,
-): void {
-  if (!debugEnabled()) return
+function logTextElement(stage: string, element: DebugTextElement): void {
+  const text = typeof element.text === 'string' ? element.text : ''
 
-  const lastChar = text.at(-1) ?? ''
   console.info('[mindppt:pipeline]', {
     stage,
-    ...details,
+    id: element.id,
     text,
-    length: text.length,
-    lastChar,
-    lastCodePoint: lastChar ? lastChar.codePointAt(0) : undefined,
-    suffix: text.slice(-16),
+    lastChar: text.at(-1) ?? '',
+    fontFamily: element.fontFamily,
+    width: element.width,
+    height: element.height,
+    fontSize: element.fontSize,
+    lineHeight: element.lineHeight,
   })
 }
 

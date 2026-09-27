@@ -298,6 +298,44 @@ slide market {
     expect(error).toBeInstanceOf(MindPptCompileError)
     expect((error as Error).message).toContain('Unknown slide in tree edge')
   })
+  it('fails cyclic primary trees instead of recursing indefinitely', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  market --> intro
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    let error: unknown
+
+    await ctx.plugin({
+      name: 'mindppt-parser-cycle-guard-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        try {
+          child.mindpptParser.compile(source)
+        } catch (caught) {
+          error = caught
+        }
+      },
+    })
+
+    expect(error).toBeInstanceOf(MindPptCompileError)
+    expect((error as Error).message).toContain('cyclic primary tree')
+  })
+
   it('resolves every tree edge and anchors a later unknown reference to that edge', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)

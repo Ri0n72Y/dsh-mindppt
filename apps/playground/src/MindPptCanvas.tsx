@@ -26,23 +26,25 @@ export function MindPptCanvas({ elements }: MindPptCanvasProps) {
           },
         }}
         onChange={(currentElements) => {
-          const extensionText = currentElements.find(
-            (element) =>
-              element.type === 'text' &&
-              element.id.includes('/extension:'),
-          )
-          const signature = extensionText
-            ? [
-                extensionText.id,
-                extensionText.text,
-                extensionText.width,
-                extensionText.height,
-              ].join('|')
-            : ''
+          for (const element of currentElements) {
+            if (
+              element.type !== 'text' ||
+              !('text' in element) ||
+              !element.id.includes('/extension:')
+            ) continue
 
-          if (signature && signature !== lastDebugSignature) {
-            lastDebugSignature = signature
-            debugMountedElements(currentElements)
+            const signature = [
+              element.id,
+              element.text,
+              element.width,
+              element.height,
+            ].join('|')
+
+            if (signature !== lastDebugSignature) {
+              lastDebugSignature = signature
+              debugMountedElements(currentElements)
+            }
+            break
           }
         }}
         viewModeEnabled

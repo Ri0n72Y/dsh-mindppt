@@ -65,6 +65,10 @@ class ContentParser {
       }
 
       if (token.kind === 'fence') {
+        debugText('content-parser:extension', token.raw, {
+          slideId: this.slideId,
+          type: token.type,
+        })
         content.push({
           kind: 'extension',
           type: token.type,
@@ -159,4 +163,25 @@ function isParagraphToken(token: Token): token is ParagraphToken {
 
 function paragraphText(token: ParagraphToken): string {
   return token.text
+}
+
+function debugText(
+  stage: string,
+  text: string,
+  details: Record<string, unknown>,
+): void {
+  if (
+    (globalThis as { __MINDPPT_DEBUG__?: boolean }).__MINDPPT_DEBUG__ !== true
+  ) return
+
+  const lastChar = text.at(-1) ?? ''
+  console.debug('[mindppt:pipeline]', {
+    stage,
+    ...details,
+    text,
+    length: text.length,
+    lastChar,
+    lastCodePoint: lastChar ? lastChar.codePointAt(0) : undefined,
+    suffix: text.slice(-16),
+  })
 }

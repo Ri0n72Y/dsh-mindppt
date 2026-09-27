@@ -6,6 +6,8 @@ import type { MindPptStructure, SlideNode, TreeSpec } from './types.ts'
 const SLIDE_WIDTH = 1280
 const SLIDE_HEIGHT = 720
 const SLIDE_GAP = 600
+const TITLE_WIDTH = SLIDE_WIDTH * 0.8
+const TITLE_HEIGHT = 120
 
 export function compileSource(source: string): MindPptStructure {
   const document = parse(tokenize(source))
@@ -86,10 +88,10 @@ export function compileSource(source: string): MindPptStructure {
           kind: 'title',
           id: `slide:${slide.id}/title:0`,
           text: slide.title,
-          x: 160,
-          y: 390,
-          width: 1280,
-          height: 120,
+          x: (SLIDE_WIDTH - TITLE_WIDTH) / 2,
+          y: (SLIDE_HEIGHT - TITLE_HEIGHT) / 2,
+          width: TITLE_WIDTH,
+          height: TITLE_HEIGHT,
           sourceRange: slide.titleRange,
         },
       ],

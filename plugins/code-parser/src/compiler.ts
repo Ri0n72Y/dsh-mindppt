@@ -1,5 +1,6 @@
 import { MindPptCompileError } from './errors.ts'
-import { parse, type ParsedContent } from './parser.ts'
+import type { ParsedContent } from './content-parser.ts'
+import { parse } from './parser.ts'
 import { tokenize } from './tokenizer.ts'
 import type {
   ContentNode,

@@ -7,6 +7,8 @@ import { App } from './App.tsx'
 import { compileMindPpt } from './runtime.ts'
 import './style.css'
 
+;(globalThis as { __MINDPPT_DEBUG__?: boolean }).__MINDPPT_DEBUG__ = true
+
 const elements = await compileMindPpt(source)
 const root = document.getElementById('root')
 

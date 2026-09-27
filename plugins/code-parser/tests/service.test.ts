@@ -40,24 +40,24 @@ describe('MindPptParserService', () => {
         id: 'intro',
         x: 0,
         y: 0,
-        width: 1600,
-        height: 900,
+        width: 1280,
+        height: 720,
         elements: [
           expect.objectContaining({
             id: 'slide:intro/title:0',
             kind: 'title',
             text: 'Introduction',
-            x: 160,
-            y: 390,
+            x: 128,
+            y: 300,
           }),
         ],
       }),
       expect.objectContaining({
         id: 'market',
-        x: 2200,
+        x: 1880,
         y: 0,
-        width: 1600,
-        height: 900,
+        width: 1280,
+        height: 720,
         elements: [
           expect.objectContaining({
             id: 'slide:market/title:0',

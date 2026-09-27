@@ -48,12 +48,17 @@ textarea {
 }
 
 .status-ok,
+.status-warning,
 .status-error {
   font-size: 12px;
 }
 
 .status-ok {
   color: #2b6f42;
+}
+
+.status-warning {
+  color: #8a5a00;
 }
 
 .status-error {
@@ -81,11 +86,20 @@ textarea {
 
 .diagnostic {
   padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diagnostic-error {
   border: 1px solid #e0b4b4;
   background: #fff4f4;
   color: #7f1d1d;
-  text-align: left;
-  cursor: pointer;
+}
+
+.diagnostic-warning {
+  border: 1px solid #e4c46a;
+  background: #fff9e8;
+  color: #6f4a00;
 }
 
 .canvas-panel {

@@ -1,39 +1,15 @@
+import { readFileSync } from 'node:fs'
+
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 
 import MindPptParserService from 'dsh-mindppt-code-parser'
 import MindPptCanvasService, { serviceName } from '../src/index.ts'
 
-const M2 = `mindppt
-
-tree LR {
-  overview --> math
-}
-
-slide overview {
-  # Outdoor Market
-
-  ## 2026 snapshot
-
-  Demand remains seasonal.
-
-  - Premium products gain share
-  - Online channels continue growing
-
-  1. Confirm positioning
-  2. Compare substitutes
-}
-
-slide math {
-  A compact mathematical example.
-
-  Need --> Product
-
-  \`\`\`latex
-  e^{i\\pi} + 1 = 0
-  \`\`\`
-}
-`
+const M2 = readFileSync(
+  new URL('../../../examples/m2-content-profile.mindppt', import.meta.url),
+  'utf8',
+).replace(/\r\n/g, '\n')
 
 describe('MindPptCanvasService', () => {
   it('renders M2 Markdown content and unknown extension fallback', async () => {

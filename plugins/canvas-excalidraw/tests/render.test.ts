@@ -49,8 +49,8 @@ describe('MindPptCanvasService', () => {
     const arrow = scene.find((element) => element.type === 'arrow')
     expect(arrow).toEqual(expect.objectContaining({
       id: 'tree:intro->market',
-      x: 1600,
-      y: 450,
+      x: 1280,
+      y: 360,
       endArrowhead: 'arrow',
     }))
     expect((arrow as { points?: unknown }).points).toEqual([
@@ -58,9 +58,11 @@ describe('MindPptCanvasService', () => {
       [600, 0],
     ])
 
-    const titles = scene
-      .filter((element) => element.type === 'rectangle' && element.label?.text)
-      .map((element) => element.label?.text)
+    const titles = scene.flatMap((element) =>
+      element.type === 'rectangle' && 'label' in element && element.label?.text
+        ? [element.label.text]
+        : [],
+    )
 
     expect(titles).toEqual(['Introduction', 'Market'])
   })

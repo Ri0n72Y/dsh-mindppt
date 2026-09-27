@@ -1,0 +1,4 @@
+- insert:
+    - id: mindppt-canvas-excalidraw
+      name: "dsh-mindppt-canvas-excalidraw"
+      inject: [mindpptParser]

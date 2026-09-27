@@ -1,0 +1,33 @@
+mindppt
+
+tree LR {
+  intro --> market
+  intro --> problem
+  market --> customer
+  market --> competitor
+  problem --> solution
+}
+
+slide intro {
+  # Outdoor Market
+}
+
+slide market {
+  # Market
+}
+
+slide problem {
+  # Problem
+}
+
+slide customer {
+  # Customer
+}
+
+slide competitor {
+  # Competitor
+}
+
+slide solution {
+  # Solution
+}

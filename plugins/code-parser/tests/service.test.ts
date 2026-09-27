@@ -235,6 +235,22 @@ describe('MindPptParserService', () => {
           )
           expect(secondPositions).toEqual(firstPositions)
 
+          const orphanSource = source.replace(
+            'slide intro {',
+            `slide orphan {
+  # Orphan
+}
+
+slide intro {`,
+          )
+          const withOrphan = child.mindpptParser.compile(orphanSource)
+          const primaryPositionsWithOrphan = Object.fromEntries(
+            withOrphan.slides
+              .filter((slide) => slide.id !== 'orphan')
+              .map((slide) => [slide.id, [slide.x, slide.y] as [number, number]]),
+          )
+          expect(primaryPositionsWithOrphan).toEqual(firstPositions)
+
           if (direction === 'TB') tbPositions = firstPositions
           if (direction === 'TD') expect(firstPositions).toEqual(tbPositions)
         }

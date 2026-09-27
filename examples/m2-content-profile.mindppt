@@ -1,0 +1,29 @@
+mindppt
+
+tree LR {
+  overview --> math
+}
+
+slide overview {
+  # Outdoor Market
+
+  ## 2026 snapshot
+
+  Demand remains seasonal.
+
+  - Premium products gain share
+  - Online channels continue growing
+
+  1. Confirm positioning
+  2. Compare substitutes
+}
+
+slide math {
+  # Euler Identity
+
+  A compact mathematical example.
+
+  ```latex
+  e^{i\pi} + 1 = 0
+  ```
+}

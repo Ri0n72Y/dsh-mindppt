@@ -1,7 +1,7 @@
 # MindPPT Roadmap
 
 Status: accepted v0 implementation roadmap  
-Baseline: M0 merged to `main`  
+Baseline: M1 merged to `main`  
 Architecture: Cordis-native runtime, React + TypeScript host UI, Excalidraw canvas rendering
 
 ## 1. Product direction
@@ -287,6 +287,8 @@ It does not establish the final content syntax.
 
 ## M1 — Structural Parser + Two Slides + Tree
 
+Status: complete
+
 Purpose: replace the bootstrap regex with the first real parser and prove spatial topology.
 
 Target source shape:
@@ -342,6 +344,8 @@ Explicit non-goals:
 ---
 
 ## M2 — Markdown Content Profile + Extension Fallback
+
+Status: in progress
 
 Purpose: establish the long-term content model by extending M1's single-heading support into the first intentional MindPPT Markdown Profile.
 

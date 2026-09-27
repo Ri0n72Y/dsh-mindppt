@@ -1,12 +1,12 @@
+import { parseSlideContent, type ParsedContent } from './content-parser.ts'
 import { MindPptCompileError } from './errors.ts'
 import type { Token } from './tokenizer.ts'
 import type { SourceRange } from './types.ts'
 
 export interface ParsedSlide {
   id: string
-  title: string
+  content: ParsedContent[]
   range: SourceRange
-  titleRange: SourceRange
 }
 
 export interface ParsedTreeEdge {
@@ -36,25 +36,29 @@ class Parser {
   constructor(private readonly tokens: Token[]) {}
 
   parseDocument(): ParsedDocument {
+    this.skipBlanks()
     this.expect('marker')
 
     const slides: ParsedSlide[] = []
     let tree: ParsedTree | undefined
 
     while (this.current()) {
+      this.skipBlanks()
       const token = this.current()
-      if (token?.kind === 'tree-start') {
-        if (tree) this.fail('M1 supports one primary tree')
+      if (!token) break
+
+      if (token.kind === 'tree-start') {
+        if (tree) this.fail('M2 supports one primary tree')
         tree = this.parseTree()
         continue
       }
 
-      if (token?.kind === 'slide-start') {
+      if (token.kind === 'slide-start') {
         slides.push(this.parseSlide())
         continue
       }
 
-      this.fail(`Unexpected document statement: ${describe(token)}`)
+      this.fail(`Unexpected document statement: ${token.kind}`)
     }
 
     return tree ? { slides, tree } : { slides }
@@ -63,11 +67,13 @@ class Parser {
   private parseTree(): ParsedTree {
     const start = this.expect('tree-start')
     if (start.direction !== 'LR') {
-      this.fail('M1 supports tree direction LR only')
+      this.fail('M2 supports tree direction LR only')
     }
 
     const edges: ParsedTreeEdge[] = []
-    while (this.current()?.kind !== 'block-end') {
+    while (true) {
+      this.skipBlanks()
+      if (this.current()?.kind === 'block-end') break
       const edge = this.expect('edge')
       edges.push({ from: edge.from, to: edge.to, range: edge.range })
     }
@@ -84,34 +90,24 @@ class Parser {
 
   private parseSlide(): ParsedSlide {
     const start = this.expect('slide-start')
-    let title: Extract<Token, { kind: 'heading' }> | undefined
+    const body: Token[] = []
 
-    while (this.current()?.kind !== 'block-end') {
+    while (this.current() && this.current()?.kind !== 'block-end') {
       const token = this.current()
-
-      if (token?.kind === 'heading') {
-        if (title) this.fail('M1 supports one # heading per slide')
-        title = token
-        this.index += 1
-        continue
-      }
-
-      if (token?.kind === 'fence') {
-        this.fail('Fenced slide content is introduced in M2')
-      }
-
-      this.fail(`Unsupported M1 slide content: ${describe(token)}`)
+      if (token) body.push(token)
+      this.index += 1
     }
 
     const end = this.expect('block-end')
-    if (!title) this.fail(`Slide "${start.id}" requires one # heading`)
-
     return {
       id: start.id,
-      title: title.text,
+      content: parseSlideContent(body, start.id),
       range: { start: start.range.start, end: end.range.end },
-      titleRange: title.range,
     }
+  }
+
+  private skipBlanks(): void {
+    while (this.current()?.kind === 'blank') this.index += 1
   }
 
   private current(): Token | undefined {
@@ -123,7 +119,7 @@ class Parser {
   ): Extract<Token, { kind: K }> {
     const token = this.current()
     if (token?.kind !== kind) {
-      this.fail(`Expected ${kind}, received ${describe(token)}`)
+      this.fail(`Expected ${kind}, received ${token?.kind ?? 'end of source'}`)
     }
 
     this.index += 1
@@ -133,10 +129,4 @@ class Parser {
   private fail(message: string): never {
     throw new MindPptCompileError(message)
   }
-}
-
-function describe(token: Token | undefined): string {
-  if (!token) return 'end of source'
-  if (token.kind === 'unknown') return token.text
-  return token.kind
 }

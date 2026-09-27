@@ -29,5 +29,7 @@ export async function compileMindPpt(source: string): Promise<CompiledElements> 
     throw new Error('MindPPT renderer did not produce a scene')
   }
 
-  return convertToExcalidrawElements(scene, { regenerateIds: false })
+  return convertToExcalidrawElements(scene, {
+    regenerateIds: false,
+  })
 }

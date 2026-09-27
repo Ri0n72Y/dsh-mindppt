@@ -4,21 +4,31 @@ Cordis-native compiler service for MindPPT source code.
 
 The package intentionally exposes compilation through the Cordis service graph rather than a parallel standalone runtime.
 
-## Current M1 capability
+## Current M2 capability
 
-The current compiler supports the first structural slice:
+The compiler preserves the M1 structural slice:
 
 ```text
-mindppt marker
+mindppt
 slide <id> { ... }
-# heading
 tree LR { ... }
 A --> B
 ```
 
-It produces deterministic slide geometry, one resolved LR tree edge, stable semantic IDs, and source ranges.
+and supports the first MindPPT Markdown Profile inside slides:
 
-The tokenizer also treats triple-backtick fenced blocks as opaque input so future extension payload cannot leak braces or arrows into the structural grammar. Fenced slide content itself remains an M2 feature.
+```text
+# heading        -> title
+## heading       -> subtitle
+paragraph        -> text
+- item           -> unordered list
+1. item          -> ordered list
+fenced block     -> extension
+```
+
+Fenced payload remains opaque to the outer structural grammar. It is emitted as a generic extension semantic node with its type and raw payload preserved. Missing extension capabilities do not make compilation fail.
+
+The compiler produces deterministic slide geometry, stable semantic IDs, and source ranges for content and structure.
 
 ## Cordis service
 

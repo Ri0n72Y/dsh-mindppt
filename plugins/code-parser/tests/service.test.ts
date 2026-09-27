@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 
@@ -6,23 +8,13 @@ import MindPptParserService, {
   serviceName,
 } from '../src/index.ts'
 
-const M1 = `mindppt
-
-tree LR {
-  intro --> market
-}
-
-slide intro {
-  # Introduction
-}
-
-slide market {
-  # Market
-}
-`
+const M2 = readFileSync(
+  new URL('../../../examples/m2-content-profile.mindppt', import.meta.url),
+  'utf8',
+).replace(/\r\n/g, '\n')
 
 describe('MindPptParserService', () => {
-  it('compiles two slides and one deterministic LR tree edge', async () => {
+  it('compiles the M2 content profile into a resolved structure', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
 
@@ -31,65 +23,77 @@ describe('MindPptParserService', () => {
       name: 'mindppt-parser-compile-test',
       inject: [serviceName],
       apply(child: Context) {
-        structure = child.mindpptParser.compile(M1)
+        structure = child.mindpptParser.compile(M2)
       },
     })
 
-    expect(structure?.slides).toEqual([
+    expect(structure?.slides[0]).toEqual(expect.objectContaining({
+      id: 'overview',
+      x: 0,
+      y: 0,
+      width: 1280,
+      height: 720,
+    }))
+    expect(structure?.slides[0]?.elements).toEqual([
       expect.objectContaining({
-        id: 'intro',
-        x: 0,
-        y: 0,
-        width: 1280,
-        height: 720,
-        elements: [
-          expect.objectContaining({
-            id: 'slide:intro/title:0',
-            kind: 'title',
-            text: 'Introduction',
-            x: 128,
-            y: 300,
-          }),
-        ],
+        id: 'slide:overview/title:0',
+        kind: 'title',
+        text: 'Outdoor Market',
       }),
       expect.objectContaining({
-        id: 'market',
-        x: 1880,
-        y: 0,
-        width: 1280,
-        height: 720,
-        elements: [
-          expect.objectContaining({
-            id: 'slide:market/title:0',
-            text: 'Market',
-          }),
-        ],
+        id: 'slide:overview/subtitle:0',
+        kind: 'subtitle',
+        text: '2026 snapshot',
+      }),
+      expect.objectContaining({
+        id: 'slide:overview/text:0',
+        kind: 'text',
+        text: 'Demand remains seasonal.',
+      }),
+      expect.objectContaining({
+        id: 'slide:overview/list:0',
+        kind: 'list',
+        ordered: false,
+        items: ['Premium products gain share', 'Online channels continue growing'],
+      }),
+      expect.objectContaining({
+        id: 'slide:overview/list:1',
+        kind: 'list',
+        ordered: true,
+        items: ['Confirm positioning', 'Compare substitutes'],
       }),
     ])
 
-    expect(structure?.tree).toEqual(expect.objectContaining({
-      direction: 'LR',
-      edges: [
-        expect.objectContaining({
-          id: 'tree:intro->market',
-          from: 'intro',
-          to: 'market',
-        }),
-      ],
+    expect(structure?.slides[1]?.elements.slice(0, 2)).toEqual([
+      expect.objectContaining({
+        id: 'slide:math/text:0',
+        kind: 'text',
+        text: 'A compact mathematical example.',
+      }),
+      expect.objectContaining({
+        id: 'slide:math/text:1',
+        kind: 'text',
+        text: 'Need --> Product',
+      }),
+    ])
+
+    const extension = structure?.slides[1]?.elements.at(-1)
+    expect(extension).toEqual(expect.objectContaining({
+      id: 'slide:math/extension:0',
+      kind: 'extension',
+      type: 'latex',
+      raw: '  e^{i\\pi} + 1 = 0',
     }))
 
-    const introRange = structure?.slides[0]?.sourceRange
-    const titleRange = structure?.slides[0]?.elements[0]?.sourceRange
-    const edgeRange = structure?.tree?.edges[0]?.sourceRange
+    expect(structure?.tree?.edges[0]).toEqual(expect.objectContaining({
+      id: 'tree:overview->math',
+      from: 'overview',
+      to: 'math',
+    }))
 
-    expect(introRange && M1.slice(introRange.start, introRange.end)).toBe(
-      'slide intro {\n  # Introduction\n}',
-    )
-    expect(titleRange && M1.slice(titleRange.start, titleRange.end)).toBe(
-      '  # Introduction',
-    )
-    expect(edgeRange && M1.slice(edgeRange.start, edgeRange.end)).toBe(
-      '  intro --> market',
+    const range = extension?.sourceRange
+    expect(range && M2.slice(range.start, range.end)).toBe(
+      '  \`\`\`latex\n  e^{i\\pi} + 1 = 0\n  \`\`\`',
     )
   })
 

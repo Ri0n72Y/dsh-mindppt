@@ -18,6 +18,11 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": false,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "customConditions": [
+      "development"
+    ]
   }
 }

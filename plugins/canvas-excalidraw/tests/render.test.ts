@@ -1,26 +1,18 @@
+import { readFileSync } from 'node:fs'
+
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 
 import MindPptParserService from 'dsh-mindppt-code-parser'
 import MindPptCanvasService, { serviceName } from '../src/index.ts'
 
-const M1 = `mindppt
-
-tree LR {
-  intro --> market
-}
-
-slide intro {
-  # Introduction
-}
-
-slide market {
-  # Market
-}
-`
+const M2 = readFileSync(
+  new URL('../../../examples/m2-content-profile.mindppt', import.meta.url),
+  'utf8',
+).replace(/\r\n/g, '\n')
 
 describe('MindPptCanvasService', () => {
-  it('renders two slide frames connected by one tree arrow', async () => {
+  it('renders M2 Markdown content and unknown extension fallback', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
     await ctx.plugin(MindPptCanvasService)
@@ -31,39 +23,44 @@ describe('MindPptCanvasService', () => {
       name: 'mindppt-render-test-driver',
       inject: ['mindpptParser', serviceName],
       apply(child: Context) {
-        child.mindpptParser.compile(M1)
+        child.mindpptParser.compile(M2)
         scene = child.mindpptCanvas.scene
       },
     })
 
-    expect(scene.map((element) => element.type)).toEqual([
-      'arrow',
-      'rectangle',
-      'rectangle',
-      'frame',
-      'rectangle',
-      'rectangle',
-      'frame',
-    ])
-
     const arrow = scene.find((element) => element.type === 'arrow')
     expect(arrow).toEqual(expect.objectContaining({
-      id: 'tree:intro->market',
+      id: 'tree:overview->math',
       x: 1280,
       y: 360,
-      endArrowhead: 'arrow',
     }))
-    expect((arrow as { points?: unknown }).points).toEqual([
-      [0, 0],
-      [600, 0],
-    ])
 
-    const titles = scene.flatMap((element) =>
-      element.type === 'rectangle' && 'label' in element && element.label?.text
-        ? [element.label.text]
-        : [],
-    )
+    const visibleText = scene.flatMap((element) => {
+      if (element.type === 'text') return [element.text]
+      if (element.type === 'rectangle' && 'label' in element && element.label?.text) {
+        return [element.label.text]
+      }
+      return []
+    })
 
-    expect(titles).toEqual(['Introduction', 'Market'])
+    expect(visibleText).toEqual(expect.arrayContaining([
+      'Outdoor Market',
+      '2026 snapshot',
+      'Demand remains seasonal.',
+      '• Premium products gain share\n• Online channels continue growing',
+      '1. Confirm positioning\n2. Compare substitutes',
+      'A compact mathematical example.',
+      'Need --> Product',
+      '[latex]\n  e^{i\\pi} + 1 = 0',
+    ]))
+
+    expect(scene).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'text',
+        id: 'slide:math/extension:0/text',
+        text: '[latex]\n  e^{i\\pi} + 1 = 0',
+        fontFamily: 2,
+      }),
+    ]))
   })
 })

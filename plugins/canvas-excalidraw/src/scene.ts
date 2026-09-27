@@ -66,16 +66,23 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
   }
 
   const content: ExcalidrawElementSkeleton[] = slide.elements.map((element) => ({
-    type: 'text',
-    id: element.id,
+    type: 'rectangle',
+    id: `${element.id}/box`,
     x: slide.x + element.x,
     y: slide.y + element.y,
     width: element.width,
     height: element.height,
-    text: element.text,
-    fontSize: 72,
-    textAlign: 'center',
-    verticalAlign: 'middle',
+    backgroundColor: 'transparent',
+    strokeColor: 'transparent',
+    roughness: 0,
+    label: {
+      id: element.id,
+      text: element.text,
+      fontSize: 72,
+      textAlign: 'center',
+      verticalAlign: 'middle',
+      strokeColor: '#1b1b1f',
+    },
   }))
 
   const frame: ExcalidrawElementSkeleton = {

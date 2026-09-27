@@ -15,6 +15,12 @@ export function MindPptCanvas({ elements }: MindPptCanvasProps) {
           scrollToContent: true,
           appState: {
             zenModeEnabled: true,
+            frameRendering: {
+              enabled: true,
+              clip: false,
+              name: false,
+              outline: false,
+            },
           },
         }}
         viewModeEnabled

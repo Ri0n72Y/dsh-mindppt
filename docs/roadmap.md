@@ -438,7 +438,7 @@ Source mapping begins to become operational here for diagnostics and editor navi
 
 ## M4 — Branching MindMap + Validation + Spatial Layout
 
-Status: in progress
+Status: complete
 
 Purpose: prove the mind-map model beyond a linear pair of slides.
 
@@ -454,12 +454,14 @@ Support:
 - tree cycles;
 - unreachable-slide warning.
 
-Current M4 progress:
+Delivered:
 
-- complete: deterministic LR branching layout;
-- complete: duplicate slide, unknown reference, duplicate edge, multiple-parent, and cycle errors;
-- complete: non-blocking unreachable-slide warnings;
-- remaining: `RL`, `TB`, `TD`, and `BT` spatial layout.
+- deterministic branching layout for `LR`, `RL`, `TB`, `TD`, and `BT`;
+- `TD` is the top-down alias of `TB`;
+- duplicate slide, unknown reference, duplicate edge, multiple-parent, and cycle errors;
+- non-blocking unreachable-slide warnings;
+- direction-correct primary tree arrow anchors in Excalidraw;
+- browser-level proof that direction changes update the live canvas.
 
 Tree layout uses only the primary tree.
 

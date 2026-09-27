@@ -1,7 +1,7 @@
 # MindPPT Roadmap
 
 Status: accepted v0 implementation roadmap  
-Baseline: M1 merged to `main`  
+Baseline: M2 merged to `main`  
 Architecture: Cordis-native runtime, React + TypeScript host UI, Excalidraw canvas rendering
 
 ## 1. Product direction
@@ -345,7 +345,7 @@ Explicit non-goals:
 
 ## M2 — Markdown Content Profile + Extension Fallback
 
-Status: in progress
+Status: complete
 
 Purpose: establish the long-term content model by extending M1's single-heading support into the first intentional MindPPT Markdown Profile.
 
@@ -397,6 +397,8 @@ Explicit non-goals:
 ---
 
 ## M3 — Code Editor + Live Compile
+
+Status: in progress
 
 Purpose: turn the static playground into the actual authoring development loop.
 

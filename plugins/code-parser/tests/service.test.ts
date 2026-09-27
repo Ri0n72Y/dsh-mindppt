@@ -27,9 +27,9 @@ slide overview {
 }
 
 slide math {
-  # Euler Identity
-
   A compact mathematical example.
+
+  Need --> Product
 
   \`\`\`latex
   e^{i\\pi} + 1 = 0
@@ -85,6 +85,19 @@ describe('MindPptParserService', () => {
         kind: 'list',
         ordered: true,
         items: ['Confirm positioning', 'Compare substitutes'],
+      }),
+    ])
+
+    expect(structure?.slides[1]?.elements.slice(0, 2)).toEqual([
+      expect.objectContaining({
+        id: 'slide:math/text:0',
+        kind: 'text',
+        text: 'A compact mathematical example.',
+      }),
+      expect.objectContaining({
+        id: 'slide:math/text:1',
+        kind: 'text',
+        text: 'Need --> Product',
       }),
     ])
 

@@ -1,5 +1,6 @@
 import type { ExcalidrawElementSkeleton } from '@excalidraw/excalidraw/data/transform'
 import type {
+  ContentNode,
   MindPptStructure,
   SlideNode,
   TreeEdge,
@@ -16,7 +17,6 @@ export function renderScene(structure: MindPptStructure): ExcalidrawScene {
 
 function renderTree(structure: MindPptStructure): ExcalidrawScene {
   if (!structure.tree) return []
-
   return structure.tree.edges.map((edge) => renderTreeEdge(structure, edge))
 }
 
@@ -65,25 +65,9 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
     roughness: 0,
   }
 
-  const content: ExcalidrawElementSkeleton[] = slide.elements.map((element) => ({
-    type: 'rectangle',
-    id: `${element.id}/box`,
-    x: slide.x + element.x,
-    y: slide.y + element.y,
-    width: element.width,
-    height: element.height,
-    backgroundColor: 'transparent',
-    strokeColor: 'transparent',
-    roughness: 0,
-    label: {
-      id: element.id,
-      text: element.text,
-      fontSize: 72,
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      strokeColor: '#1b1b1f',
-    },
-  }))
+  const content = slide.elements.map((element) =>
+    renderContent(slide, element),
+  )
 
   const frame: ExcalidrawElementSkeleton = {
     type: 'frame',
@@ -95,4 +79,69 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
   }
 
   return [surface, ...content, frame]
+}
+
+function renderContent(
+  slide: SlideNode,
+  element: ContentNode,
+): ExcalidrawElementSkeleton {
+  const extension = element.kind === 'extension'
+
+  return {
+    type: 'rectangle',
+    id: `${element.id}/box`,
+    x: slide.x + element.x,
+    y: slide.y + element.y,
+    width: element.width,
+    height: element.height,
+    backgroundColor: extension ? '#f8f9fa' : 'transparent',
+    strokeColor: extension ? '#adb5bd' : 'transparent',
+    strokeStyle: extension ? 'dashed' : 'solid',
+    fillStyle: 'solid',
+    roughness: 0,
+    label: {
+      id: element.id,
+      text: contentText(element),
+      fontSize: contentFontSize(element),
+      textAlign:
+        element.kind === 'title' || element.kind === 'subtitle'
+          ? 'center'
+          : 'left',
+      verticalAlign:
+        element.kind === 'title' || element.kind === 'subtitle'
+          ? 'middle'
+          : 'top',
+      strokeColor: '#1b1b1f',
+    },
+  }
+}
+
+function contentText(element: ContentNode): string {
+  if (element.kind === 'list') {
+    return element.items
+      .map((item, index) =>
+        element.ordered ? `${index + 1}. ${item}` : `• ${item}`,
+      )
+      .join('\n')
+  }
+
+  if (element.kind === 'extension') {
+    return `[${element.type || 'extension'}]\n${element.raw}`
+  }
+
+  return element.text
+}
+
+function contentFontSize(element: ContentNode): number {
+  switch (element.kind) {
+    case 'title':
+      return 48
+    case 'subtitle':
+      return 30
+    case 'text':
+    case 'list':
+      return 24
+    case 'extension':
+      return 22
+  }
 }

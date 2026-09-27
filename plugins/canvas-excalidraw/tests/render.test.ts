@@ -39,10 +39,10 @@ describe('MindPptCanvasService', () => {
     expect(scene.map((element) => element.type)).toEqual([
       'arrow',
       'rectangle',
-      'text',
+      'rectangle',
       'frame',
       'rectangle',
-      'text',
+      'rectangle',
       'frame',
     ])
 
@@ -59,8 +59,8 @@ describe('MindPptCanvasService', () => {
     ])
 
     const titles = scene
-      .filter((element) => element.type === 'text')
-      .map((element) => element.type === 'text' ? element.text : '')
+      .filter((element) => element.type === 'rectangle' && element.label?.text)
+      .map((element) => element.label?.text)
 
     expect(titles).toEqual(['Introduction', 'Market'])
   })

@@ -111,7 +111,10 @@ function unreachableWarnings(
   edges: TreeEdge[],
   parentByChild: Map<string, string>,
 ): MindPptDiagnostic[] {
-  const root = slides.find((slide) => !parentByChild.has(slide.id))
+  const rootId = edges.find((edge) => !parentByChild.has(edge.from))?.from
+  if (!rootId) return []
+
+  const root = slides.find((slide) => slide.id === rootId)
   if (!root) return []
 
   const children = new Map<string, string[]>()

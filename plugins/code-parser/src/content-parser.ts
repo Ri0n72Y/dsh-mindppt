@@ -30,7 +30,6 @@ export function parseSlideContent(
 
 class ContentParser {
   private index = 0
-  private titles = 0
 
   constructor(
     private readonly tokens: Token[],
@@ -46,16 +45,16 @@ class ContentParser {
       if (!token) break
 
       if (token.kind === 'heading') {
-        const kind = token.level === 1 ? 'title' : 'subtitle'
-        if (kind === 'title' && ++this.titles > 1) {
-          this.fail('supports one # heading')
-        }
-        content.push({ kind, text: token.text, range: token.range })
+        content.push({
+          kind: token.level === 1 ? 'title' : 'subtitle',
+          text: token.text,
+          range: token.range,
+        })
         this.index += 1
         continue
       }
 
-      if (token.kind === 'text') {
+      if (isParagraphToken(token)) {
         content.push(this.parseParagraph())
         continue
       }
@@ -79,19 +78,23 @@ class ContentParser {
       this.fail(`contains unsupported ${token.kind}`)
     }
 
-    if (this.titles === 0) this.fail('requires one # heading')
     return content
   }
 
   private parseParagraph(): ParsedContent {
-    const first = this.expect('text')
-    const lines = [first.text]
-    let end = first.range.end
+    const first = this.current()
+    if (!first || !isParagraphToken(first)) this.fail('expected paragraph')
 
-    while (this.current()?.kind === 'text') {
-      const line = this.expect('text')
-      lines.push(line.text)
-      end = line.range.end
+    const lines = [paragraphText(first)]
+    let end = first.range.end
+    this.index += 1
+
+    while (true) {
+      const token = this.current()
+      if (!token || !isParagraphToken(token)) break
+      lines.push(paragraphText(token))
+      end = token.range.end
+      this.index += 1
     }
 
     return {
@@ -146,4 +149,14 @@ class ContentParser {
   private fail(message: string): never {
     throw new MindPptCompileError(`Slide "${this.slideId}" ${message}`)
   }
+}
+
+type ParagraphToken = Extract<Token, { kind: 'text' | 'edge' }>
+
+function isParagraphToken(token: Token): token is ParagraphToken {
+  return token.kind === 'text' || token.kind === 'edge'
+}
+
+function paragraphText(token: ParagraphToken): string {
+  return token.text
 }

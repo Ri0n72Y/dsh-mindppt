@@ -184,10 +184,10 @@ class Parser {
     const items = [first.text]
     let end = first.range.end
 
-    while (
-      this.current()?.kind === 'list-item' &&
-      this.current()?.ordered === ordered
-    ) {
+    while (true) {
+      const token = this.current()
+      if (token?.kind !== 'list-item' || token.ordered !== ordered) break
+
       const item = this.expect('list-item')
       items.push(item.text)
       end = item.range.end

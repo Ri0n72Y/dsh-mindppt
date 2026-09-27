@@ -13,6 +13,11 @@ const M2 = readFileSync(
   'utf8',
 ).replace(/\r\n/g, '\n')
 
+const M4 = readFileSync(
+  new URL('../../../examples/m4-branching-lr-tree.mindppt', import.meta.url),
+  'utf8',
+).replace(/\r\n/g, '\n')
+
 describe('MindPptParserService', () => {
   it('compiles the M2 content profile into a resolved structure', async () => {
     const ctx = new Context()
@@ -95,6 +100,67 @@ describe('MindPptParserService', () => {
     expect(range && M2.slice(range.start, range.end)).toBe(
       '  \`\`\`latex\n  e^{i\\pi} + 1 = 0\n  \`\`\`',
     )
+  })
+
+  it('compiles the canonical M4 branching tree with deterministic non-overlapping geometry', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    let first: ReturnType<MindPptParserService['compile']> | undefined
+    let second: ReturnType<MindPptParserService['compile']> | undefined
+
+    await ctx.plugin({
+      name: 'mindppt-parser-m4-branching-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        first = child.mindpptParser.compile(M4)
+        second = child.mindpptParser.compile(M4)
+      },
+    })
+
+    expect(first?.slides.map((slide) => slide.id)).toEqual([
+      'intro',
+      'market',
+      'problem',
+      'customer',
+      'competitor',
+      'solution',
+    ])
+    expect(first?.tree?.edges.map((edge) => edge.id)).toEqual([
+      'tree:intro->market',
+      'tree:intro->problem',
+      'tree:market->customer',
+      'tree:market->competitor',
+      'tree:problem->solution',
+    ])
+
+    const slides = first?.slides ?? []
+    const byId = new Map(slides.map((slide) => [slide.id, slide]))
+
+    for (const edge of first?.tree?.edges ?? []) {
+      const parent = byId.get(edge.from)
+      const child = byId.get(edge.to)
+      expect(parent).toBeDefined()
+      expect(child).toBeDefined()
+      expect(child!.x).toBeGreaterThan(parent!.x)
+    }
+
+    expect(byId.get('market')?.y).not.toBe(byId.get('problem')?.y)
+    expect(byId.get('customer')?.y).not.toBe(byId.get('competitor')?.y)
+
+    for (let index = 0; index < slides.length; index += 1) {
+      for (let other = index + 1; other < slides.length; other += 1) {
+        expect(rectanglesOverlap(slides[index]!, slides[other]!)).toBe(false)
+      }
+    }
+
+    const firstPositions = Object.fromEntries(
+      slides.map((slide) => [slide.id, [slide.x, slide.y]]),
+    )
+    const secondPositions = Object.fromEntries(
+      (second?.slides ?? []).map((slide) => [slide.id, [slide.x, slide.y]]),
+    )
+    expect(secondPositions).toEqual(firstPositions)
   })
 
   it('anchors unsupported tree direction diagnostics to the tree declaration', async () => {
@@ -232,4 +298,58 @@ slide market {
     expect(error).toBeInstanceOf(MindPptCompileError)
     expect((error as Error).message).toContain('Unknown slide in tree edge')
   })
-})
+  it('resolves every tree edge and anchors a later unknown reference to that edge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  market --> missing
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    let diagnosticSlice: string | undefined
+
+    await ctx.plugin({
+      name: 'mindppt-parser-later-reference-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        try {
+          child.mindpptParser.compile(source)
+        } catch {
+          // Expected compile failure.
+        }
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.message).toContain('Unknown slide in tree edge')
+
+        const range = diagnostic?.sourceRange
+        diagnosticSlice = range
+          ? source.slice(range.start, range.end)
+          : undefined
+      },
+    })
+
+    expect(diagnosticSlice).toBe('  market --> missing')
+  })
+)
+
+function rectanglesOverlap(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+): boolean {
+  return left.x < right.x + right.width
+    && left.x + left.width > right.x
+    && left.y < right.y + right.height
+    && left.y + left.height > right.y
+}

@@ -92,16 +92,23 @@ function debugConvertedElements(elements: CompiledElements): void {
   }
 }
 
+interface DebugElement {
+  id: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  text?: unknown
+  originalText?: unknown
+  fontSize?: unknown
+  lineHeight?: unknown
+  containerId?: unknown
+  frameId?: unknown
+}
+
 export function debugMountedElements(
-  elements: readonly {
-    id: string
-    type: string
-    x: number
-    y: number
-    width: number
-    height: number
-    [key: string]: unknown
-  }[],
+  elements: readonly DebugElement[],
 ): void {
   if (!debugEnabled()) return
 

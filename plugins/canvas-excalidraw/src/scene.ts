@@ -124,6 +124,16 @@ function renderExtensionFallback(
 ): ExcalidrawScene {
   const x = slide.x + element.x
   const y = slide.y + element.y
+  const text = contentText(element)
+
+  debugText('renderer:extension-skeleton', text, {
+    id: element.id,
+    x,
+    y,
+    width: element.width,
+    height: element.height,
+    fontSize: contentFontSize(element),
+  })
 
   return [
     {
@@ -144,7 +154,7 @@ function renderExtensionFallback(
       id: `${element.id}/text`,
       x: x + 16,
       y: y + 16,
-      text: contentText(element),
+      text,
       fontSize: contentFontSize(element),
       textAlign: 'left',
       verticalAlign: 'top',
@@ -181,4 +191,25 @@ function contentFontSize(element: ContentNode): number {
     case 'extension':
       return 22
   }
+}
+
+function debugText(
+  stage: string,
+  text: string,
+  details: Record<string, unknown>,
+): void {
+  if (
+    (globalThis as { __MINDPPT_DEBUG__?: boolean }).__MINDPPT_DEBUG__ !== true
+  ) return
+
+  const lastChar = text.at(-1) ?? ''
+  console.debug('[mindppt:pipeline]', {
+    stage,
+    ...details,
+    text,
+    length: text.length,
+    lastChar,
+    lastCodePoint: lastChar ? lastChar.codePointAt(0) : undefined,
+    suffix: text.slice(-16),
+  })
 }

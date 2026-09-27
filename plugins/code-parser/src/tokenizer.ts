@@ -6,15 +6,20 @@ export type Token =
   | { kind: 'tree-start'; direction: string; range: SourceRange }
   | { kind: 'slide-start'; id: string; range: SourceRange }
   | { kind: 'edge'; from: string; to: string; range: SourceRange }
-  | { kind: 'heading'; text: string; range: SourceRange }
+  | { kind: 'heading'; level: 1 | 2; text: string; range: SourceRange }
+  | { kind: 'list-item'; ordered: boolean; text: string; range: SourceRange }
+  | { kind: 'text'; text: string; range: SourceRange }
   | { kind: 'fence'; type: string; raw: string; range: SourceRange }
+  | { kind: 'blank'; range: SourceRange }
   | { kind: 'block-end'; range: SourceRange }
-  | { kind: 'unknown'; text: string; range: SourceRange }
 
 const ID = '[A-Za-z_][A-Za-z0-9_-]*'
 const TREE_START = new RegExp(`^tree\\s+([A-Za-z]+)\\s*\\{$`)
 const SLIDE_START = new RegExp(`^slide\\s+(${ID})\\s*\\{$`)
 const EDGE = new RegExp(`^(${ID})\\s*-->\\s*(${ID})$`)
+const HEADING = /^(#{1,2})\s+(.+)$/
+const UNORDERED_ITEM = /^-\s+(.+)$/
+const ORDERED_ITEM = /^\d+\.\s+(.+)$/
 
 export function tokenize(source: string): Token[] {
   const lines = source.split('\n')
@@ -28,7 +33,12 @@ export function tokenize(source: string): Token[] {
     offset = end + 1
 
     const text = line.trim()
-    if (!text) continue
+    const range = { start, end }
+
+    if (!text) {
+      tokens.push({ kind: 'blank', range })
+      continue
+    }
 
     if (text.startsWith('```')) {
       const fenceStart = start
@@ -63,8 +73,6 @@ export function tokenize(source: string): Token[] {
       continue
     }
 
-    const range = { start, end }
-
     if (text === 'mindppt') {
       tokens.push({ kind: 'marker', range })
       continue
@@ -88,17 +96,45 @@ export function tokenize(source: string): Token[] {
       continue
     }
 
-    if (text.startsWith('# ')) {
-      tokens.push({ kind: 'heading', text: text.slice(2).trim(), range })
-      continue
-    }
-
     if (text === '}') {
       tokens.push({ kind: 'block-end', range })
       continue
     }
 
-    tokens.push({ kind: 'unknown', text, range })
+    const heading = HEADING.exec(text)
+    if (heading?.[1] && heading[2]) {
+      tokens.push({
+        kind: 'heading',
+        level: heading[1].length as 1 | 2,
+        text: heading[2].trim(),
+        range,
+      })
+      continue
+    }
+
+    const unordered = UNORDERED_ITEM.exec(text)
+    if (unordered?.[1]) {
+      tokens.push({
+        kind: 'list-item',
+        ordered: false,
+        text: unordered[1],
+        range,
+      })
+      continue
+    }
+
+    const ordered = ORDERED_ITEM.exec(text)
+    if (ordered?.[1]) {
+      tokens.push({
+        kind: 'list-item',
+        ordered: true,
+        text: ordered[1],
+        range,
+      })
+      continue
+    }
+
+    tokens.push({ kind: 'text', text, range })
   }
 
   return tokens

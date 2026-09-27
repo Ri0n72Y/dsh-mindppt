@@ -163,6 +163,85 @@ describe('MindPptParserService', () => {
     expect(secondPositions).toEqual(firstPositions)
   })
 
+  it('projects the canonical M4 tree deterministically in every supported direction', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    await ctx.plugin({
+      name: 'mindppt-parser-m4-directions-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        let tbPositions: Record<string, [number, number]> | undefined
+
+        for (const direction of ['LR', 'RL', 'TB', 'TD', 'BT'] as const) {
+          const source = M4.replace('tree LR {', `tree ${direction} {`)
+          const first = child.mindpptParser.compile(source)
+          const second = child.mindpptParser.compile(source)
+
+          expect(first.tree?.direction).toBe(direction)
+          expect(first.slides.map((slide) => slide.id)).toEqual([
+            'intro',
+            'market',
+            'problem',
+            'customer',
+            'competitor',
+            'solution',
+          ])
+          expect(first.tree?.edges.map((edge) => edge.id)).toEqual([
+            'tree:intro->market',
+            'tree:intro->problem',
+            'tree:market->customer',
+            'tree:market->competitor',
+            'tree:problem->solution',
+          ])
+
+          const slides = first.slides
+          const byId = new Map(slides.map((slide) => [slide.id, slide]))
+
+          for (const edge of first.tree?.edges ?? []) {
+            const parent = byId.get(edge.from)!
+            const childSlide = byId.get(edge.to)!
+
+            if (direction === 'LR') {
+              expect(childSlide.x).toBeGreaterThan(parent.x)
+            } else if (direction === 'RL') {
+              expect(childSlide.x).toBeLessThan(parent.x)
+            } else if (direction === 'BT') {
+              expect(childSlide.y).toBeLessThan(parent.y)
+            } else {
+              expect(childSlide.y).toBeGreaterThan(parent.y)
+            }
+          }
+
+          if (direction === 'LR' || direction === 'RL') {
+            expect(byId.get('market')?.y).not.toBe(byId.get('problem')?.y)
+            expect(byId.get('customer')?.y).not.toBe(byId.get('competitor')?.y)
+          } else {
+            expect(byId.get('market')?.x).not.toBe(byId.get('problem')?.x)
+            expect(byId.get('customer')?.x).not.toBe(byId.get('competitor')?.x)
+          }
+
+          for (let index = 0; index < slides.length; index += 1) {
+            for (let other = index + 1; other < slides.length; other += 1) {
+              expect(rectanglesOverlap(slides[index]!, slides[other]!)).toBe(false)
+            }
+          }
+
+          const firstPositions = Object.fromEntries(
+            slides.map((slide) => [slide.id, [slide.x, slide.y] as [number, number]]),
+          )
+          const secondPositions = Object.fromEntries(
+            second.slides.map((slide) => [slide.id, [slide.x, slide.y] as [number, number]]),
+          )
+          expect(secondPositions).toEqual(firstPositions)
+
+          if (direction === 'TB') tbPositions = firstPositions
+          if (direction === 'TD') expect(firstPositions).toEqual(tbPositions)
+        }
+      },
+    })
+  })
+
   it('rejects duplicate slide IDs at the duplicate declaration', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
@@ -346,7 +425,7 @@ slide market {
 
     const source = `mindppt
 
-tree TB {
+tree XY {
   intro --> market
 }
 
@@ -372,7 +451,7 @@ slide market {
         }
 
         const diagnostic = child.mindpptParser.diagnostics[0]
-        expect(diagnostic?.message).toContain('tree direction LR only')
+        expect(diagnostic?.message).toContain('Unsupported tree direction: XY')
 
         const range = diagnostic?.sourceRange
         diagnosticSlice = range
@@ -381,7 +460,7 @@ slide market {
       },
     })
 
-    expect(diagnosticSlice).toBe('tree TB {')
+    expect(diagnosticSlice).toBe('tree XY {')
   })
 
   it('anchors empty tree diagnostics to the empty tree block', async () => {

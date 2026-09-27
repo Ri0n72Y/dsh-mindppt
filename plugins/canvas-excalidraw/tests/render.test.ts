@@ -35,13 +35,15 @@ describe('MindPptCanvasService', () => {
       y: 360,
     }))
 
-    const labels = scene.flatMap((element) =>
-      element.type === 'rectangle' && 'label' in element && element.label?.text
-        ? [element.label.text]
-        : [],
-    )
+    const visibleText = scene.flatMap((element) => {
+      if (element.type === 'text') return [element.text]
+      if (element.type === 'rectangle' && 'label' in element && element.label?.text) {
+        return [element.label.text]
+      }
+      return []
+    })
 
-    expect(labels).toEqual(expect.arrayContaining([
+    expect(visibleText).toEqual(expect.arrayContaining([
       'Outdoor Market',
       '2026 snapshot',
       'Demand remains seasonal.',
@@ -50,6 +52,14 @@ describe('MindPptCanvasService', () => {
       'A compact mathematical example.',
       'Need --> Product',
       '[latex]\n  e^{i\\pi} + 1 = 0',
+    ]))
+
+    expect(scene).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'text',
+        id: 'slide:math/extension:0/text',
+        text: '[latex]\n  e^{i\\pi} + 1 = 0',
+      }),
     ]))
   })
 })

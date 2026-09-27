@@ -54,10 +54,12 @@ export function tokenize(source: string): Token[] {
         offset = nextEnd + 1
 
         if (next.trim() === '```') {
+          const rawText = raw.join('\n')
+          debugText('tokenizer:fence', rawText, { type })
           tokens.push({
             kind: 'fence',
             type,
-            raw: raw.join('\n'),
+            raw: rawText,
             range: { start: fenceStart, end: nextEnd },
           })
           closed = true
@@ -138,4 +140,25 @@ export function tokenize(source: string): Token[] {
   }
 
   return tokens
+}
+
+function debugText(
+  stage: string,
+  text: string,
+  details: Record<string, unknown>,
+): void {
+  if (
+    (globalThis as { __MINDPPT_DEBUG__?: boolean }).__MINDPPT_DEBUG__ !== true
+  ) return
+
+  const lastChar = text.at(-1) ?? ''
+  console.debug('[mindppt:pipeline]', {
+    stage,
+    ...details,
+    text,
+    length: text.length,
+    lastChar,
+    lastCodePoint: lastChar ? lastChar.codePointAt(0) : undefined,
+    suffix: text.slice(-16),
+  })
 }

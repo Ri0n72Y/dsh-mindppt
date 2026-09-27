@@ -69,7 +69,10 @@ export function tokenize(source: string): Token[] {
       }
 
       if (!closed) {
-        throw new MindPptCompileError('Unclosed fenced content block')
+        throw new MindPptCompileError(
+          'Unclosed fenced content block',
+          { start: fenceStart, end: source.length },
+        )
       }
       continue
     }

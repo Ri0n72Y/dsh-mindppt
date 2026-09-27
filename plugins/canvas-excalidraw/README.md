@@ -8,13 +8,13 @@ The renderer does not parse source and does not perform presentation layout.
 
 ```text
 MindPptStructure
-  - two 1600x900 slides
+  - two 1280x720 slides
   - one resolved LR tree edge
         |
         v
 canvas-excalidraw
   - white slide surface as the only visible PPT boundary
-  - centered title text
+  - centered title lowered through an invisible text container
   - Excalidraw frame
   - arrow between slide boundaries
         |

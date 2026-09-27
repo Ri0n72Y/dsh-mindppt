@@ -1,4 +1,3 @@
-import { FONT_FAMILY } from '@excalidraw/excalidraw'
 import type { ExcalidrawElementSkeleton } from '@excalidraw/excalidraw/data/transform'
 import type {
   ContentNode,
@@ -8,6 +7,10 @@ import type {
 } from 'dsh-mindppt-code-parser'
 
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
+
+// Excalidraw 0.18 EXCALIDRAW_SYSTEM_FONT_FAMILY. Kept local so the renderer does not
+// pull the browser runtime into Node-based tests just to access an enum value.
+const EXCALIDRAW_SYSTEM_FONT_FAMILY = 2
 
 export function renderScene(structure: MindPptStructure): ExcalidrawScene {
   return [
@@ -134,7 +137,7 @@ function renderExtensionFallback(
     width: element.width,
     height: element.height,
     fontSize: contentFontSize(element),
-    fontFamily: FONT_FAMILY.Helvetica,
+    fontFamily: EXCALIDRAW_SYSTEM_FONT_FAMILY,
   })
 
   return [
@@ -158,7 +161,7 @@ function renderExtensionFallback(
       y: y + 16,
       text,
       fontSize: contentFontSize(element),
-      fontFamily: FONT_FAMILY.Helvetica,
+      fontFamily: EXCALIDRAW_SYSTEM_FONT_FAMILY,
       textAlign: 'left',
       verticalAlign: 'top',
       strokeColor: '#1b1b1f',

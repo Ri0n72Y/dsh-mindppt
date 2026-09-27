@@ -62,6 +62,7 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
     strokeColor: 'transparent',
     fillStyle: 'solid',
     opacity: 14,
+    roughness: 0,
   }
 
   const surface: ExcalidrawElementSkeleton = {
@@ -75,15 +76,14 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
     strokeColor: '#d0d0d0',
     fillStyle: 'solid',
     strokeWidth: 1,
+    roughness: 0,
   }
 
   const content: ExcalidrawElementSkeleton[] = slide.elements.map((element) => ({
     type: 'text',
     id: element.id,
-    x: slide.x + element.x,
-    y: slide.y + element.y,
-    width: element.width,
-    height: element.height,
+    x: slide.x + element.x + element.width / 2,
+    y: slide.y + element.y + element.height / 2,
     text: element.text,
     fontSize: 72,
     textAlign: 'center',
@@ -93,10 +93,6 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
   const frame: ExcalidrawElementSkeleton = {
     type: 'frame',
     id: `slide:${slide.id}`,
-    x: slide.x,
-    y: slide.y,
-    width: slide.width,
-    height: slide.height,
     children: [surface, ...content].flatMap((child) =>
       child.id ? [child.id] : [],
     ),

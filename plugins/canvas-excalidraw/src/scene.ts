@@ -1,3 +1,4 @@
+import { FONT_FAMILY } from '@excalidraw/excalidraw'
 import type { ExcalidrawElementSkeleton } from '@excalidraw/excalidraw/data/transform'
 import type {
   ContentNode,
@@ -133,6 +134,7 @@ function renderExtensionFallback(
     width: element.width,
     height: element.height,
     fontSize: contentFontSize(element),
+    fontFamily: FONT_FAMILY.Helvetica,
   })
 
   return [
@@ -156,6 +158,7 @@ function renderExtensionFallback(
       y: y + 16,
       text,
       fontSize: contentFontSize(element),
+      fontFamily: FONT_FAMILY.Helvetica,
       textAlign: 'left',
       verticalAlign: 'top',
       strokeColor: '#1b1b1f',

@@ -4,7 +4,7 @@ export interface SourceRange {
 }
 
 export interface MindPptDiagnostic {
-  severity: 'error'
+  severity: 'error' | 'warning'
   message: string
   sourceRange?: SourceRange
 }
@@ -47,6 +47,8 @@ export interface SlideNode {
   sourceRange: SourceRange
 }
 
+export type TreeDirection = 'LR' | 'RL' | 'TB' | 'TD' | 'BT'
+
 export interface TreeEdge {
   id: string
   from: string
@@ -55,7 +57,7 @@ export interface TreeEdge {
 }
 
 export interface TreeSpec {
-  direction: 'LR'
+  direction: TreeDirection
   edges: TreeEdge[]
   sourceRange: SourceRange
 }

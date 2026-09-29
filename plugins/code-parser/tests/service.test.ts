@@ -13,6 +13,11 @@ const M2 = readFileSync(
   'utf8',
 ).replace(/\r\n/g, '\n')
 
+const M4 = readFileSync(
+  new URL('../../../examples/m4-branching-lr-tree.mindppt', import.meta.url),
+  'utf8',
+).replace(/\r\n/g, '\n')
+
 describe('MindPptParserService', () => {
   it('compiles the M2 content profile into a resolved structure', async () => {
     const ctx = new Context()
@@ -97,13 +102,346 @@ describe('MindPptParserService', () => {
     )
   })
 
+  it('compiles the canonical M4 branching tree with deterministic non-overlapping geometry', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    let first: ReturnType<MindPptParserService['compile']> | undefined
+    let second: ReturnType<MindPptParserService['compile']> | undefined
+
+    await ctx.plugin({
+      name: 'mindppt-parser-m4-branching-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        first = child.mindpptParser.compile(M4)
+        second = child.mindpptParser.compile(M4)
+      },
+    })
+
+    expect(first?.slides.map((slide) => slide.id)).toEqual([
+      'intro',
+      'market',
+      'problem',
+      'customer',
+      'competitor',
+      'solution',
+    ])
+    expect(first?.tree?.edges.map((edge) => edge.id)).toEqual([
+      'tree:intro->market',
+      'tree:intro->problem',
+      'tree:market->customer',
+      'tree:market->competitor',
+      'tree:problem->solution',
+    ])
+
+    const slides = first?.slides ?? []
+    const byId = new Map(slides.map((slide) => [slide.id, slide]))
+
+    for (const edge of first?.tree?.edges ?? []) {
+      const parent = byId.get(edge.from)
+      const child = byId.get(edge.to)
+      expect(parent).toBeDefined()
+      expect(child).toBeDefined()
+      expect(child!.x).toBeGreaterThan(parent!.x)
+    }
+
+    expect(byId.get('market')?.y).not.toBe(byId.get('problem')?.y)
+    expect(byId.get('customer')?.y).not.toBe(byId.get('competitor')?.y)
+
+    for (let index = 0; index < slides.length; index += 1) {
+      for (let other = index + 1; other < slides.length; other += 1) {
+        expect(rectanglesOverlap(slides[index]!, slides[other]!)).toBe(false)
+      }
+    }
+
+    const firstPositions = Object.fromEntries(
+      slides.map((slide) => [slide.id, [slide.x, slide.y]]),
+    )
+    const secondPositions = Object.fromEntries(
+      (second?.slides ?? []).map((slide) => [slide.id, [slide.x, slide.y]]),
+    )
+    expect(secondPositions).toEqual(firstPositions)
+  })
+
+  it('projects the canonical M4 tree deterministically in every supported direction', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    await ctx.plugin({
+      name: 'mindppt-parser-m4-directions-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        let tbPositions: Record<string, [number, number]> | undefined
+
+        for (const direction of ['LR', 'RL', 'TB', 'TD', 'BT'] as const) {
+          const source = M4.replace('tree LR {', `tree ${direction} {`)
+          const first = child.mindpptParser.compile(source)
+          const second = child.mindpptParser.compile(source)
+
+          expect(first.tree?.direction).toBe(direction)
+          expect(first.slides.map((slide) => slide.id)).toEqual([
+            'intro',
+            'market',
+            'problem',
+            'customer',
+            'competitor',
+            'solution',
+          ])
+          expect(first.tree?.edges.map((edge) => edge.id)).toEqual([
+            'tree:intro->market',
+            'tree:intro->problem',
+            'tree:market->customer',
+            'tree:market->competitor',
+            'tree:problem->solution',
+          ])
+
+          const slides = first.slides
+          const byId = new Map(slides.map((slide) => [slide.id, slide]))
+
+          for (const edge of first.tree?.edges ?? []) {
+            const parent = byId.get(edge.from)!
+            const childSlide = byId.get(edge.to)!
+
+            if (direction === 'LR') {
+              expect(childSlide.x).toBeGreaterThan(parent.x)
+            } else if (direction === 'RL') {
+              expect(childSlide.x).toBeLessThan(parent.x)
+            } else if (direction === 'BT') {
+              expect(childSlide.y).toBeLessThan(parent.y)
+            } else {
+              expect(childSlide.y).toBeGreaterThan(parent.y)
+            }
+          }
+
+          if (direction === 'LR' || direction === 'RL') {
+            expect(byId.get('market')?.y).not.toBe(byId.get('problem')?.y)
+            expect(byId.get('customer')?.y).not.toBe(byId.get('competitor')?.y)
+          } else {
+            expect(byId.get('market')?.x).not.toBe(byId.get('problem')?.x)
+            expect(byId.get('customer')?.x).not.toBe(byId.get('competitor')?.x)
+          }
+
+          for (let index = 0; index < slides.length; index += 1) {
+            for (let other = index + 1; other < slides.length; other += 1) {
+              expect(rectanglesOverlap(slides[index]!, slides[other]!)).toBe(false)
+            }
+          }
+
+          const firstPositions = Object.fromEntries(
+            slides.map((slide) => [slide.id, [slide.x, slide.y] as [number, number]]),
+          )
+          const secondPositions = Object.fromEntries(
+            second.slides.map((slide) => [slide.id, [slide.x, slide.y] as [number, number]]),
+          )
+          expect(secondPositions).toEqual(firstPositions)
+
+          const orphanSource = source.replace(
+            'slide intro {',
+            `slide orphan {
+  # Orphan
+}
+
+slide intro {`,
+          )
+          const withOrphan = child.mindpptParser.compile(orphanSource)
+          const primaryPositionsWithOrphan = Object.fromEntries(
+            withOrphan.slides
+              .filter((slide) => slide.id !== 'orphan')
+              .map((slide) => [slide.id, [slide.x, slide.y] as [number, number]]),
+          )
+          expect(primaryPositionsWithOrphan).toEqual(firstPositions)
+
+          if (direction === 'TB') tbPositions = firstPositions
+          if (direction === 'TD') expect(firstPositions).toEqual(tbPositions)
+        }
+      },
+    })
+  })
+
+  it('rejects duplicate slide IDs at the duplicate declaration', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+
+slide intro {
+  # Duplicate Introduction
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-duplicate-slide-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        expect(() => child.mindpptParser.compile(source)).toThrow(
+          'Duplicate slide ID: intro',
+        )
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.severity).toBe('error')
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe(`slide intro {
+  # Duplicate Introduction
+}`)
+      },
+    })
+  })
+
+  it('rejects duplicate primary tree edges at the duplicate edge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  intro --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-duplicate-edge-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        expect(() => child.mindpptParser.compile(source)).toThrow(
+          'Duplicate tree edge: intro --> market',
+        )
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe('  intro --> market')
+      },
+    })
+  })
+
+  it('rejects multiple parents at the second parent edge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  problem --> market
+}
+
+slide intro {
+  # Introduction
+}
+
+slide problem {
+  # Problem
+}
+
+slide market {
+  # Market
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-multiple-parent-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        expect(() => child.mindpptParser.compile(source)).toThrow(
+          'Slide "market" has multiple parents',
+        )
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe('  problem --> market')
+      },
+    })
+  })
+
+  it('keeps unreachable slides as successful compile warnings', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+}
+
+slide orphan {
+  # Orphan
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    await ctx.plugin({
+      name: 'mindppt-parser-unreachable-warning-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        const structure = child.mindpptParser.compile(source)
+
+        expect(structure.slides.map((slide) => slide.id)).toEqual([
+          'orphan',
+          'intro',
+          'market',
+        ])
+        expect(child.mindpptParser.structure).toBe(structure)
+        expect(child.mindpptParser.diagnostics).toHaveLength(1)
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic).toEqual(expect.objectContaining({
+          severity: 'warning',
+          message: 'Slide "orphan" is unreachable from primary tree root "intro"',
+        }))
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe(`slide orphan {
+  # Orphan
+}`)
+      },
+    })
+  })
+
   it('anchors unsupported tree direction diagnostics to the tree declaration', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
 
     const source = `mindppt
 
-tree TB {
+tree XY {
   intro --> market
 }
 
@@ -129,7 +467,7 @@ slide market {
         }
 
         const diagnostic = child.mindpptParser.diagnostics[0]
-        expect(diagnostic?.message).toContain('tree direction LR only')
+        expect(diagnostic?.message).toContain('Unsupported tree direction: XY')
 
         const range = diagnostic?.sourceRange
         diagnosticSlice = range
@@ -138,7 +476,7 @@ slide market {
       },
     })
 
-    expect(diagnosticSlice).toBe('tree TB {')
+    expect(diagnosticSlice).toBe('tree XY {')
   })
 
   it('anchors empty tree diagnostics to the empty tree block', async () => {
@@ -232,4 +570,103 @@ slide market {
     expect(error).toBeInstanceOf(MindPptCompileError)
     expect((error as Error).message).toContain('Unknown slide in tree edge')
   })
+  it('rejects primary tree cycles at the closing edge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  market --> intro
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    let error: unknown
+
+    await ctx.plugin({
+      name: 'mindppt-parser-cycle-validation-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        try {
+          child.mindpptParser.compile(source)
+        } catch (caught) {
+          error = caught
+        }
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.sourceRange).toBeDefined()
+        expect(source.slice(
+          diagnostic!.sourceRange!.start,
+          diagnostic!.sourceRange!.end,
+        )).toBe('  market --> intro')
+      },
+    })
+
+    expect(error).toBeInstanceOf(MindPptCompileError)
+    expect((error as Error).message).toContain('Primary tree contains a cycle')
+  })
+
+  it('resolves every tree edge and anchors a later unknown reference to that edge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    const source = `mindppt
+
+tree LR {
+  intro --> market
+  market --> missing
+}
+
+slide intro {
+  # Introduction
+}
+
+slide market {
+  # Market
+}
+`
+
+    let diagnosticSlice: string | undefined
+
+    await ctx.plugin({
+      name: 'mindppt-parser-later-reference-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        try {
+          child.mindpptParser.compile(source)
+        } catch {
+          // Expected compile failure.
+        }
+
+        const diagnostic = child.mindpptParser.diagnostics[0]
+        expect(diagnostic?.message).toContain('Unknown slide in tree edge')
+
+        const range = diagnostic?.sourceRange
+        diagnosticSlice = range
+          ? source.slice(range.start, range.end)
+          : undefined
+      },
+    })
+
+    expect(diagnosticSlice).toBe('  market --> missing')
+  })
 })
+
+function rectanglesOverlap(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+): boolean {
+  return left.x < right.x + right.width
+    && left.x + left.width > right.x
+    && left.y < right.y + right.height
+    && left.y + left.height > right.y
+}

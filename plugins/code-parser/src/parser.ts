@@ -1,7 +1,7 @@
 import { parseSlideContent, type ParsedContent } from './content-parser.ts'
 import { MindPptCompileError } from './errors.ts'
 import type { Token } from './tokenizer.ts'
-import type { SourceRange } from './types.ts'
+import type { SourceRange, TreeDirection } from './types.ts'
 
 export interface ParsedSlide {
   id: string
@@ -16,7 +16,7 @@ export interface ParsedTreeEdge {
 }
 
 export interface ParsedTree {
-  direction: 'LR'
+  direction: TreeDirection
   edges: ParsedTreeEdge[]
   range: SourceRange
 }
@@ -48,7 +48,7 @@ class Parser {
       if (!token) break
 
       if (token.kind === 'tree-start') {
-        if (tree) this.fail('M2 supports one primary tree')
+        if (tree) this.fail('MindPPT supports one primary tree')
         tree = this.parseTree()
         continue
       }
@@ -66,8 +66,8 @@ class Parser {
 
   private parseTree(): ParsedTree {
     const start = this.expect('tree-start')
-    if (start.direction !== 'LR') {
-      this.fail('M2 supports tree direction LR only', start.range)
+    if (!isTreeDirection(start.direction)) {
+      this.fail(`Unsupported tree direction: ${start.direction}`, start.range)
     }
 
     const edges: ParsedTreeEdge[] = []
@@ -87,7 +87,7 @@ class Parser {
     }
 
     return {
-      direction: 'LR',
+      direction: start.direction,
       edges,
       range: { start: start.range.start, end: end.range.end },
     }
@@ -142,4 +142,12 @@ class Parser {
 
     throw new MindPptCompileError(message, resolvedRange)
   }
+}
+
+function isTreeDirection(direction: string): direction is TreeDirection {
+  return direction === 'LR'
+    || direction === 'RL'
+    || direction === 'TB'
+    || direction === 'TD'
+    || direction === 'BT'
 }

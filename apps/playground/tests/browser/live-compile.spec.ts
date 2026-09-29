@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('live edit updates the canvas and invalid source keeps the last-good scene', async ({ page }) => {
+test('M4 branching fixture live-edits and invalid source keeps the last-good scene', async ({ page }) => {
   await page.goto('/')
 
   const editor = page.getByRole('textbox', { name: 'MindPPT source editor' })
@@ -12,6 +12,9 @@ test('live edit updates the canvas and invalid source keeps the last-good scene'
   await page.evaluate(() => document.fonts.ready)
 
   const initialSource = await editor.inputValue()
+  expect(initialSource).toContain('market --> customer')
+  expect(initialSource.match(/^slide /gm)).toHaveLength(6)
+
   const beforeEdit = await canvas.screenshot()
 
   const validEdit = initialSource.replace('# Outdoor Market', '# Live Market')
@@ -56,5 +59,35 @@ test('live edit updates the canvas and invalid source keeps the last-good scene'
   await expect.poll(async () => {
     const current = await canvas.screenshot()
     return current.equals(lastGood)
+  }).toBe(false)
+
+  const recoveredScene = await canvas.screenshot()
+  const directionEdit = recoveredEdit.replace('tree LR {', 'tree BT {')
+  await editor.fill(directionEdit)
+
+  await expect(page.getByText('Compiled', { exact: true })).toBeVisible()
+  await expect(page.locator('.diagnostic')).toHaveCount(0)
+
+  await expect.poll(async () => {
+    const current = await canvas.screenshot()
+    return current.equals(recoveredScene)
+  }).toBe(false)
+
+  const directionScene = await canvas.screenshot()
+  const warningEdit = `${directionEdit}
+slide orphan {
+  # Orphan
+}
+`
+  await editor.fill(warningEdit)
+
+  await expect(page.getByText('Compiled with warning', { exact: true })).toBeVisible()
+  await expect(page.locator('.diagnostic-warning')).toContainText(
+    'Slide "orphan" is unreachable from primary tree root "intro"',
+  )
+
+  await expect.poll(async () => {
+    const current = await canvas.screenshot()
+    return current.equals(directionScene)
   }).toBe(false)
 })

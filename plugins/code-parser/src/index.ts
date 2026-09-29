@@ -15,6 +15,7 @@ export type {
   SlideNode,
   SourceRange,
   TextNode,
+  TreeDirection,
   TreeEdge,
   TreeSpec,
 } from './types.ts'
@@ -44,9 +45,10 @@ export default class MindPptParserService extends Service {
     this.source = source
 
     try {
-      const structure = compileSource(source)
+      const diagnostics: MindPptDiagnostic[] = []
+      const structure = compileSource(source, diagnostics)
       this.structure = structure
-      this.diagnostics = []
+      this.diagnostics = diagnostics
       this.ctx.emit('mindppt/compiled', structure)
       return structure
     } catch (error) {

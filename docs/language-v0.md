@@ -232,7 +232,7 @@ The compiler diagnoses:
 - multiple parents;
 - cycles.
 
-Slides may temporarily exist outside the tree. Once graph validation is implemented, unreachable slides should produce a warning rather than a syntax error.
+Slides may exist outside the tree. Unreachable slides produce a warning rather than a syntax error.
 
 ## 8. Soft links
 

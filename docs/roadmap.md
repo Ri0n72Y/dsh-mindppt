@@ -1,7 +1,7 @@
 # MindPPT Roadmap
 
 Status: accepted v0 implementation roadmap  
-Baseline: M2 merged to `main`  
+Baseline: M3 merged to `main`  
 Architecture: Cordis-native runtime, React + TypeScript host UI, Excalidraw canvas rendering
 
 ## 1. Product direction
@@ -398,7 +398,7 @@ Explicit non-goals:
 
 ## M3 — Code Editor + Live Compile
 
-Status: in progress
+Status: complete
 
 Purpose: turn the static playground into the actual authoring development loop.
 
@@ -438,6 +438,8 @@ Source mapping begins to become operational here for diagnostics and editor navi
 
 ## M4 — Branching MindMap + Validation + Spatial Layout
 
+Status: complete
+
 Purpose: prove the mind-map model beyond a linear pair of slides.
 
 Support:
@@ -451,6 +453,15 @@ Support:
 - multiple parents;
 - tree cycles;
 - unreachable-slide warning.
+
+Delivered:
+
+- deterministic branching layout for `LR`, `RL`, `TB`, `TD`, and `BT`;
+- `TD` is the top-down alias of `TB`;
+- duplicate slide, unknown reference, duplicate edge, multiple-parent, and cycle errors;
+- non-blocking unreachable-slide warnings;
+- direction-correct primary tree arrow anchors in Excalidraw;
+- browser-level proof that direction changes update the live canvas.
 
 Tree layout uses only the primary tree.
 

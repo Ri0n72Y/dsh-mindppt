@@ -12,11 +12,12 @@
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.4",
     "@excalidraw/excalidraw": "0.18.0",
+    "dsh-mindppt-camera": "workspace:*",
     "dsh-mindppt-canvas-excalidraw": "workspace:*",
+    "dsh-mindppt-code-editor": "workspace:*",
     "dsh-mindppt-code-parser": "workspace:*",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "dsh-mindppt-code-editor": "workspace:*"
+    "react-dom": "19.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

@@ -8,7 +8,7 @@ import type { CompiledElements } from './runtime.ts'
 
 interface MindPptCanvasProps {
   elements: CompiledElements
-  focusRequest?: CameraFocusRequest
+  focusRequest: CameraFocusRequest | undefined
 }
 
 export function MindPptCanvas({

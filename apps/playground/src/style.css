@@ -106,3 +106,51 @@ textarea {
   min-width: 0;
   min-height: 0;
 }
+
+.camera-controls {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #ddd;
+}
+
+.camera-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.camera-current,
+.camera-label,
+.camera-empty {
+  font-size: 12px;
+}
+
+.camera-select,
+.camera-controls button {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+.camera-controls button:not(:disabled) {
+  cursor: pointer;
+}
+
+.camera-children {
+  display: grid;
+  gap: 6px;
+}
+
+.camera-child-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.camera-child-list button {
+  width: auto;
+}

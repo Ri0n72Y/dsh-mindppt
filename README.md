@@ -44,40 +44,40 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 - `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
 
-## Current vertical slice: M3
+## Current vertical slice: M5
 
-M2 established the Markdown content profile and generic extension fallback. M3 turns the playground into the first live authoring loop.
+M4 completed branching primary-tree validation and deterministic spatial layout in `LR`, `RL`, `TB`, `TD`, and `BT`.
 
-The same canonical fixture remains:
+M5 is now in progress. Its first vertical slice adds the Cordis-native `camera` service and keeps presentation navigation separate from both source semantics and React-local UI state.
 
-`examples/m2-content-profile.mindppt`
+The canonical browser fixture is:
 
-The runtime now follows:
+`examples/m4-branching-lr-tree.mindppt`
+
+The current runtime path is:
 
 ```text
-edit source
+successful structure
     |
-    v
-code-editor
+    +--> canvas scene
     |
-    v
-code-parser
-   / \
-success error
- |       |
- v       v
-canvas   diagnostics
- |       |
- v       v
-new      keep last-good
-scene    scene
+    +--> camera navigation state
+              |
+              v
+       focus request revision
+              |
+              v
+        React host bridge
+              |
+              v
+   Excalidraw viewport focus
 ```
 
-The parser tracks the current source, diagnostics, and the last successful structure. Diagnostics carry source ranges where available, and the React editor uses those ranges for click-to-focus navigation.
+Direct target focus and primary-tree parent/child navigation are available. The host projects each real navigation request to the stable `slide:<id>/surface` element with a single-step Excalidraw viewport operation.
 
-The Excalidraw canvas updates after successful source edits. Invalid intermediate source does not clear the previous valid presentation.
+Initial load remains the complete mind-map overview. Source recompiles do not automatically pull the viewport back to the current slide, while failed compiles keep both the last-good scene and camera state.
 
-A Chromium smoke test covers the real browser path from editing a title through visible canvas update, followed by an invalid edit that surfaces diagnostics while preserving the last-good canvas.
+The three-stage `zoom out -> travel -> zoom in` choreography remains intentionally deferred until this first camera slice is evaluated in practice.
 
 Run the standalone playground with:
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import type { CameraFocusRequest } from 'dsh-mindppt-camera'
 
+import { focusSlideSurface } from './excalidraw-focus.ts'
 import type { CompiledElements } from './runtime.ts'
 
 interface MindPptCanvasProps {
@@ -25,11 +26,7 @@ export function MindPptCanvas({
   useEffect(() => {
     if (!api || !focusRequest) return
 
-    api.scrollToContent(`slide:${focusRequest.slideId}/surface`, {
-      fitToViewport: true,
-      viewportZoomFactor: 0.85,
-      animate: false,
-    })
+    focusSlideSurface(api, focusRequest.slideId)
   }, [api, focusRequest?.revision])
 
   return (

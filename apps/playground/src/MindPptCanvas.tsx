@@ -2,19 +2,35 @@ import { Excalidraw } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { useEffect, useState } from 'react'
 
+import type { CameraFocusRequest } from 'dsh-mindppt-camera'
+
 import type { CompiledElements } from './runtime.ts'
 
 interface MindPptCanvasProps {
   elements: CompiledElements
+  focusRequest?: CameraFocusRequest
 }
 
-export function MindPptCanvas({ elements }: MindPptCanvasProps) {
+export function MindPptCanvas({
+  elements,
+  focusRequest,
+}: MindPptCanvasProps) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
 
   useEffect(() => {
     if (!api) return
     api.updateScene({ elements })
   }, [api, elements])
+
+  useEffect(() => {
+    if (!api || !focusRequest) return
+
+    api.scrollToContent(`slide:${focusRequest.slideId}/surface`, {
+      fitToViewport: true,
+      viewportZoomFactor: 0.85,
+      animate: false,
+    })
+  }, [api, focusRequest?.revision])
 
   return (
     <section className="canvas-panel">

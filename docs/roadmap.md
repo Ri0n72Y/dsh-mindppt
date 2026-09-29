@@ -1,7 +1,7 @@
 # MindPPT Roadmap
 
 Status: accepted v0 implementation roadmap  
-Baseline: M3 merged to `main`  
+Baseline: M4 merged to `main`  
 Architecture: Cordis-native runtime, React + TypeScript host UI, Excalidraw canvas rendering
 
 ## 1. Product direction
@@ -476,6 +476,19 @@ A small content edit should not cause unrelated semantic IDs or positions to cha
 ---
 
 ## M5 — Camera Navigation
+
+Status: in progress
+
+Current first slice:
+
+- Cordis-native `camera` service owns transient current-slide navigation state;
+- direct focus plus primary-tree parent/child navigation;
+- current slide geometry and topology view exposed without React re-parsing the tree;
+- navigation request revision separates viewport commands from source recompiles;
+- React host projects focus to the stable slide surface through Excalidraw 0.18.0;
+- movement is instant/single-step for this slice.
+
+The default `zoom out -> travel -> zoom in` choreography remains deferred until the single-step browser result is evaluated.
 
 Purpose: prove that presentation is traversal over spatial topology.
 

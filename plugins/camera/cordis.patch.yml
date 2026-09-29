@@ -1,0 +1,4 @@
+- insert:
+    - id: mindppt-camera
+      name: "dsh-mindppt-camera"
+      inject: [mindpptParser]

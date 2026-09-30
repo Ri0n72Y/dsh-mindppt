@@ -51,26 +51,41 @@ function createApi(getElements: () => SceneElement[]) {
   }
 }
 
+let animationFrameCallbacks = new Map<number, (timestamp: number) => void>()
+let nextAnimationFrame = 1
+
+function fireAnimationFrame(timestamp: number) {
+  const frameIds = [...animationFrameCallbacks.keys()]
+  for (const id of frameIds) {
+    const callback = animationFrameCallbacks.get(id)
+    if (!callback) continue
+    animationFrameCallbacks.delete(id)
+    callback(timestamp)
+  }
+}
+
+async function completeAnimationWindow(duration: number) {
+  fireAnimationFrame(0)
+  await vi.advanceTimersByTimeAsync(duration)
+  fireAnimationFrame(duration)
+}
+
 beforeEach(() => {
-  let nextAnimationFrame = 1
-  const cancelledAnimationFrames = new Set<number>()
+  animationFrameCallbacks = new Map()
+  nextAnimationFrame = 1
 
   vi.stubGlobal(
     'requestAnimationFrame',
     (callback: (timestamp: number) => void) => {
       const handle = nextAnimationFrame++
-      Promise.resolve().then(() => {
-        if (!cancelledAnimationFrames.has(handle)) {
-          callback(performance.now())
-        }
-      })
+      animationFrameCallbacks.set(handle, callback)
       return handle
     },
   )
   vi.stubGlobal(
     'cancelAnimationFrame',
     (handle: number) => {
-      cancelledAnimationFrames.add(handle)
+      animationFrameCallbacks.delete(handle)
     },
   )
 })
@@ -106,7 +121,7 @@ describe('runCameraTransition', () => {
     })
 
     target = targetV2
-    await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_OUT_DURATION)
+    await completeAnimationWindow(CAMERA_ZOOM_OUT_DURATION)
 
     expect(scrollToContent).toHaveBeenCalledTimes(2)
     expect(scrollToContent).toHaveBeenLastCalledWith(targetV2, {
@@ -115,7 +130,7 @@ describe('runCameraTransition', () => {
     })
 
     target = targetV3
-    await vi.advanceTimersByTimeAsync(CAMERA_TRAVEL_DURATION)
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
 
     expect(scrollToContent).toHaveBeenCalledTimes(3)
     expect(scrollToContent).toHaveBeenLastCalledWith(targetV3, {
@@ -144,7 +159,7 @@ describe('runCameraTransition', () => {
       duration: CAMERA_TRAVEL_DURATION,
     })
 
-    await vi.advanceTimersByTimeAsync(CAMERA_TRAVEL_DURATION)
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
 
     expect(scrollToContent).toHaveBeenCalledTimes(2)
     expect(scrollToContent).toHaveBeenLastCalledWith(target, {
@@ -174,7 +189,7 @@ describe('runCameraTransition', () => {
       animate: true,
       duration: CAMERA_ZOOM_IN_DURATION,
     })
-    await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_IN_DURATION)
+    await completeAnimationWindow(CAMERA_ZOOM_IN_DURATION)
     expect(vi.getTimerCount()).toBe(0)
   })
 
@@ -227,9 +242,8 @@ describe('runCameraTransition', () => {
       fromSlideId: 'intro',
     })
 
-    await vi.advanceTimersByTimeAsync(
-      CAMERA_ZOOM_OUT_DURATION + CAMERA_TRAVEL_DURATION,
-    )
+    await completeAnimationWindow(CAMERA_ZOOM_OUT_DURATION)
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
     expect(getAnimationOwner()).toBe(target)
 
     transition.cancel()
@@ -256,9 +270,8 @@ describe('runCameraTransition', () => {
       fromSlideId: 'intro',
     })
 
-    await vi.advanceTimersByTimeAsync(
-      CAMERA_ZOOM_OUT_DURATION + CAMERA_TRAVEL_DURATION,
-    )
+    await completeAnimationWindow(CAMERA_ZOOM_OUT_DURATION)
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
     expect(scrollToContent).toHaveBeenCalledTimes(3)
     expect(scrollToContent).toHaveBeenLastCalledWith(targetV1, {
       fitToViewport: true,
@@ -284,7 +297,7 @@ describe('runCameraTransition', () => {
       opts?.duration === CAMERA_TRAVEL_DURATION,
     )).toHaveLength(1)
 
-    await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_IN_DURATION)
+    await completeAnimationWindow(CAMERA_ZOOM_IN_DURATION)
     expect(vi.getTimerCount()).toBe(0)
   })
 
@@ -301,9 +314,8 @@ describe('runCameraTransition', () => {
       slideId: 'intro',
     })
 
-    await vi.advanceTimersByTimeAsync(
-      CAMERA_TRAVEL_DURATION + CAMERA_ZOOM_IN_DURATION,
-    )
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
+    await completeAnimationWindow(CAMERA_ZOOM_IN_DURATION)
     expect(scrollToContent).toHaveBeenCalledTimes(2)
 
     target = targetV2
@@ -328,9 +340,8 @@ describe('runCameraTransition', () => {
       fromSlideId: 'intro',
     })
 
-    await vi.advanceTimersByTimeAsync(
-      CAMERA_ZOOM_OUT_DURATION + CAMERA_TRAVEL_DURATION,
-    )
+    await completeAnimationWindow(CAMERA_ZOOM_OUT_DURATION)
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
     expect(getAnimationOwner()).toBe(target)
 
     includeTarget = false
@@ -366,8 +377,8 @@ describe('runCameraTransition', () => {
       fromSlideId: 'market',
     })
 
-    await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_OUT_DURATION)
-    await vi.advanceTimersByTimeAsync(CAMERA_TRAVEL_DURATION)
+    await completeAnimationWindow(CAMERA_ZOOM_OUT_DURATION)
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
 
     const animatedCalls = scrollToContent.mock.calls.filter(([, opts]) => opts?.animate)
     expect(animatedCalls).toEqual([
@@ -418,7 +429,7 @@ describe('runCameraTransition', () => {
       duration: CAMERA_TRAVEL_DURATION,
     })
 
-    await vi.advanceTimersByTimeAsync(CAMERA_TRAVEL_DURATION)
+    await completeAnimationWindow(CAMERA_TRAVEL_DURATION)
 
     expect(scrollToContent).toHaveBeenCalledTimes(2)
     expect(scrollToContent).toHaveBeenLastCalledWith(target, {

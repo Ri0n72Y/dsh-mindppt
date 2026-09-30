@@ -17,6 +17,7 @@ export interface CameraTarget {
 export interface CameraFocusRequest {
   revision: number
   slideId: string
+  fromSlideId?: string
 }
 
 export interface CameraView {
@@ -81,11 +82,13 @@ export default class MindPptCameraService extends Service {
     const slide = this.findSlide(slideId)
     if (!slide) return false
 
+    const fromSlideId = this.activeSlideId
     this.activeSlideId = slideId
     this.revision += 1
     this.request = {
       revision: this.revision,
       slideId,
+      ...(fromSlideId !== undefined ? { fromSlideId } : {}),
     }
     return true
   }

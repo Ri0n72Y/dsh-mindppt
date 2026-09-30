@@ -146,4 +146,4 @@ slide orphan {
   await cameraTarget.selectOption('solution')
   await expect(page.getByText('Current: solution', { exact: true })).toBeVisible()
   await expectCanvasTransitionToSettle(canvas, solutionScene)
-}
+})

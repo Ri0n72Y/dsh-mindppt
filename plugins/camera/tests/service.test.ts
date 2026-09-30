@@ -35,7 +35,7 @@ async function createRuntime() {
 }
 
 describe('MindPptCameraService', () => {
-  it('directly focuses an existing slide and exposes its geometry', async () => {
+  it('directly focuses an existing slide and records overview as the first source', async () => {
     const { camera } = await createRuntime()
 
     expect(camera.focusSlide('intro')).toBe(true)
@@ -45,22 +45,37 @@ describe('MindPptCameraService', () => {
       width: 1280,
       height: 720,
     }))
+    expect(camera.view.focusRequest).toEqual({
+      revision: 1,
+      slideId: 'intro',
+    })
+    expect(camera.view.focusRequest?.fromSlideId).toBeUndefined()
   })
 
-  it('navigates from a parent to one of its primary-tree children', async () => {
+  it('navigates from a parent to one of its primary-tree children with the parent as source', async () => {
     const { camera } = await createRuntime()
 
     camera.focusSlide('intro')
     expect(camera.focusChild('market')).toBe(true)
     expect(camera.currentSlideId).toBe('market')
+    expect(camera.view.focusRequest).toEqual({
+      revision: 2,
+      slideId: 'market',
+      fromSlideId: 'intro',
+    })
   })
 
-  it('navigates from a child back to its primary-tree parent', async () => {
+  it('navigates from a child back to its primary-tree parent with the child as source', async () => {
     const { camera } = await createRuntime()
 
     camera.focusSlide('market')
     expect(camera.focusParent()).toBe(true)
     expect(camera.currentSlideId).toBe('intro')
+    expect(camera.view.focusRequest).toEqual({
+      revision: 2,
+      slideId: 'intro',
+      fromSlideId: 'market',
+    })
   })
 
   it('preserves primary-tree child source order for branching navigation', async () => {
@@ -126,13 +141,17 @@ slide orphan {
     expect(camera.view.childSlideIds).toEqual([])
   })
 
-  it('issues a new request revision when the same slide is focused again', async () => {
+  it('issues a new same-slide request with the current slide as its source', async () => {
     const { camera } = await createRuntime()
 
     camera.focusSlide('intro')
     const firstRevision = camera.view.focusRequest?.revision
     camera.focusSlide('intro')
 
-    expect(camera.view.focusRequest?.revision).toBe((firstRevision ?? 0) + 1)
+    expect(camera.view.focusRequest).toEqual({
+      revision: (firstRevision ?? 0) + 1,
+      slideId: 'intro',
+      fromSlideId: 'intro',
+    })
   })
 })

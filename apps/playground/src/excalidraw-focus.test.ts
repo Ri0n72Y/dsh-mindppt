@@ -1,5 +1,5 @@
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   CAMERA_TARGET_ZOOM_FACTOR,
@@ -51,8 +51,21 @@ function createApi(getElements: () => SceneElement[]) {
   }
 }
 
+beforeEach(() => {
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    (callback: (timestamp: number) => void) =>
+      setTimeout(() => callback(performance.now()), 0) as unknown as number,
+  )
+  vi.stubGlobal(
+    'cancelAnimationFrame',
+    (handle: number) => clearTimeout(handle),
+  )
+})
+
 afterEach(() => {
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 describe('runCameraTransition', () => {

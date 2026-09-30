@@ -23,12 +23,17 @@ export function runCameraTransition(
 ): CameraTransitionController {
   let phase: TransitionPhase = 'done'
   let pendingTimer: ReturnType<typeof setTimeout> | undefined
+  let pendingAnimationFrame: number | undefined
   let activeSurface: SceneElement | undefined
 
-  const clearPendingTimer = () => {
+  const clearPendingCompletion = () => {
     if (pendingTimer !== undefined) {
       clearTimeout(pendingTimer)
       pendingTimer = undefined
+    }
+    if (pendingAnimationFrame !== undefined) {
+      cancelAnimationFrame(pendingAnimationFrame)
+      pendingAnimationFrame = undefined
     }
   }
 
@@ -55,7 +60,7 @@ export function runCameraTransition(
     if (phase === 'cancelled' || phase === 'done') return
 
     phase = 'cancelled'
-    clearPendingTimer()
+    clearPendingCompletion()
     interruptViewportAnimation()
   }
 
@@ -64,12 +69,32 @@ export function runCameraTransition(
     return api.getSceneElements().find((element) => element.id === surfaceId)
   }
 
-  const schedule = (duration: number, next: () => void) => {
-    clearPendingTimer()
-    pendingTimer = setTimeout(() => {
-      pendingTimer = undefined
-      if (phase !== 'cancelled') next()
-    }, duration)
+  const scheduleAfterAnimationWindow = (
+    duration: number,
+    next: () => void,
+  ) => {
+    clearPendingCompletion()
+
+    // Excalidraw 0.18.0 starts easeToValuesRAF's duration clock inside the
+    // first RAF callback, not when scrollToContent() is invoked. Queue our
+    // first boundary only after scrollToContent() has queued Excalidraw's RAF,
+    // then measure the duration from that shared frame and advance on the
+    // following RAF. Excalidraw's already-pending final step therefore runs
+    // before this completion callback on that frame.
+    pendingAnimationFrame = requestAnimationFrame(() => {
+      pendingAnimationFrame = undefined
+      if (phase === 'cancelled') return
+
+      pendingTimer = setTimeout(() => {
+        pendingTimer = undefined
+        if (phase === 'cancelled') return
+
+        pendingAnimationFrame = requestAnimationFrame(() => {
+          pendingAnimationFrame = undefined
+          if (phase !== 'cancelled') next()
+        })
+      }, duration)
+    })
   }
 
   const finish = () => {
@@ -96,7 +121,7 @@ export function runCameraTransition(
       animate: true,
       duration: CAMERA_ZOOM_IN_DURATION,
     })
-    schedule(CAMERA_ZOOM_IN_DURATION, finish)
+    scheduleAfterAnimationWindow(CAMERA_ZOOM_IN_DURATION, finish)
   }
 
   const travelToTarget = () => {
@@ -114,7 +139,7 @@ export function runCameraTransition(
       animate: true,
       duration: CAMERA_TRAVEL_DURATION,
     })
-    schedule(CAMERA_TRAVEL_DURATION, zoomInTarget)
+    scheduleAfterAnimationWindow(CAMERA_TRAVEL_DURATION, zoomInTarget)
   }
 
   const reconcileScene = () => {
@@ -137,7 +162,7 @@ export function runCameraTransition(
       animate: true,
       duration: CAMERA_ZOOM_IN_DURATION,
     })
-    schedule(CAMERA_ZOOM_IN_DURATION, finish)
+    scheduleAfterAnimationWindow(CAMERA_ZOOM_IN_DURATION, finish)
   }
 
   const controller: CameraTransitionController = {
@@ -174,7 +199,7 @@ export function runCameraTransition(
     animate: true,
     duration: CAMERA_ZOOM_OUT_DURATION,
   })
-  schedule(CAMERA_ZOOM_OUT_DURATION, travelToTarget)
+  scheduleAfterAnimationWindow(CAMERA_ZOOM_OUT_DURATION, travelToTarget)
 
   return controller
 }

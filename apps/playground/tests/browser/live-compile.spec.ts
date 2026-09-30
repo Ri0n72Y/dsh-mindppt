@@ -1,6 +1,32 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 
-test('M5 camera focus extends the M4 live authoring browser path', async ({ page }) => {
+async function expectCanvasTransitionToSettle(
+  canvas: Locator,
+  previous: Buffer,
+): Promise<void> {
+  let last = previous
+  let changed = false
+  let stableSamples = 0
+
+  await expect.poll(async () => {
+    const current = await canvas.screenshot()
+
+    if (!current.equals(previous)) changed = true
+    if (changed && current.equals(last)) {
+      stableSamples += 1
+    } else {
+      stableSamples = 0
+    }
+    last = current
+
+    return changed && stableSamples >= 2
+  }, {
+    timeout: 5_000,
+    intervals: [100, 120, 160, 200],
+  }).toBe(true)
+}
+
+test('M5 animated camera navigation extends the M4 live authoring browser path', async ({ page }) => {
   await page.goto('/')
 
   const editor = page.getByRole('textbox', { name: 'MindPPT source editor' })
@@ -97,32 +123,27 @@ slide orphan {
 
   await cameraTarget.selectOption('intro')
   await expect(page.getByText('Current: intro', { exact: true })).toBeVisible()
-  await expect.poll(async () => {
-    const current = await canvas.screenshot()
-    return current.equals(overviewScene)
-  }).toBe(false)
+  await expectCanvasTransitionToSettle(canvas, overviewScene)
 
   const introScene = await canvas.screenshot()
   await page.getByRole('button', { name: 'Focus child market' }).click()
   await expect(page.getByText('Current: market', { exact: true })).toBeVisible()
-  await expect.poll(async () => {
-    const current = await canvas.screenshot()
-    return current.equals(introScene)
-  }).toBe(false)
+  await expectCanvasTransitionToSettle(canvas, introScene)
 
   const marketScene = await canvas.screenshot()
   await page.getByRole('button', { name: 'Focus parent intro' }).click()
   await expect(page.getByText('Current: intro', { exact: true })).toBeVisible()
-  await expect.poll(async () => {
-    const current = await canvas.screenshot()
-    return current.equals(marketScene)
-  }).toBe(false)
+  await expectCanvasTransitionToSettle(canvas, marketScene)
 
   const returnedIntroScene = await canvas.screenshot()
   await cameraTarget.selectOption('solution')
   await expect(page.getByText('Current: solution', { exact: true })).toBeVisible()
-  await expect.poll(async () => {
-    const current = await canvas.screenshot()
-    return current.equals(returnedIntroScene)
-  }).toBe(false)
-})
+  await expectCanvasTransitionToSettle(canvas, returnedIntroScene)
+
+  const solutionScene = await canvas.screenshot()
+  await cameraTarget.selectOption('market')
+  await expect(page.getByText('Current: market', { exact: true })).toBeVisible()
+  await cameraTarget.selectOption('solution')
+  await expect(page.getByText('Current: solution', { exact: true })).toBeVisible()
+  await expectCanvasTransitionToSettle(canvas, solutionScene)
+}

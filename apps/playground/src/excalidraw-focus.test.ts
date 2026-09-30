@@ -71,6 +71,7 @@ async function completeAnimationWindow(duration: number) {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
   animationFrameCallbacks = new Map()
   nextAnimationFrame = 1
 
@@ -97,8 +98,6 @@ afterEach(() => {
 
 describe('runCameraTransition', () => {
   it('runs zoom-out, travel, and zoom-in while resolving the current scene for each phase', async () => {
-    vi.useFakeTimers()
-
     const source = { id: 'slide:intro/surface' } as SceneElement
     const targetV1 = { id: 'slide:market/surface', version: 1 } as unknown as SceneElement
     const targetV2 = { id: 'slide:market/surface', version: 2 } as unknown as SceneElement
@@ -143,8 +142,6 @@ describe('runCameraTransition', () => {
   })
 
   it('travels from the overview zoom before applying the final target framing', async () => {
-    vi.useFakeTimers()
-
     const target = { id: 'slide:intro/surface' } as SceneElement
     const { api, scrollToContent } = createApi(() => [target])
 
@@ -171,8 +168,6 @@ describe('runCameraTransition', () => {
   })
 
   it('uses only the final animated focus for repeated same-slide requests', async () => {
-    vi.useFakeTimers()
-
     const target = { id: 'slide:intro/surface' } as SceneElement
     const { api, scrollToContent } = createApi(() => [target])
 
@@ -194,8 +189,6 @@ describe('runCameraTransition', () => {
   })
 
   it('cancels active Excalidraw viewport ownership as well as pending host phases', async () => {
-    vi.useFakeTimers()
-
     const source = { id: 'slide:intro/surface' } as SceneElement
     const target = { id: 'slide:market/surface' } as SceneElement
     const {
@@ -230,8 +223,6 @@ describe('runCameraTransition', () => {
   })
 
   it('stops an active final animation when its request is removed without a successor', async () => {
-    vi.useFakeTimers()
-
     const source = { id: 'slide:intro/surface' } as SceneElement
     const target = { id: 'slide:market/surface' } as SceneElement
     const { api, scrollToContent, getAnimationOwner } = createApi(() => [source, target])
@@ -256,8 +247,6 @@ describe('runCameraTransition', () => {
   })
 
   it('reconciles only the active terminal framing against latest scene geometry', async () => {
-    vi.useFakeTimers()
-
     const source = { id: 'slide:intro/surface' } as SceneElement
     const targetV1 = { id: 'slide:market/surface', version: 1 } as unknown as SceneElement
     const targetV2 = { id: 'slide:market/surface', version: 2 } as unknown as SceneElement
@@ -302,8 +291,6 @@ describe('runCameraTransition', () => {
   })
 
   it('does not refocus after the transition is done', async () => {
-    vi.useFakeTimers()
-
     const targetV1 = { id: 'slide:intro/surface', version: 1 } as unknown as SceneElement
     const targetV2 = { id: 'slide:intro/surface', version: 2 } as unknown as SceneElement
     let target = targetV1
@@ -325,8 +312,6 @@ describe('runCameraTransition', () => {
   })
 
   it('interrupts the terminal animation when the target disappears during reconciliation', async () => {
-    vi.useFakeTimers()
-
     const source = { id: 'slide:intro/surface' } as SceneElement
     const target = { id: 'slide:market/surface' } as SceneElement
     let includeTarget = true
@@ -356,8 +341,6 @@ describe('runCameraTransition', () => {
   })
 
   it('lets the latest request replace the previous transition without stale phases reclaiming the viewport', async () => {
-    vi.useFakeTimers()
-
     const intro = { id: 'slide:intro/surface' } as SceneElement
     const market = { id: 'slide:market/surface' } as SceneElement
     const solution = { id: 'slide:solution/surface' } as SceneElement
@@ -412,8 +395,6 @@ describe('runCameraTransition', () => {
   })
 
   it('degrades to target travel and final focus when the source surface is missing', async () => {
-    vi.useFakeTimers()
-
     const target = { id: 'slide:market/surface' } as SceneElement
     const { api, scrollToContent } = createApi(() => [target])
 
@@ -441,8 +422,6 @@ describe('runCameraTransition', () => {
   })
 
   it('stops safely when the target surface is missing', async () => {
-    vi.useFakeTimers()
-
     const source = { id: 'slide:intro/surface' } as SceneElement
     const { api, scrollToContent } = createApi(() => [source])
 

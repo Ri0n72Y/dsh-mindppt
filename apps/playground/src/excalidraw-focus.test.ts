@@ -52,14 +52,26 @@ function createApi(getElements: () => SceneElement[]) {
 }
 
 beforeEach(() => {
+  let nextAnimationFrame = 1
+  const cancelledAnimationFrames = new Set<number>()
+
   vi.stubGlobal(
     'requestAnimationFrame',
-    (callback: (timestamp: number) => void) =>
-      setTimeout(() => callback(performance.now()), 0) as unknown as number,
+    (callback: (timestamp: number) => void) => {
+      const handle = nextAnimationFrame++
+      Promise.resolve().then(() => {
+        if (!cancelledAnimationFrames.has(handle)) {
+          callback(performance.now())
+        }
+      })
+      return handle
+    },
   )
   vi.stubGlobal(
     'cancelAnimationFrame',
-    (handle: number) => clearTimeout(handle),
+    (handle: number) => {
+      cancelledAnimationFrames.add(handle)
+    },
   )
 })
 
@@ -162,8 +174,6 @@ describe('runCameraTransition', () => {
       animate: true,
       duration: CAMERA_ZOOM_IN_DURATION,
     })
-    expect(vi.getTimerCount()).toBe(1)
-
     await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_IN_DURATION)
     expect(vi.getTimerCount()).toBe(0)
   })

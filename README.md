@@ -48,7 +48,7 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 
 M4 completed branching primary-tree validation and deterministic spatial layout in `LR`, `RL`, `TB`, `TD`, and `BT`.
 
-M5 is now in progress. Its first vertical slice adds the Cordis-native `camera` service and keeps presentation navigation separate from both source semantics and React-local UI state.
+M5 Camera Navigation is complete. The Cordis-native `camera` service owns semantic current-slide and topology navigation state, while the React / Excalidraw host owns viewport choreography.
 
 The canonical browser fixture is:
 
@@ -64,20 +64,23 @@ successful structure
     +--> camera navigation state
               |
               v
-       focus request revision
+ CameraFocusRequest(revision, from?, target)
               |
               v
-        React host bridge
+      React host sequencer
               |
               v
-   Excalidraw viewport focus
+ current Excalidraw scene lookup
+              |
+              v
+ zoom out -> travel -> zoom in
 ```
 
-Direct target focus and primary-tree parent/child navigation are available. The host projects each real navigation request to the stable `slide:<id>/surface` element with a single-step Excalidraw viewport operation.
+Direct target focus and primary-tree parent / child navigation all use the same semantic focus request. Normal slide-to-slide movement zooms out around the current slide, travels to the target at that wider scale, then fits the target to approximately 85% of the viewport. The first focus from the overview skips the redundant zoom-out phase, while repeated same-slide focus performs only the final animated framing.
 
-Initial load remains the complete mind-map overview. Source recompiles do not automatically pull the viewport back to the current slide, while failed compiles keep both the last-good scene and camera state.
+Each transition phase resolves the stable `slide:<id>/surface` from the current Excalidraw scene immediately before calling `scrollToContent()`. Source recompiles therefore do not automatically refocus the camera, but an in-flight transition can continue against the latest successful scene geometry.
 
-The three-stage `zoom out -> travel -> zoom in` choreography remains intentionally deferred until this first camera slice is evaluated in practice.
+A newer camera request cancels the previous host sequence before its remaining phases can run. Initial load remains the complete mind-map overview, failed compiles preserve the last-good scene and camera state, and successful removal of the current slide clears its focus request.
 
 Run the standalone playground with:
 

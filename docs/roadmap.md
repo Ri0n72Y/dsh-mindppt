@@ -477,22 +477,33 @@ A small content edit should not cause unrelated semantic IDs or positions to cha
 
 ## M5 — Camera Navigation
 
-Status: in progress
-
-Current first slice:
-
-- Cordis-native `camera` service owns transient current-slide navigation state;
-- direct focus plus primary-tree parent/child navigation;
-- current slide geometry and topology view exposed without React re-parsing the tree;
-- navigation request revision separates viewport commands from source recompiles;
-- React host projects focus to the stable slide surface through Excalidraw 0.18.0;
-- movement is instant/single-step for this slice.
-
-The default `zoom out -> travel -> zoom in` choreography remains deferred until the single-step browser result is evaluated.
+Status: complete
 
 Purpose: prove that presentation is traversal over spatial topology.
 
-Add the `camera` Cordis plugin.
+M5.1 — semantic focus + topology navigation:
+
+- Cordis-native `camera` service owns transient current-slide navigation state;
+- direct target focus plus primary-tree parent / child navigation;
+- current slide geometry and topology view exposed without React re-parsing the tree;
+- `CameraFocusRequest` carries `revision`, target `slideId`, and the optional semantic `fromSlideId` captured before current-slide mutation;
+- request revision separates viewport commands from source recompiles;
+- compile failures preserve last-good scene and camera state;
+- successful recompiles preserve the current slide when it still exists and clear camera focus state when it is removed.
+
+M5.2 — viewport choreography:
+
+- React / Excalidraw host owns a local cancellable sequencer; the camera service remains free of Excalidraw state and animation timing;
+- normal slide-to-slide movement is `zoom out -> travel -> zoom in`;
+- zoom-out fits the source slide at `0.55` viewport factor for `220ms`;
+- travel moves to the target center at the zoomed-out scale for `340ms`;
+- zoom-in fits the target slide at the M5 framing factor `0.85` for `220ms`;
+- first focus from the overview skips source zoom-out and performs `travel -> zoom in`;
+- repeated same-slide focus performs only the animated final framing;
+- every phase resolves `slide:<id>/surface` from the current Excalidraw scene immediately before use, so successful live recompiles do not leave stale element objects queued in the transition;
+- missing source surface degrades to target travel plus final focus, while a missing target stops the transition safely;
+- React effect cleanup cancels pending host sequencing when a newer request arrives or the component unmounts; the next `scrollToContent()` call cancels the previous Excalidraw RAF animation;
+- fixed local timing keeps the normal transition below one second without introducing an animation framework or configuration system.
 
 Camera consumes:
 
@@ -504,28 +515,20 @@ target slide
 viewport
 ```
 
-Initial transitions:
+Supported navigation:
 
 - parent -> child;
 - child -> parent;
-- direct target focus.
+- direct target focus;
+- repeated same-slide refocus.
 
-Default movement:
-
-```text
-focus current
--> zoom out
--> travel
--> zoom in
-```
-
-React UI adds only minimal presentation controls.
+Initial load remains the complete mind-map overview. Source recompiles do not automatically refocus the current slide.
 
 Visible acceptance:
 
-> A user can select a slide and navigate through parent/child relationships with spatial camera movement.
+> A user can select a slide and navigate through parent/child relationships with animated spatial camera movement, and a newer navigation request wins over any older in-flight choreography.
 
-Camera must remain independent from content types.
+Camera remains independent from content types.
 
 ---
 

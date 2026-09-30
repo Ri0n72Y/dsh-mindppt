@@ -15,13 +15,40 @@ type SceneElement = ReturnType<
 >[number]
 
 function createApi(getElements: () => SceneElement[]) {
-  const scrollToContent = vi.fn()
+  let animationOwner: SceneElement | undefined
+  const appState = {
+    scrollX: 12,
+    scrollY: -8,
+    zoom: { value: 0.73 },
+  }
+  const scrollToContent = vi.fn((
+    target: SceneElement,
+    opts?: {
+      animate?: boolean
+      duration?: number
+      fitToViewport?: boolean
+      viewportZoomFactor?: number
+    },
+  ) => {
+    animationOwner = opts?.animate ? target : undefined
+  })
+  const updateScene = vi.fn()
+  const getAppState = vi.fn(() => appState)
   const api = {
     getSceneElements: getElements,
+    getAppState,
     scrollToContent,
+    updateScene,
   } as unknown as ExcalidrawImperativeAPI
 
-  return { api, scrollToContent }
+  return {
+    api,
+    scrollToContent,
+    updateScene,
+    getAppState,
+    getAnimationOwner: () => animationOwner,
+    appState,
+  }
 }
 
 afterEach(() => {
@@ -103,7 +130,7 @@ describe('runCameraTransition', () => {
     })
   })
 
-  it('uses only the final animated focus for repeated same-slide requests', () => {
+  it('uses only the final animated focus for repeated same-slide requests', async () => {
     vi.useFakeTimers()
 
     const target = { id: 'slide:intro/surface' } as SceneElement
@@ -122,10 +149,179 @@ describe('runCameraTransition', () => {
       animate: true,
       duration: CAMERA_ZOOM_IN_DURATION,
     })
+    expect(vi.getTimerCount()).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_IN_DURATION)
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('lets the latest request cancel every pending phase from the previous transition', async () => {
+  it('cancels active Excalidraw viewport ownership as well as pending host phases', async () => {
+    vi.useFakeTimers()
+
+    const source = { id: 'slide:intro/surface' } as SceneElement
+    const target = { id: 'slide:market/surface' } as SceneElement
+    const {
+      api,
+      scrollToContent,
+      updateScene,
+      getAnimationOwner,
+      appState,
+    } = createApi(() => [source, target])
+
+    const transition = runCameraTransition(api, {
+      revision: 2,
+      slideId: 'market',
+      fromSlideId: 'intro',
+    })
+
+    expect(getAnimationOwner()).toBe(source)
+    transition.cancel()
+
+    expect(scrollToContent).toHaveBeenLastCalledWith(source, { animate: false })
+    expect(updateScene).toHaveBeenLastCalledWith({
+      appState: {
+        scrollX: appState.scrollX,
+        scrollY: appState.scrollY,
+        zoom: appState.zoom,
+      },
+    })
+    expect(getAnimationOwner()).toBeUndefined()
+
+    await vi.runAllTimersAsync()
+    expect(scrollToContent).toHaveBeenCalledTimes(2)
+  })
+
+  it('stops an active final animation when its request is removed without a successor', async () => {
+    vi.useFakeTimers()
+
+    const source = { id: 'slide:intro/surface' } as SceneElement
+    const target = { id: 'slide:market/surface' } as SceneElement
+    const { api, scrollToContent, getAnimationOwner } = createApi(() => [source, target])
+
+    const transition = runCameraTransition(api, {
+      revision: 2,
+      slideId: 'market',
+      fromSlideId: 'intro',
+    })
+
+    await vi.advanceTimersByTimeAsync(
+      CAMERA_ZOOM_OUT_DURATION + CAMERA_TRAVEL_DURATION,
+    )
+    expect(getAnimationOwner()).toBe(target)
+
+    transition.cancel()
+
+    expect(scrollToContent).toHaveBeenLastCalledWith(target, { animate: false })
+    expect(getAnimationOwner()).toBeUndefined()
+
+    await vi.runAllTimersAsync()
+    expect(scrollToContent).toHaveBeenCalledTimes(4)
+  })
+
+  it('reconciles only the active terminal framing against latest scene geometry', async () => {
+    vi.useFakeTimers()
+
+    const source = { id: 'slide:intro/surface' } as SceneElement
+    const targetV1 = { id: 'slide:market/surface', version: 1 } as unknown as SceneElement
+    const targetV2 = { id: 'slide:market/surface', version: 2 } as unknown as SceneElement
+    let target = targetV1
+    const { api, scrollToContent } = createApi(() => [source, target])
+
+    const transition = runCameraTransition(api, {
+      revision: 2,
+      slideId: 'market',
+      fromSlideId: 'intro',
+    })
+
+    await vi.advanceTimersByTimeAsync(
+      CAMERA_ZOOM_OUT_DURATION + CAMERA_TRAVEL_DURATION,
+    )
+    expect(scrollToContent).toHaveBeenCalledTimes(3)
+    expect(scrollToContent).toHaveBeenLastCalledWith(targetV1, {
+      fitToViewport: true,
+      viewportZoomFactor: CAMERA_TARGET_ZOOM_FACTOR,
+      animate: true,
+      duration: CAMERA_ZOOM_IN_DURATION,
+    })
+
+    target = targetV2
+    transition.reconcileScene()
+
+    expect(scrollToContent).toHaveBeenCalledTimes(4)
+    expect(scrollToContent).toHaveBeenLastCalledWith(targetV2, {
+      fitToViewport: true,
+      viewportZoomFactor: CAMERA_TARGET_ZOOM_FACTOR,
+      animate: true,
+      duration: CAMERA_ZOOM_IN_DURATION,
+    })
+    expect(scrollToContent.mock.calls.filter(([, opts]) =>
+      opts?.viewportZoomFactor === CAMERA_ZOOM_OUT_FACTOR,
+    )).toHaveLength(1)
+    expect(scrollToContent.mock.calls.filter(([, opts]) =>
+      opts?.duration === CAMERA_TRAVEL_DURATION,
+    )).toHaveLength(1)
+
+    await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_IN_DURATION)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('does not refocus after the transition is done', async () => {
+    vi.useFakeTimers()
+
+    const targetV1 = { id: 'slide:intro/surface', version: 1 } as unknown as SceneElement
+    const targetV2 = { id: 'slide:intro/surface', version: 2 } as unknown as SceneElement
+    let target = targetV1
+    const { api, scrollToContent } = createApi(() => [target])
+
+    const transition = runCameraTransition(api, {
+      revision: 1,
+      slideId: 'intro',
+    })
+
+    await vi.advanceTimersByTimeAsync(
+      CAMERA_TRAVEL_DURATION + CAMERA_ZOOM_IN_DURATION,
+    )
+    expect(scrollToContent).toHaveBeenCalledTimes(2)
+
+    target = targetV2
+    transition.reconcileScene()
+
+    expect(scrollToContent).toHaveBeenCalledTimes(2)
+  })
+
+  it('interrupts the terminal animation when the target disappears during reconciliation', async () => {
+    vi.useFakeTimers()
+
+    const source = { id: 'slide:intro/surface' } as SceneElement
+    const target = { id: 'slide:market/surface' } as SceneElement
+    let includeTarget = true
+    const { api, scrollToContent, getAnimationOwner } = createApi(() =>
+      includeTarget ? [source, target] : [source],
+    )
+
+    const transition = runCameraTransition(api, {
+      revision: 2,
+      slideId: 'market',
+      fromSlideId: 'intro',
+    })
+
+    await vi.advanceTimersByTimeAsync(
+      CAMERA_ZOOM_OUT_DURATION + CAMERA_TRAVEL_DURATION,
+    )
+    expect(getAnimationOwner()).toBe(target)
+
+    includeTarget = false
+    transition.reconcileScene()
+
+    expect(scrollToContent).toHaveBeenLastCalledWith(target, { animate: false })
+    expect(getAnimationOwner()).toBeUndefined()
+
+    const callsAfterRemoval = scrollToContent.mock.calls.length
+    await vi.runAllTimersAsync()
+    expect(scrollToContent).toHaveBeenCalledTimes(callsAfterRemoval)
+  })
+
+  it('lets the latest request replace the previous transition without stale phases reclaiming the viewport', async () => {
     vi.useFakeTimers()
 
     const intro = { id: 'slide:intro/surface' } as SceneElement
@@ -133,14 +329,13 @@ describe('runCameraTransition', () => {
     const solution = { id: 'slide:solution/surface' } as SceneElement
     const { api, scrollToContent } = createApi(() => [intro, market, solution])
 
-    const cancelFirst = runCameraTransition(api, {
+    const first = runCameraTransition(api, {
       revision: 2,
       slideId: 'market',
       fromSlideId: 'intro',
     })
 
-    expect(scrollToContent).toHaveBeenCalledTimes(1)
-    cancelFirst()
+    first.cancel()
 
     runCameraTransition(api, {
       revision: 3,
@@ -148,34 +343,38 @@ describe('runCameraTransition', () => {
       fromSlideId: 'market',
     })
 
-    expect(scrollToContent).toHaveBeenCalledTimes(2)
-    expect(scrollToContent).toHaveBeenLastCalledWith(market, {
-      fitToViewport: true,
-      viewportZoomFactor: CAMERA_ZOOM_OUT_FACTOR,
-      animate: true,
-      duration: CAMERA_ZOOM_OUT_DURATION,
-    })
-
     await vi.advanceTimersByTimeAsync(CAMERA_ZOOM_OUT_DURATION)
-    expect(scrollToContent).toHaveBeenCalledTimes(3)
-    expect(scrollToContent).toHaveBeenLastCalledWith(solution, {
-      animate: true,
-      duration: CAMERA_TRAVEL_DURATION,
-    })
-
     await vi.advanceTimersByTimeAsync(CAMERA_TRAVEL_DURATION)
-    expect(scrollToContent).toHaveBeenCalledTimes(4)
-    expect(scrollToContent).toHaveBeenLastCalledWith(solution, {
-      fitToViewport: true,
-      viewportZoomFactor: CAMERA_TARGET_ZOOM_FACTOR,
-      animate: true,
-      duration: CAMERA_ZOOM_IN_DURATION,
-    })
 
-    expect(scrollToContent).not.toHaveBeenCalledWith(market, {
-      animate: true,
-      duration: CAMERA_TRAVEL_DURATION,
-    })
+    const animatedCalls = scrollToContent.mock.calls.filter(([, opts]) => opts?.animate)
+    expect(animatedCalls).toEqual([
+      [intro, {
+        fitToViewport: true,
+        viewportZoomFactor: CAMERA_ZOOM_OUT_FACTOR,
+        animate: true,
+        duration: CAMERA_ZOOM_OUT_DURATION,
+      }],
+      [market, {
+        fitToViewport: true,
+        viewportZoomFactor: CAMERA_ZOOM_OUT_FACTOR,
+        animate: true,
+        duration: CAMERA_ZOOM_OUT_DURATION,
+      }],
+      [solution, {
+        animate: true,
+        duration: CAMERA_TRAVEL_DURATION,
+      }],
+      [solution, {
+        fitToViewport: true,
+        viewportZoomFactor: CAMERA_TARGET_ZOOM_FACTOR,
+        animate: true,
+        duration: CAMERA_ZOOM_IN_DURATION,
+      }],
+    ])
+    expect(animatedCalls).not.toContainEqual([
+      market,
+      { animate: true, duration: CAMERA_TRAVEL_DURATION },
+    ])
   })
 
   it('degrades to target travel and final focus when the source surface is missing', async () => {

@@ -5,7 +5,7 @@ import type {
   SlideNode,
 } from 'dsh-mindppt-code-parser'
 
-import { imageFileId } from './assets.ts'
+import { semanticImageFileId } from './assets.ts'
 import { renderTreeScene } from './tree-scene.ts'
 
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
@@ -64,7 +64,7 @@ function renderContent(
       y: slide.y + element.y,
       width: element.width,
       height: element.height,
-      fileId: imageFileId(element.src),
+      fileId: semanticImageFileId(element.id),
       status: 'saved',
       scale: [1, 1],
     }]

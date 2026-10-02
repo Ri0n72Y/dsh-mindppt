@@ -11,8 +11,23 @@ const M6 = readFileSync(
   'utf8',
 ).replace(/\r\n/g, '\n')
 
+const COLLISION = `mindppt
+
+slide collision {
+  layout two-column
+
+  left {
+    ![First](./assets/72p9kvztbry2.png)
+  }
+
+  right {
+    ![Second](./assets/9035ngs4mk8m.png)
+  }
+}
+`
+
 describe('M6 Excalidraw image lowering', () => {
-  it('renders deterministic image geometry and stable asset requests', async () => {
+  it('keeps semantic image identity stable before binary resolution', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
     await ctx.plugin(MindPptCanvasService)
@@ -49,13 +64,49 @@ describe('M6 Excalidraw image lowering', () => {
           return
         }
 
-        expect(firstImage.fileId).toBe(firstRequest?.fileId)
+        expect(secondImage.id).toBe(firstImage.id)
         expect(secondImage.fileId).toBe(firstImage.fileId)
-        expect(secondRequest?.fileId).toBe(firstRequest?.fileId)
         expect(firstRequest).toEqual(expect.objectContaining({
+          elementIds: ['slide:customer/right/image:0'],
           source: './assets/customer.svg',
           sourceRange: expect.any(Object),
         }))
+        expect(secondRequest).toEqual(firstRequest)
+      },
+    })
+  })
+
+  it('deduplicates by exact source rather than a short fileId hash', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+    await ctx.plugin(MindPptCanvasService)
+
+    await ctx.plugin({
+      name: 'mindppt-m6-collision-test',
+      inject: ['mindpptParser', serviceName],
+      apply(child: Context) {
+        child.mindpptParser.compile(COLLISION)
+
+        expect(child.mindpptCanvas.assetRequests).toEqual([
+          expect.objectContaining({
+            source: './assets/72p9kvztbry2.png',
+            elementIds: ['slide:collision/left/image:0'],
+          }),
+          expect.objectContaining({
+            source: './assets/9035ngs4mk8m.png',
+            elementIds: ['slide:collision/right/image:0'],
+          }),
+        ])
+
+        const images = child.mindpptCanvas.scene.filter(
+          (element) => element.type === 'image',
+        )
+        expect(images).toHaveLength(2)
+        expect(images[0]?.id).not.toBe(images[1]?.id)
+        expect(images[0]?.type).toBe('image')
+        expect(images[1]?.type).toBe('image')
+        if (images[0]?.type !== 'image' || images[1]?.type !== 'image') return
+        expect(images[0].fileId).not.toBe(images[1].fileId)
       },
     })
   })

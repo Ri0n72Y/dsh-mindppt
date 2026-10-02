@@ -65,21 +65,21 @@ compiler-owned semantic boxes
 Markdown image node
     |
     v
-Excalidraw image skeleton + stable fileId
+Excalidraw image skeleton + stable semantic identity
     |
     v
 document-relative local asset resolution
     |
     v
-Excalidraw BinaryFiles
+content-revision binary fileId + Excalidraw BinaryFiles
     |
     v
 visible browser canvas
 ```
 
-The two-column preset keeps the title in the slide header and lays out named `left` / `right` slots deterministically. Image source paths remain semantic source data; browser bytes and Excalidraw file delivery are handled outside the parser model. Missing or non-local assets produce warnings instead of crashing the live authoring loop.
+The two-column preset keeps the title in the slide header and lays out named `left` / `right` slots deterministically. Image source paths remain semantic source data; browser bytes and Excalidraw binary identity are handled outside the parser model. Binary file IDs are deterministic for unchanged source + bytes and change when the bytes at the same source change. Missing, malformed, or non-local assets produce warnings instead of crashing the live authoring loop.
 
-M3-M5 behavior remains part of the same runtime: failed compiles keep the last-good elements and files, stable slide/content identities are preserved, and Camera remains content-agnostic. The browser smoke test switches from the M6 fixture back to the canonical M4 tree to exercise M5 navigation after the asset path has rendered.
+M3-M5 behavior remains part of the same runtime: failed compiles keep the last-good elements and files, stable slide/content identities are preserved, and Camera remains content-agnostic. Successful asset-warning snapshots publish source, elements, files, and camera from the same logical compile. The browser smoke test switches from the M6 fixture back to the canonical M4 tree to exercise M5 navigation after the asset path has rendered.
 
 Remaining M6 work includes the `hero` and `title-content` presets and broader image fit policy. Those are intentionally not generalized into a layout/theme framework in this slice.
 

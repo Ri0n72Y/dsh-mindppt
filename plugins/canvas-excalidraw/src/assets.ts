@@ -10,7 +10,7 @@ type ImageFileId = Extract<
 >['fileId']
 
 export interface CanvasAssetRequest {
-  fileId: ImageFileId
+  elementIds: string[]
   source: string
   sourceRange: SourceRange
 }
@@ -18,33 +18,29 @@ export interface CanvasAssetRequest {
 export function collectAssetRequests(
   structure: MindPptStructure,
 ): CanvasAssetRequest[] {
-  const requests: CanvasAssetRequest[] = []
-  const seen = new Set<string>()
+  const requests = new Map<string, CanvasAssetRequest>()
 
   for (const slide of structure.slides) {
     for (const element of slide.elements) {
       if (element.kind !== 'image') continue
 
-      const fileId = imageFileId(element.src)
-      if (seen.has(fileId)) continue
-      seen.add(fileId)
-      requests.push({
-        fileId,
+      const existing = requests.get(element.src)
+      if (existing) {
+        existing.elementIds.push(element.id)
+        continue
+      }
+
+      requests.set(element.src, {
+        elementIds: [element.id],
         source: element.src,
         sourceRange: element.sourceRange,
       })
     }
   }
 
-  return requests
+  return [...requests.values()]
 }
 
-export function imageFileId(source: string): ImageFileId {
-  let hash = 2166136261
-  for (let index = 0; index < source.length; index += 1) {
-    hash ^= source.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-
-  return ('mindppt-' + (hash >>> 0).toString(16).padStart(8, '0')) as ImageFileId
+export function semanticImageFileId(elementId: string): ImageFileId {
+  return ('mindppt-semantic:' + elementId) as ImageFileId
 }

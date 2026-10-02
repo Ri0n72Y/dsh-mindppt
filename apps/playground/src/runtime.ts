@@ -14,6 +14,7 @@ import MindPptParserService, {
 import {
   resolveCanvasAssets,
   type PlaygroundAssetContext,
+  type ResolvedAssets,
 } from './assets.ts'
 
 export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
@@ -102,7 +103,7 @@ export async function createPlaygroundRuntime(
         ? [...parserService.diagnostics, ...(assets?.diagnostics ?? [])]
         : [...parserService.diagnostics],
       elements: compiled
-        ? convertToExcalidrawElements(canvasService.scene, { regenerateIds: false })
+        ? compileElements(canvasService, assets)
         : snapshot.elements,
       files: compiled ? (assets?.files ?? {}) : snapshot.files,
       camera: cameraService.view,
@@ -136,4 +137,19 @@ export async function createPlaygroundRuntime(
       applyCameraAction(() => cameraService.focusChild(slideId))
     },
   }
+}
+
+
+function compileElements(
+  canvasService: MindPptCanvasService,
+  assets: ResolvedAssets | undefined,
+): CompiledElements {
+  const scene = canvasService.scene.map((element) => {
+    if (element.type !== 'image' || !element.id) return element
+
+    const fileId = assets?.elementFileIds[element.id]
+    return fileId ? { ...element, fileId } : element
+  })
+
+  return convertToExcalidrawElements(scene, { regenerateIds: false })
 }

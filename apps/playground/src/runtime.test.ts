@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@excalidraw/excalidraw', () => ({
+  convertToExcalidrawElements: (elements: unknown) => elements,
+}))
 
 import { createPlaygroundRuntime } from './runtime.ts'
 

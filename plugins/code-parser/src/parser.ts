@@ -1,5 +1,12 @@
-import { parseSlideContent, type ParsedContent } from './content-parser.ts'
+import { parseSlideContent } from './content-parser.ts'
 import { MindPptCompileError } from './errors.ts'
+import type {
+  ParsedContent,
+  ParsedDocument,
+  ParsedSlide,
+  ParsedTree,
+  ParsedTreeEdge,
+} from './parsed-types.ts'
 import type { Token } from './tokenizer.ts'
 import type {
   LayoutPreset,
@@ -7,31 +14,6 @@ import type {
   SourceRange,
   TreeDirection,
 } from './types.ts'
-
-export interface ParsedSlide {
-  id: string
-  layout?: LayoutPreset
-  content: ParsedContent[]
-  slots: Partial<Record<LayoutSlot, ParsedContent[]>>
-  range: SourceRange
-}
-
-export interface ParsedTreeEdge {
-  from: string
-  to: string
-  range: SourceRange
-}
-
-export interface ParsedTree {
-  direction: TreeDirection
-  edges: ParsedTreeEdge[]
-  range: SourceRange
-}
-
-export interface ParsedDocument {
-  slides: ParsedSlide[]
-  tree?: ParsedTree
-}
 
 export function parse(tokens: Token[]): ParsedDocument {
   return new Parser(tokens).parseDocument()
@@ -111,7 +93,12 @@ class Parser {
       if (!token) break
 
       if (token.kind === 'layout') {
-        if (layout) this.fail('Slide "' + start.id + '" has duplicate layout', token.range)
+        if (layout) {
+          this.fail(
+            'Slide "' + start.id + '" has duplicate layout',
+            token.range,
+          )
+        }
         if (!isLayoutPreset(token.preset)) {
           this.fail('Unsupported layout preset: ' + token.preset, token.range)
         }
@@ -181,7 +168,9 @@ class Parser {
   ): Extract<Token, { kind: K }> {
     const token = this.current()
     if (token?.kind !== kind) {
-      this.fail('Expected ' + kind + ', received ' + (token?.kind ?? 'end of source'))
+      this.fail(
+        'Expected ' + kind + ', received ' + (token?.kind ?? 'end of source'),
+      )
     }
 
     this.index += 1

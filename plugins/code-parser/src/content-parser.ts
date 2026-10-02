@@ -1,31 +1,6 @@
 import { MindPptCompileError } from './errors.ts'
+import type { ParsedContent } from './parsed-types.ts'
 import type { Token } from './tokenizer.ts'
-import type { SourceRange } from './types.ts'
-
-export type ParsedContent =
-  | {
-      kind: 'title' | 'subtitle' | 'text'
-      text: string
-      range: SourceRange
-    }
-  | {
-      kind: 'list'
-      ordered: boolean
-      items: string[]
-      range: SourceRange
-    }
-  | {
-      kind: 'image'
-      alt: string
-      src: string
-      range: SourceRange
-    }
-  | {
-      kind: 'extension'
-      type: string
-      raw: string
-      range: SourceRange
-    }
 
 const IMAGE = /^!\[([^\]]*)\]\(([^)]+)\)$/
 
@@ -153,9 +128,7 @@ class ContentParser {
     kind: K,
   ): Extract<Token, { kind: K }> {
     const token = this.current()
-    if (token?.kind !== kind) {
-      this.fail('expected ' + kind)
-    }
+    if (token?.kind !== kind) this.fail('expected ' + kind)
 
     this.index += 1
     return token as Extract<Token, { kind: K }>

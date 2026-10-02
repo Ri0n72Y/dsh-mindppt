@@ -534,27 +534,23 @@ Camera remains independent from content types.
 
 ## M6 — Layout + Image + Asset Pipeline
 
-Status: in progress — first end-to-end vertical slice complete
+Status: in progress — initial layout preset set complete
 
 Purpose: make ordinary business presentation pages practical.
 
-Delivered in the first M6 slice:
+Delivered:
 
-- `layout two-column` with compiler-owned deterministic geometry;
-- named `left` / `right` slot semantics;
+- `hero` preset with compiler-owned deterministic centered semantic geometry;
+- `title-content` preset with a distinct title area and ordinary Markdown content area;
+- `two-column` preset with compiler-owned deterministic geometry;
+- named `left` / `right` slot semantics for two-column;
 - Markdown image nodes with source ranges and stable semantic IDs;
 - Excalidraw image skeleton lowering with deterministic file IDs;
 - document-relative local asset resolution in the browser host;
 - Excalidraw `BinaryFiles` delivery;
-- missing / non-local asset warnings without breaking last-good rendering;
-- a canonical M6 fixture and Chromium-visible image smoke coverage.
-
-Remaining M6 work:
-
-- `hero` preset;
-- `title-content` preset;
-- broader image fit behavior beyond the deterministic first-slice box.
-
+- missing / malformed / non-local asset warnings without breaking last-good rendering;
+- canonical fixtures covering all three presets and the focused two-column asset path;
+- Chromium-visible smoke coverage for the three presets, live recompilation, images, last-good, and M5 Camera regression.
 
 Initial layout presets:
 
@@ -562,10 +558,49 @@ Initial layout presets:
 - `title-content`;
 - `two-column`.
 
-Initial layout primitives:
+Authoring remains deliberately small:
 
-- named slots such as `left` and `right`;
-- simple row/column behavior only where required by the presets.
+```mindppt
+slide cover {
+  layout hero
+
+  # Product Direction
+  ## 2026 review
+
+  A short supporting statement.
+}
+
+slide summary {
+  layout title-content
+
+  # Executive Summary
+
+  The title occupies its own semantic area.
+
+  - Ordinary Markdown remains ordinary content
+  - Geometry is deterministic from the slide box
+}
+```
+
+Named slots remain specific to the preset that needs them:
+
+```mindppt
+slide customer {
+  layout two-column
+
+  # Customer Profile
+
+  left {
+    ...
+  }
+
+  right {
+    ...
+  }
+}
+```
+
+Layout remains content-agnostic. Semantic text/image boxes belong to the compiler/layout layer; Excalidraw lowering mechanically preserves those boxes and adds the slide's canvas offset. Excalidraw frames remain grouping containers rather than visual slide boundaries.
 
 Image support:
 
@@ -573,22 +608,25 @@ Image support:
 ![Customer](./assets/customer.png)
 ```
 
-Default image behavior can use `contain`.
-
-Advanced fit behavior may use MindPPT component/layout metadata rather than extending Markdown syntax.
+Default image behavior uses the deterministic current box. Broader image-fit behavior remains deferred inside M6 until a concrete presentation use case requires it.
 
 Asset work:
 
 - resolve paths relative to the MindPPT document;
 - load local assets into the Excalidraw file map;
-- preserve asset identity across recompiles where practical;
+- keep semantic image identity separate from binary content-revision identity;
+- preserve last-good/version consistency through asset warnings and compile failures;
 - treat remote URL loading as runtime policy, not a language guarantee.
+
+Remaining M6 work:
+
+- broader image fit behavior beyond the deterministic current image box.
 
 Visible acceptance:
 
-> A two-column slide with text on one side and an image on the other renders correctly.
+> Hero, title-content, and two-column slides compile from MindPPT source into visibly distinct deterministic layouts, including a two-column slide with text and a local image.
 
-Layout remains content-agnostic.
+M6 does not introduce a generic layout engine, constraint solver, theme system, component registry, asset registry, or CSS-like layout DSL.
 
 ---
 

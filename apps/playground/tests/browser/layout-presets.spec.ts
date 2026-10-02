@@ -1,7 +1,7 @@
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 async function focusAndCapture(
-  page: Parameters<typeof test>[0] extends never ? never : any,
+  page: Page,
   canvas: Locator,
   slideId: string,
 ): Promise<Buffer> {

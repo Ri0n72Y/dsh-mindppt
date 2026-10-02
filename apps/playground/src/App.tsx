@@ -76,9 +76,66 @@ export function App({ runtime }: AppProps) {
             </button>
           ))}
         </div>
+
+        <section className="camera-controls" aria-label="Camera controls">
+          <div className="camera-heading">
+            <span className="panel-label">Camera</span>
+            <span className="camera-current">
+              Current: {snapshot.camera.currentSlideId ?? 'overview'}
+            </span>
+          </div>
+
+          <select
+            aria-label="Camera slide target"
+            className="camera-select"
+            value=""
+            onChange={(event) => {
+              if (event.target.value) runtime.focusSlide(event.target.value)
+            }}
+          >
+            <option value="" disabled>Focus slide…</option>
+            {snapshot.camera.slideIds.map((slideId) => (
+              <option key={slideId} value={slideId}>{slideId}</option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            disabled={!snapshot.camera.parentSlideId}
+            aria-label={
+              snapshot.camera.parentSlideId
+                ? `Focus parent ${snapshot.camera.parentSlideId}`
+                : 'No parent slide'
+            }
+            onClick={() => runtime.focusParent()}
+          >
+            Parent: {snapshot.camera.parentSlideId ?? '—'}
+          </button>
+
+          <div className="camera-children">
+            <span className="camera-label">Children</span>
+            <div className="camera-child-list">
+              {snapshot.camera.childSlideIds.length
+                ? snapshot.camera.childSlideIds.map((slideId) => (
+                    <button
+                      key={slideId}
+                      type="button"
+                      aria-label={`Focus child ${slideId}`}
+                      onClick={() => runtime.focusChild(slideId)}
+                    >
+                      {slideId}
+                    </button>
+                  ))
+                : <span className="camera-empty">—</span>}
+            </div>
+          </div>
+        </section>
       </aside>
 
-      <MindPptCanvas elements={snapshot.elements} />
+      <MindPptCanvas
+        elements={snapshot.elements}
+        focusRequest={snapshot.camera.focusRequest}
+      />
     </main>
   )
 }

@@ -44,40 +44,43 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 - `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
 
-## Current vertical slice: M3
+## Current vertical slice: M5
 
-M2 established the Markdown content profile and generic extension fallback. M3 turns the playground into the first live authoring loop.
+M4 completed branching primary-tree validation and deterministic spatial layout in `LR`, `RL`, `TB`, `TD`, and `BT`.
 
-The same canonical fixture remains:
+M5 Camera Navigation is complete. The Cordis-native `camera` service owns semantic current-slide and topology navigation state, while the React / Excalidraw host owns viewport choreography.
 
-`examples/m2-content-profile.mindppt`
+The canonical browser fixture is:
 
-The runtime now follows:
+`examples/m4-branching-lr-tree.mindppt`
+
+The current runtime path is:
 
 ```text
-edit source
+successful structure
     |
-    v
-code-editor
+    +--> canvas scene
     |
-    v
-code-parser
-   / \
-success error
- |       |
- v       v
-canvas   diagnostics
- |       |
- v       v
-new      keep last-good
-scene    scene
+    +--> camera navigation state
+              |
+              v
+ CameraFocusRequest(revision, from?, target)
+              |
+              v
+      React host sequencer
+              |
+              v
+ current Excalidraw scene lookup
+              |
+              v
+ zoom out -> travel -> zoom in
 ```
 
-The parser tracks the current source, diagnostics, and the last successful structure. Diagnostics carry source ranges where available, and the React editor uses those ranges for click-to-focus navigation.
+Direct target focus and primary-tree parent / child navigation all use the same semantic focus request. Normal slide-to-slide movement zooms out around the current slide, travels to the target at that wider scale, then fits the target to approximately 85% of the viewport. The first focus from the overview skips the redundant zoom-out phase, while repeated same-slide focus performs only the final animated framing.
 
-The Excalidraw canvas updates after successful source edits. Invalid intermediate source does not clear the previous valid presentation.
+Each transition phase resolves the stable `slide:<id>/surface` from the current Excalidraw scene immediately before calling `scrollToContent()`. Source recompiles therefore do not automatically refocus the camera, but an in-flight transition can continue against the latest successful scene geometry.
 
-A Chromium smoke test covers the real browser path from editing a title through visible canvas update, followed by an invalid edit that surfaces diagnostics while preserving the last-good canvas.
+A newer camera request cancels the previous host sequence before its remaining phases can run. Initial load remains the complete mind-map overview, failed compiles preserve the last-good scene and camera state, and successful removal of the current slide clears its focus request.
 
 Run the standalone playground with:
 

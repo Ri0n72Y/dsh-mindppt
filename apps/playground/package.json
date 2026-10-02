@@ -7,16 +7,18 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run src",
     "test:browser": "playwright test"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.4",
     "@excalidraw/excalidraw": "0.18.0",
+    "dsh-mindppt-camera": "workspace:*",
     "dsh-mindppt-canvas-excalidraw": "workspace:*",
+    "dsh-mindppt-code-editor": "workspace:*",
     "dsh-mindppt-code-parser": "workspace:*",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "dsh-mindppt-code-editor": "workspace:*"
+    "react-dom": "19.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
@@ -24,6 +26,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "^6.0.3",
     "vite": "^7.1.0",
+    "vitest": "^4.1.8",
     "@playwright/test": "1.63.0"
   }
 }

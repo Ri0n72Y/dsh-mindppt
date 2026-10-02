@@ -128,7 +128,28 @@ test('M6 image pipeline extends live authoring without regressing M5 camera navi
           width: element.width,
           height: element.height,
           frameId: element.frameId,
+          opacity: element.opacity,
         })),
+      sceneOrder: app?.scene?.getNonDeletedElements?.().map(
+        (element: any) => ({
+          id: element.id,
+          type: element.type,
+          frameId: element.frameId,
+          opacity: element.opacity,
+        }),
+      ),
+      visibleOrder: app?.visibleElements?.map((element: any) => ({
+        id: element.id,
+        type: element.type,
+      })),
+      appState: {
+        zoom: app?.state?.zoom?.value,
+        scrollX: app?.state?.scrollX,
+        scrollY: app?.state?.scrollY,
+        width: app?.state?.width,
+        height: app?.state?.height,
+        frameRendering: app?.state?.frameRendering,
+      },
       canvasStats,
     }
   })

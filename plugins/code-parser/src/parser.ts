@@ -1,19 +1,8 @@
 import { parseSlideContent } from './content-parser.ts'
 import { MindPptCompileError } from './errors.ts'
-import type {
-  ParsedContent,
-  ParsedDocument,
-  ParsedSlide,
-  ParsedTree,
-  ParsedTreeEdge,
-} from './parsed-types.ts'
+import type { ParsedContent, ParsedDocument, ParsedSlide, ParsedTree, ParsedTreeEdge } from './parsed-types.ts'
 import type { Token } from './tokenizer.ts'
-import type {
-  LayoutPreset,
-  LayoutSlot,
-  SourceRange,
-  TreeDirection,
-} from './types.ts'
+import type { LayoutPreset, LayoutSlot, SourceRange, TreeDirection } from './types.ts'
 
 export function parse(tokens: Token[]): ParsedDocument {
   return new Parser(tokens).parseDocument()

@@ -1,5 +1,4 @@
-import type { ParsedContent } from './content-parser.ts'
-import type { ParsedSlide } from './parser.ts'
+import type { ParsedContent, ParsedSlide } from './parsed-types.ts'
 import type { ContentNode, LayoutSlot } from './types.ts'
 
 const CONTENT_X = 96

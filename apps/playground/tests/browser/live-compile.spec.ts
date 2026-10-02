@@ -78,6 +78,62 @@ test('M6 image pipeline extends live authoring without regressing M5 camera navi
   expect(m6Source).toContain('layout two-column')
   expect(m6Source).toContain('![Customer workshop](./assets/customer.svg)')
 
+  await page.waitForTimeout(500)
+  const imageDebug = await page.evaluate(() => {
+    const app = (window as any).h?.app
+    const canvasStats = Array.from(
+      document.querySelectorAll<HTMLCanvasElement>('.canvas-panel canvas'),
+    ).map((canvas) => {
+      const context = canvas.getContext('2d')
+      const data = context?.getImageData(0, 0, canvas.width, canvas.height).data
+      let purple = 0
+      if (data) {
+        for (let index = 0; index < data.length; index += 16) {
+          const red = data[index] ?? 0
+          const green = data[index + 1] ?? 0
+          const blue = data[index + 2] ?? 0
+          if (red >= 80 && green < 130 && blue > 150) purple += 1
+        }
+      }
+      return {
+        className: canvas.className,
+        width: canvas.width,
+        height: canvas.height,
+        purple,
+      }
+    })
+
+    return {
+      files: Object.entries(app?.files ?? {}).map(([id, file]: any) => ({
+        id,
+        mimeType: file.mimeType,
+        dataURL: file.dataURL.slice(0, 48),
+      })),
+      imageCache: Array.from(app?.imageCache?.entries?.() ?? []).map(
+        ([id, value]: any) => ({
+          id,
+          image: value.image instanceof HTMLImageElement
+            ? [value.image.naturalWidth, value.image.naturalHeight]
+            : 'promise',
+        }),
+      ),
+      images: app?.scene?.getNonDeletedElements?.()
+        ?.filter((element: any) => element.type === 'image')
+        .map((element: any) => ({
+          id: element.id,
+          fileId: element.fileId,
+          status: element.status,
+          x: element.x,
+          y: element.y,
+          width: element.width,
+          height: element.height,
+          frameId: element.frameId,
+        })),
+      canvasStats,
+    }
+  })
+  console.log('M6_IMAGE_DEBUG', JSON.stringify(imageDebug))
+
   await expect.poll(
     () => countFixturePixels(canvas),
     { timeout: 5_000 },

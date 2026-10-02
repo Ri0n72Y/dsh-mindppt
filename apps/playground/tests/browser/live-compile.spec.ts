@@ -68,6 +68,7 @@ test('M6 layouts and image pipeline preserve live authoring and M5 camera naviga
 
   const editor = page.getByRole('textbox', { name: 'MindPPT source editor' })
   const canvas = page.locator('.canvas-panel canvas.static')
+  const cameraTarget = page.getByRole('combobox', { name: 'Camera slide target' })
 
   await expect(editor).toBeVisible()
   await expect(canvas).toBeVisible()
@@ -81,6 +82,10 @@ test('M6 layouts and image pipeline preserve live authoring and M5 camera naviga
   expect(m6Source).toContain('layout two-column')
   expect(m6Source).toContain('![Customer workshop](./assets/customer.svg)')
 
+  const m6Overview = await canvas.screenshot()
+  await cameraTarget.selectOption('customer')
+  await expect(page.getByText('Current: customer', { exact: true })).toBeVisible()
+  await expectCanvasTransitionToSettle(canvas, m6Overview)
   await expect.poll(
     () => countFixturePixels(canvas),
     { timeout: 5_000 },
@@ -135,10 +140,10 @@ test('M6 layouts and image pipeline preserve live authoring and M5 camera naviga
   await editor.fill(M4)
   await expect(page.getByText('Compiled', { exact: true })).toBeVisible()
   await expect(page.locator('.diagnostic')).toHaveCount(0)
+  await expect(page.getByText('Current: overview', { exact: true })).toBeVisible()
   expect((await editor.inputValue()).match(/^slide /gm)).toHaveLength(6)
 
   const overviewScene = await canvas.screenshot()
-  const cameraTarget = page.getByRole('combobox', { name: 'Camera slide target' })
 
   await cameraTarget.selectOption('intro')
   await expect(page.getByText('Current: intro', { exact: true })).toBeVisible()

@@ -13,7 +13,7 @@ const runtime = await createPlaygroundRuntime(source, {
   files: {
     'examples/assets/customer.svg': {
       mimeType: 'image/svg+xml',
-      dataURL: 'data:image/svg+xml,' + encodeURIComponent(customerSvg),
+      dataURL: 'data:image/svg+xml;base64,' + btoa(customerSvg),
     },
   },
 })

@@ -62,7 +62,7 @@ async function countFixturePixels(canvas: Locator): Promise<number> {
   })
 }
 
-test('M6 image pipeline extends live authoring without regressing M5 camera navigation', async ({ page }) => {
+test('M6 layouts and image pipeline preserve live authoring and M5 camera navigation', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto('/')
 
@@ -76,6 +76,8 @@ test('M6 image pipeline extends live authoring without regressing M5 camera navi
   await page.evaluate(() => document.fonts.ready)
 
   const m6Source = await editor.inputValue()
+  expect(m6Source).toContain('layout hero')
+  expect(m6Source).toContain('layout title-content')
   expect(m6Source).toContain('layout two-column')
   expect(m6Source).toContain('![Customer workshop](./assets/customer.svg)')
 

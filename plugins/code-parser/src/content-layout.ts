@@ -2,21 +2,38 @@ import type { ParsedContent, ParsedSlide } from './parsed-types.ts'
 import type { ContentNode, LayoutSlot } from './types.ts'
 
 const CONTENT_X = 96
+const CONTENT_TOP = 56
 const CONTENT_GAP = 20
 const TWO_COLUMN_GAP = 48
 const SLOT_TOP_GAP = 36
 const SLIDE_BOTTOM_GAP = 56
 const IMAGE_HEIGHT = 390
+const HERO_SIDE_GAP = 160
+const TITLE_CONTENT_X = 128
+const TITLE_CONTENT_GAP = 44
 
 export function layoutSlideContent(
   slide: ParsedSlide,
   slideWidth: number,
   slideHeight: number,
 ): ContentNode[] {
-  if (slide.layout === 'two-column') {
-    return layoutTwoColumn(slide, slideWidth, slideHeight)
+  switch (slide.layout) {
+    case 'hero':
+      return layoutHero(slide, slideWidth, slideHeight)
+    case 'title-content':
+      return layoutTitleContent(slide, slideWidth, slideHeight)
+    case 'two-column':
+      return layoutTwoColumn(slide, slideWidth, slideHeight)
+    default:
+      return layoutDefault(slide, slideWidth, slideHeight)
   }
+}
 
+function layoutDefault(
+  slide: ParsedSlide,
+  slideWidth: number,
+  slideHeight: number,
+): ContentNode[] {
   const only = slide.content[0]
   if (slide.content.length === 1 && only?.kind === 'title') {
     const width = slideWidth * 0.8
@@ -36,8 +53,78 @@ export function layoutSlideContent(
   return layoutStack(
     slide.id,
     slide.content,
-    { x: CONTENT_X, y: 56, width: slideWidth - CONTENT_X * 2 },
+    { x: CONTENT_X, y: CONTENT_TOP, width: slideWidth - CONTENT_X * 2 },
   )
+}
+
+function layoutHero(
+  slide: ParsedSlide,
+  slideWidth: number,
+  slideHeight: number,
+): ContentNode[] {
+  const width = slideWidth - HERO_SIDE_GAP * 2
+  const height = stackHeight(slide.content)
+  const y = Math.max(CONTENT_TOP, (slideHeight - height) / 2)
+
+  return layoutStack(
+    slide.id,
+    slide.content,
+    {
+      x: HERO_SIDE_GAP,
+      y,
+      width,
+      height: Math.max(0, slideHeight - y - SLIDE_BOTTOM_GAP),
+    },
+  )
+}
+
+function layoutTitleContent(
+  slide: ParsedSlide,
+  slideWidth: number,
+  slideHeight: number,
+): ContentNode[] {
+  const first = slide.content[0]
+  const bodyX = TITLE_CONTENT_X
+  const bodyWidth = slideWidth - bodyX * 2
+
+  if (first?.kind !== 'title') {
+    return layoutStack(
+      slide.id,
+      slide.content,
+      {
+        x: bodyX,
+        y: CONTENT_TOP,
+        width: bodyWidth,
+        height: slideHeight - CONTENT_TOP - SLIDE_BOTTOM_GAP,
+      },
+    )
+  }
+
+  const counts = createContentCounts()
+  const title = layoutStack(
+    slide.id,
+    [first],
+    { x: CONTENT_X, y: CONTENT_TOP, width: slideWidth - CONTENT_X * 2 },
+    undefined,
+    counts,
+  )
+  const bodyY = CONTENT_TOP + blockHeight(first) + TITLE_CONTENT_GAP
+
+  return [
+    ...title,
+    ...layoutStack(
+      slide.id,
+      slide.content.slice(1),
+      {
+        x: bodyX,
+        y: bodyY,
+        width: bodyWidth,
+        height: slideHeight - bodyY - SLIDE_BOTTOM_GAP,
+      },
+      undefined,
+      counts,
+    ),
+  ]
 }
 
 function layoutTwoColumn(
@@ -49,12 +136,14 @@ function layoutTwoColumn(
   const header = layoutStack(
     slide.id,
     slide.content,
-    { x: CONTENT_X, y: 56, width: contentWidth },
+    { x: CONTENT_X, y: CONTENT_TOP, width: contentWidth },
   )
   const headerBottom = header.length
     ? Math.max(...header.map((node) => node.y + node.height))
-    : 56
-  const slotTop = header.length ? headerBottom + SLOT_TOP_GAP : 56
+    : CONTENT_TOP
+  const slotTop = header.length
+    ? headerBottom + SLOT_TOP_GAP
+    : CONTENT_TOP
   const slotWidth = (contentWidth - TWO_COLUMN_GAP) / 2
   const slotHeight = Math.max(0, slideHeight - slotTop - SLIDE_BOTTOM_GAP)
 
@@ -85,15 +174,8 @@ function layoutStack(
   content: ParsedContent[],
   box: { x: number; y: number; width: number; height?: number },
   slot?: LayoutSlot,
+  counts = createContentCounts(),
 ): ContentNode[] {
-  const counts: Record<ParsedContent['kind'], number> = {
-    title: 0,
-    subtitle: 0,
-    text: 0,
-    list: 0,
-    image: 0,
-    extension: 0,
-  }
   const nodes: ContentNode[] = []
   let y = box.y
 
@@ -146,6 +228,25 @@ function layoutStack(
   }
 
   return nodes
+}
+
+function stackHeight(content: ParsedContent[]): number {
+  return content.reduce(
+    (height, block, index) =>
+      height + blockHeight(block) + (index ? CONTENT_GAP : 0),
+    0,
+  )
+}
+
+function createContentCounts(): Record<ParsedContent['kind'], number> {
+  return {
+    title: 0,
+    subtitle: 0,
+    text: 0,
+    list: 0,
+    image: 0,
+    extension: 0,
+  }
 }
 
 function blockHeight(block: ParsedContent): number {

@@ -1,8 +1,19 @@
 import { parseSlideContent } from './content-parser.ts'
 import { MindPptCompileError } from './errors.ts'
-import type { ParsedContent, ParsedDocument, ParsedSlide, ParsedTree, ParsedTreeEdge } from './parsed-types.ts'
+import type {
+  ParsedContent,
+  ParsedDocument,
+  ParsedSlide,
+  ParsedTree,
+  ParsedTreeEdge,
+} from './parsed-types.ts'
 import type { Token } from './tokenizer.ts'
-import type { LayoutPreset, LayoutSlot, SourceRange, TreeDirection } from './types.ts'
+import type {
+  LayoutPreset,
+  LayoutSlot,
+  SourceRange,
+  TreeDirection,
+} from './types.ts'
 
 export function parse(tokens: Token[]): ParsedDocument {
   return new Parser(tokens).parseDocument()
@@ -188,5 +199,7 @@ function isTreeDirection(direction: string): direction is TreeDirection {
 }
 
 function isLayoutPreset(preset: string): preset is LayoutPreset {
-  return preset === 'two-column'
+  return preset === 'hero'
+    || preset === 'title-content'
+    || preset === 'two-column'
 }

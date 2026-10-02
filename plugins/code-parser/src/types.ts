@@ -9,7 +9,7 @@ export interface MindPptDiagnostic {
   sourceRange?: SourceRange
 }
 
-export type LayoutPreset = 'two-column'
+export type LayoutPreset = 'hero' | 'title-content' | 'two-column'
 export type LayoutSlot = 'left' | 'right'
 
 interface ContentNodeBase {

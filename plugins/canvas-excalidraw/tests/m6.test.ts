@@ -11,6 +11,11 @@ const M6 = readFileSync(
   'utf8',
 ).replace(/\r\n/g, '\n')
 
+const M6_LAYOUTS = readFileSync(
+  new URL('../../../examples/m6-layout-presets.mindppt', import.meta.url),
+  'utf8',
+).replace(/\r\n/g, '\n')
+
 const COLLISION = `mindppt
 
 slide collision {
@@ -72,6 +77,51 @@ describe('M6 Excalidraw image lowering', () => {
           sourceRange: expect.any(Object),
         }))
         expect(secondRequest).toEqual(firstRequest)
+      },
+    })
+  })
+
+  it('mechanically lowers all three M6 preset geometries', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+    await ctx.plugin(MindPptCanvasService)
+
+    await ctx.plugin({
+      name: 'mindppt-m6-layout-render-test',
+      inject: ['mindpptParser', serviceName],
+      apply(child: Context) {
+        child.mindpptParser.compile(M6_LAYOUTS)
+        const scene = child.mindpptCanvas.scene
+
+        expect(scene.find(
+          (element) => element.id === 'slide:hero/title:0/box',
+        )).toEqual(expect.objectContaining({
+          type: 'rectangle',
+          x: 160,
+          y: 234,
+          width: 960,
+          height: 84,
+        }))
+
+        expect(scene.find(
+          (element) => element.id === 'slide:agenda/text:0/box',
+        )).toEqual(expect.objectContaining({
+          type: 'rectangle',
+          x: 2008,
+          y: 184,
+          width: 1024,
+          height: 72,
+        }))
+
+        expect(scene.find(
+          (element) => element.id === 'slide:customer/right/image:0',
+        )).toEqual(expect.objectContaining({
+          type: 'image',
+          x: 4424,
+          y: 176,
+          width: 520,
+          height: 390,
+        }))
       },
     })
   })

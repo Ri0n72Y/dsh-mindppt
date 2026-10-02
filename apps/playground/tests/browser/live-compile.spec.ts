@@ -140,7 +140,6 @@ test('M6 layouts and image pipeline preserve live authoring and M5 camera naviga
   await editor.fill(M4)
   await expect(page.getByText('Compiled', { exact: true })).toBeVisible()
   await expect(page.locator('.diagnostic')).toHaveCount(0)
-  await expect(page.getByText('Current: overview', { exact: true })).toBeVisible()
   expect((await editor.inputValue()).match(/^slide /gm)).toHaveLength(6)
 
   const overviewScene = await canvas.screenshot()

@@ -2,12 +2,21 @@ import '@excalidraw/excalidraw/index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import source from '../../../examples/m4-branching-lr-tree.mindppt?raw'
+import customerSvg from '../../../examples/assets/customer.svg?raw'
+import source from '../../../examples/m6-two-column.mindppt?raw'
 import { App } from './App.tsx'
 import { createPlaygroundRuntime } from './runtime.ts'
 import './style.css'
 
-const runtime = await createPlaygroundRuntime(source)
+const runtime = await createPlaygroundRuntime(source, {
+  documentPath: 'examples/m6-two-column.mindppt',
+  files: {
+    'examples/assets/customer.svg': {
+      mimeType: 'image/svg+xml',
+      dataURL: 'data:image/svg+xml,' + encodeURIComponent(customerSvg),
+    },
+  },
+})
 const root = document.getElementById('root')
 
 if (!root) {

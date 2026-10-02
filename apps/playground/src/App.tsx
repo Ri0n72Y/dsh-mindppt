@@ -66,7 +66,7 @@ export function App({ runtime }: AppProps) {
         <div className="diagnostics" aria-live="polite">
           {snapshot.diagnostics.map((diagnostic, index) => (
             <button
-              className={`diagnostic diagnostic-${diagnostic.severity}`}
+              className={'diagnostic diagnostic-' + diagnostic.severity}
               key={index}
               type="button"
               onClick={() => focusDiagnostic(diagnostic)}
@@ -104,7 +104,7 @@ export function App({ runtime }: AppProps) {
             disabled={!snapshot.camera.parentSlideId}
             aria-label={
               snapshot.camera.parentSlideId
-                ? `Focus parent ${snapshot.camera.parentSlideId}`
+                ? 'Focus parent ' + snapshot.camera.parentSlideId
                 : 'No parent slide'
             }
             onClick={() => runtime.focusParent()}
@@ -120,7 +120,7 @@ export function App({ runtime }: AppProps) {
                     <button
                       key={slideId}
                       type="button"
-                      aria-label={`Focus child ${slideId}`}
+                      aria-label={'Focus child ' + slideId}
                       onClick={() => runtime.focusChild(slideId)}
                     >
                       {slideId}
@@ -134,6 +134,7 @@ export function App({ runtime }: AppProps) {
 
       <MindPptCanvas
         elements={snapshot.elements}
+        files={snapshot.files}
         focusRequest={snapshot.camera.focusRequest}
       />
     </main>
@@ -152,5 +153,5 @@ function diagnosticLocation(
   const previousNewline = before.lastIndexOf('\n')
   const column = start - previousNewline
 
-  return `L${line}:${column} · `
+  return 'L' + line + ':' + column + ' · '
 }

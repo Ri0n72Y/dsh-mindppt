@@ -1,10 +1,12 @@
 import { MindPptCompileError } from './errors.ts'
-import type { SourceRange } from './types.ts'
+import type { LayoutSlot, SourceRange } from './types.ts'
 
 export type Token =
   | { kind: 'marker'; range: SourceRange }
   | { kind: 'tree-start'; direction: string; range: SourceRange }
   | { kind: 'slide-start'; id: string; range: SourceRange }
+  | { kind: 'layout'; preset: string; range: SourceRange }
+  | { kind: 'slot-start'; name: LayoutSlot; range: SourceRange }
   | { kind: 'edge'; from: string; to: string; text: string; range: SourceRange }
   | { kind: 'heading'; level: 1 | 2; text: string; range: SourceRange }
   | { kind: 'list-item'; ordered: boolean; text: string; range: SourceRange }
@@ -14,9 +16,11 @@ export type Token =
   | { kind: 'block-end'; range: SourceRange }
 
 const ID = '[A-Za-z_][A-Za-z0-9_-]*'
-const TREE_START = new RegExp(`^tree\\s+([A-Za-z]+)\\s*\\{$`)
-const SLIDE_START = new RegExp(`^slide\\s+(${ID})\\s*\\{$`)
-const EDGE = new RegExp(`^(${ID})\\s*-->\\s*(${ID})$`)
+const TREE_START = new RegExp('^tree\\s+([A-Za-z]+)\\s*\\{$')
+const SLIDE_START = new RegExp('^slide\\s+(' + ID + ')\\s*\\{$')
+const LAYOUT = /^layout\s+([A-Za-z][A-Za-z0-9-]*)$/
+const SLOT_START = /^(left|right)\s*\{$/
+const EDGE = new RegExp('^(' + ID + ')\\s*-->\\s*(' + ID + ')$')
 const HEADING = /^(#{1,2})\s+(.+)$/
 const UNORDERED_ITEM = /^-\s+(.+)$/
 const ORDERED_ITEM = /^\d+\.\s+(.+)$/
@@ -54,11 +58,10 @@ export function tokenize(source: string): Token[] {
         offset = nextEnd + 1
 
         if (next.trim() === '```') {
-          const rawText = raw.join('\n')
           tokens.push({
             kind: 'fence',
             type,
-            raw: rawText,
+            raw: raw.join('\n'),
             range: { start: fenceStart, end: nextEnd },
           })
           closed = true
@@ -91,6 +94,18 @@ export function tokenize(source: string): Token[] {
     const slide = SLIDE_START.exec(text)
     if (slide?.[1]) {
       tokens.push({ kind: 'slide-start', id: slide[1], range })
+      continue
+    }
+
+    const layout = LAYOUT.exec(text)
+    if (layout?.[1]) {
+      tokens.push({ kind: 'layout', preset: layout[1], range })
+      continue
+    }
+
+    const slot = SLOT_START.exec(text)
+    if (slot?.[1]) {
+      tokens.push({ kind: 'slot-start', name: slot[1] as LayoutSlot, range })
       continue
     }
 
@@ -143,4 +158,3 @@ export function tokenize(source: string): Token[] {
 
   return tokens
 }
-

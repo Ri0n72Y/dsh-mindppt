@@ -1,5 +1,8 @@
 import { Excalidraw } from '@excalidraw/excalidraw'
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type {
+  BinaryFiles,
+  ExcalidrawImperativeAPI,
+} from '@excalidraw/excalidraw/types'
 import { useEffect, useRef, useState } from 'react'
 
 import type { CameraFocusRequest } from 'dsh-mindppt-camera'
@@ -10,11 +13,13 @@ import type { CompiledElements } from './runtime.ts'
 
 interface MindPptCanvasProps {
   elements: CompiledElements
+  files: BinaryFiles
   focusRequest: CameraFocusRequest | undefined
 }
 
 export function MindPptCanvas({
   elements,
+  files,
   focusRequest,
 }: MindPptCanvasProps) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
@@ -23,9 +28,10 @@ export function MindPptCanvas({
   useEffect(() => {
     if (!api) return
 
+    api.addFiles(Object.values(files))
     api.updateScene({ elements })
     transitionRef.current?.reconcileScene()
-  }, [api, elements])
+  }, [api, elements, files])
 
   useEffect(() => {
     if (!api || !focusRequest) return
@@ -47,6 +53,7 @@ export function MindPptCanvas({
         excalidrawAPI={setApi}
         initialData={{
           elements,
+          files,
           scrollToContent: true,
           appState: {
             zenModeEnabled: true,

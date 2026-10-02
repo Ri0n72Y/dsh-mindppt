@@ -1,5 +1,6 @@
 import { Context } from '@deepseek-ai/cordis'
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
+import type { BinaryFiles } from '@excalidraw/excalidraw/types'
 
 import MindPptCameraService, {
   type CameraView,
@@ -10,12 +11,18 @@ import MindPptParserService, {
   type MindPptDiagnostic,
 } from 'dsh-mindppt-code-parser'
 
+import {
+  resolveCanvasAssets,
+  type PlaygroundAssetContext,
+} from './assets.ts'
+
 export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
 
 export interface PlaygroundSnapshot {
   source: string
   diagnostics: readonly MindPptDiagnostic[]
   elements: CompiledElements
+  files: BinaryFiles
   camera: CameraView
 }
 
@@ -30,6 +37,7 @@ export interface PlaygroundRuntime {
 
 export async function createPlaygroundRuntime(
   initialSource: string,
+  assetContext?: PlaygroundAssetContext,
 ): Promise<PlaygroundRuntime> {
   const ctx = new Context()
 
@@ -73,6 +81,7 @@ export async function createPlaygroundRuntime(
     source: '',
     diagnostics: [],
     elements: [],
+    files: {},
     camera: cameraService.view,
   }
 
@@ -83,13 +92,19 @@ export async function createPlaygroundRuntime(
 
   const setSource = (source: string) => {
     const compiled = editorService.setSource(source)
+    const assets = compiled
+      ? resolveCanvasAssets(canvasService.assetRequests, assetContext)
+      : undefined
 
     publish({
       source: editorService.source,
-      diagnostics: [...parserService.diagnostics],
+      diagnostics: compiled
+        ? [...parserService.diagnostics, ...(assets?.diagnostics ?? [])]
+        : [...parserService.diagnostics],
       elements: compiled
         ? convertToExcalidrawElements(canvasService.scene, { regenerateIds: false })
         : snapshot.elements,
+      files: compiled ? (assets?.files ?? {}) : snapshot.files,
       camera: cameraService.view,
     })
   }

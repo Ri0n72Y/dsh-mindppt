@@ -7,6 +7,8 @@ import type {
   TreeEdge,
 } from 'dsh-mindppt-code-parser'
 
+import { imageFileId } from './assets.ts'
+
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
 // Excalidraw 0.18 FONT_FAMILY.Helvetica. Kept local so the renderer does not
@@ -33,7 +35,7 @@ function renderTreeEdge(
   const target = structure.slides.find((slide) => slide.id === edge.to)
 
   if (!source || !target) {
-    throw new Error(`Resolved tree edge references missing slide: ${edge.id}`)
+    throw new Error('Resolved tree edge references missing slide: ' + edge.id)
   }
 
   const [start, end] = treeEdgeEndpoints(
@@ -89,7 +91,7 @@ function treeEdgeEndpoints(
 function renderSlide(slide: SlideNode): ExcalidrawScene {
   const surface: ExcalidrawElementSkeleton = {
     type: 'rectangle',
-    id: `slide:${slide.id}/surface`,
+    id: 'slide:' + slide.id + '/surface',
     x: slide.x,
     y: slide.y,
     width: slide.width,
@@ -107,7 +109,7 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
 
   const frame: ExcalidrawElementSkeleton = {
     type: 'frame',
-    id: `slide:${slide.id}`,
+    id: 'slide:' + slide.id,
     children: [surface, ...content].flatMap((child) =>
       child.id ? [child.id] : [],
     ),
@@ -121,6 +123,20 @@ function renderContent(
   slide: SlideNode,
   element: ContentNode,
 ): ExcalidrawScene {
+  if (element.kind === 'image') {
+    return [{
+      type: 'image',
+      id: element.id,
+      x: slide.x + element.x,
+      y: slide.y + element.y,
+      width: element.width,
+      height: element.height,
+      fileId: imageFileId(element.src),
+      status: 'saved',
+      scale: [1, 1],
+    }]
+  }
+
   if (element.kind === 'extension') {
     return renderExtensionFallback(slide, element)
   }
@@ -128,7 +144,7 @@ function renderContent(
   return [
     {
       type: 'rectangle',
-      id: `${element.id}/box`,
+      id: element.id + '/box',
       x: slide.x + element.x,
       y: slide.y + element.y,
       width: element.width,
@@ -165,7 +181,7 @@ function renderExtensionFallback(
   return [
     {
       type: 'rectangle',
-      id: `${element.id}/box`,
+      id: element.id + '/box',
       x,
       y,
       width: element.width,
@@ -178,7 +194,7 @@ function renderExtensionFallback(
     },
     {
       type: 'text',
-      id: `${element.id}/text`,
+      id: element.id + '/text',
       x: x + 16,
       y: y + 16,
       text,
@@ -195,15 +211,16 @@ function contentText(element: ContentNode): string {
   if (element.kind === 'list') {
     return element.items
       .map((item, index) =>
-        element.ordered ? `${index + 1}. ${item}` : `• ${item}`,
+        element.ordered ? (index + 1) + '. ' + item : '• ' + item,
       )
       .join('\n')
   }
 
   if (element.kind === 'extension') {
-    return `[${element.type || 'extension'}]\n${element.raw}`
+    return '[' + (element.type || 'extension') + ']\n' + element.raw
   }
 
+  if (element.kind === 'image') return element.alt
   return element.text
 }
 
@@ -215,9 +232,9 @@ function contentFontSize(element: ContentNode): number {
       return 30
     case 'text':
     case 'list':
+    case 'image':
       return 24
     case 'extension':
       return 22
   }
 }
-

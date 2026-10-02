@@ -1,11 +1,18 @@
 import { parseSlideContent, type ParsedContent } from './content-parser.ts'
 import { MindPptCompileError } from './errors.ts'
 import type { Token } from './tokenizer.ts'
-import type { SourceRange, TreeDirection } from './types.ts'
+import type {
+  LayoutPreset,
+  LayoutSlot,
+  SourceRange,
+  TreeDirection,
+} from './types.ts'
 
 export interface ParsedSlide {
   id: string
+  layout?: LayoutPreset
   content: ParsedContent[]
+  slots: Partial<Record<LayoutSlot, ParsedContent[]>>
   range: SourceRange
 }
 
@@ -58,7 +65,7 @@ class Parser {
         continue
       }
 
-      this.fail(`Unexpected document statement: ${token.kind}`)
+      this.fail('Unexpected document statement: ' + token.kind)
     }
 
     return tree ? { slides, tree } : { slides }
@@ -67,7 +74,7 @@ class Parser {
   private parseTree(): ParsedTree {
     const start = this.expect('tree-start')
     if (!isTreeDirection(start.direction)) {
-      this.fail(`Unsupported tree direction: ${start.direction}`, start.range)
+      this.fail('Unsupported tree direction: ' + start.direction, start.range)
     }
 
     const edges: ParsedTreeEdge[] = []
@@ -96,6 +103,60 @@ class Parser {
   private parseSlide(): ParsedSlide {
     const start = this.expect('slide-start')
     const body: Token[] = []
+    const slots: Partial<Record<LayoutSlot, ParsedContent[]>> = {}
+    let layout: LayoutPreset | undefined
+
+    while (this.current() && this.current()?.kind !== 'block-end') {
+      const token = this.current()
+      if (!token) break
+
+      if (token.kind === 'layout') {
+        if (layout) this.fail('Slide "' + start.id + '" has duplicate layout', token.range)
+        if (!isLayoutPreset(token.preset)) {
+          this.fail('Unsupported layout preset: ' + token.preset, token.range)
+        }
+        layout = token.preset
+        this.index += 1
+        continue
+      }
+
+      if (token.kind === 'slot-start') {
+        if (layout !== 'two-column') {
+          this.fail(
+            'Slide "' + start.id + '" named slots require layout two-column',
+            token.range,
+          )
+        }
+        if (slots[token.name]) {
+          this.fail(
+            'Slide "' + start.id + '" has duplicate ' + token.name + ' slot',
+            token.range,
+          )
+        }
+
+        const slot = this.parseSlot()
+        slots[slot.name] = parseSlideContent(slot.body, start.id)
+        continue
+      }
+
+      body.push(token)
+      this.index += 1
+    }
+
+    const end = this.expect('block-end')
+    const slide: ParsedSlide = {
+      id: start.id,
+      content: parseSlideContent(body, start.id),
+      slots,
+      range: { start: start.range.start, end: end.range.end },
+    }
+    if (layout) slide.layout = layout
+    return slide
+  }
+
+  private parseSlot(): { name: LayoutSlot; body: Token[] } {
+    const start = this.expect('slot-start')
+    const body: Token[] = []
 
     while (this.current() && this.current()?.kind !== 'block-end') {
       const token = this.current()
@@ -103,12 +164,8 @@ class Parser {
       this.index += 1
     }
 
-    const end = this.expect('block-end')
-    return {
-      id: start.id,
-      content: parseSlideContent(body, start.id),
-      range: { start: start.range.start, end: end.range.end },
-    }
+    this.expect('block-end')
+    return { name: start.name, body }
   }
 
   private skipBlanks(): void {
@@ -124,7 +181,7 @@ class Parser {
   ): Extract<Token, { kind: K }> {
     const token = this.current()
     if (token?.kind !== kind) {
-      this.fail(`Expected ${kind}, received ${token?.kind ?? 'end of source'}`)
+      this.fail('Expected ' + kind + ', received ' + (token?.kind ?? 'end of source'))
     }
 
     this.index += 1
@@ -150,4 +207,8 @@ function isTreeDirection(direction: string): direction is TreeDirection {
     || direction === 'TB'
     || direction === 'TD'
     || direction === 'BT'
+}
+
+function isLayoutPreset(preset: string): preset is LayoutPreset {
+  return preset === 'two-column'
 }

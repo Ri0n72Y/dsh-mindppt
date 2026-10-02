@@ -10,6 +10,9 @@ import type {
 export { MindPptCompileError }
 export type {
   ContentNode,
+  ImageNode,
+  LayoutPreset,
+  LayoutSlot,
   MindPptDiagnostic,
   MindPptStructure,
   SlideNode,

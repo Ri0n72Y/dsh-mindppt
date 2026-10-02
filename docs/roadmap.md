@@ -534,7 +534,27 @@ Camera remains independent from content types.
 
 ## M6 — Layout + Image + Asset Pipeline
 
+Status: in progress — first end-to-end vertical slice complete
+
 Purpose: make ordinary business presentation pages practical.
+
+Delivered in the first M6 slice:
+
+- `layout two-column` with compiler-owned deterministic geometry;
+- named `left` / `right` slot semantics;
+- Markdown image nodes with source ranges and stable semantic IDs;
+- Excalidraw image skeleton lowering with deterministic file IDs;
+- document-relative local asset resolution in the browser host;
+- Excalidraw `BinaryFiles` delivery;
+- missing / non-local asset warnings without breaking last-good rendering;
+- a canonical M6 fixture and Chromium-visible image smoke coverage.
+
+Remaining M6 work:
+
+- `hero` preset;
+- `title-content` preset;
+- broader image fit behavior beyond the deterministic first-slice box.
+
 
 Initial layout presets:
 

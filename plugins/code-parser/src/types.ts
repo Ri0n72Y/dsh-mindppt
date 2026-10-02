@@ -9,12 +9,16 @@ export interface MindPptDiagnostic {
   sourceRange?: SourceRange
 }
 
+export type LayoutPreset = 'two-column'
+export type LayoutSlot = 'left' | 'right'
+
 interface ContentNodeBase {
   id: string
   x: number
   y: number
   width: number
   height: number
+  slot?: LayoutSlot
   sourceRange: SourceRange
 }
 
@@ -29,13 +33,19 @@ export interface ListNode extends ContentNodeBase {
   items: string[]
 }
 
+export interface ImageNode extends ContentNodeBase {
+  kind: 'image'
+  alt: string
+  src: string
+}
+
 export interface ExtensionNode extends ContentNodeBase {
   kind: 'extension'
   type: string
   raw: string
 }
 
-export type ContentNode = TextNode | ListNode | ExtensionNode
+export type ContentNode = TextNode | ListNode | ImageNode | ExtensionNode
 
 export interface SlideNode {
   id: string
@@ -43,6 +53,7 @@ export interface SlideNode {
   y: number
   width: number
   height: number
+  layout?: LayoutPreset
   elements: ContentNode[]
   sourceRange: SourceRange
 }

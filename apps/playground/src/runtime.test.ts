@@ -51,6 +51,9 @@ describe('playground snapshot asset consistency', () => {
 
     expect(replacedImage.id).toBe(firstImage.id)
     expect(replacedImage.fileId).not.toBe(firstImage.fileId)
+    expect(replacedImage.fileId).not.toBeNull()
+    if (!replacedImage.fileId) return
+
     expect(replaced.files[replacedImage.fileId]?.dataURL).toBe(
       'data:image/svg+xml,version-2',
     )

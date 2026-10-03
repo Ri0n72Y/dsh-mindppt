@@ -4,12 +4,16 @@
 const BOUND_TEXT_PADDING = 10
 const TEXT_LINE_HEIGHT = 1.25
 
-// Avoid an average per-codepoint width. The current Excalifont lowering
-// domain uses coarse em ceilings for Basic Latin, a full em for fallback
-// glyphs such as CJK/full-width text, and two em for emoji presentation.
-// Real Chromium conversion regressions pin these buckets to the renderer.
+// Chromium calibration against Excalidraw 0.18's actual font stack:
+// narrow Basic Latin stays below 0.5em, the default bucket below 0.75em,
+// G/O/Q/W/M/m/% below 1em, @ is 1.015137em, CJK/full-width is 1em,
+// and Segoe UI Emoji samples are 1.248em. Pair advances add no positive
+// kerning beyond the single-glyph sums.
 const NARROW_ASCII = " !\"'(),./:;I[]il|{}"
-const WIDE_ASCII = '#%&@MWmw'
+const WIDE_ASCII = '%GMOQWm'
+const EXTRA_WIDE_ASCII = '@'
+const CJK_OR_FULLWIDTH =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\u3000-\u303f\uff01-\uff60\uffe0-\uffe6]/u
 const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Presentation}]/u
 
 export function textBlockHeight(
@@ -101,8 +105,10 @@ function splitWord(word: string, maxAdvance: number): number[] {
 }
 
 function advanceOf(character: string): number {
-  if (EMOJI.test(character)) return 2
-  if (character.codePointAt(0)! > 0x7f) return 1
+  if (EMOJI.test(character)) return 1.25
+  if (CJK_OR_FULLWIDTH.test(character)) return 1
+  if (character.codePointAt(0)! > 0x7f) return 1.25
+  if (EXTRA_WIDE_ASCII.includes(character)) return 1.25
   if (NARROW_ASCII.includes(character)) return 0.5
   if (WIDE_ASCII.includes(character)) return 1
   return 0.75

@@ -1,7 +1,8 @@
 const BOUND_TEXT_PADDING = 10
-const TEXT_LINE_HEIGHT = 1.15
-const TEXT_WIDTH_FACTOR = 0.65
-const TEXT_HEIGHT_SAFETY = 2
+const TEXT_LINE_HEIGHT = 1.25
+const NARROW_ASCII = " !\"'(),./:;I[]il|{}"
+const WIDE_ASCII = '#%&@MWmw'
+const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Presentation}]/u
 
 export function textBlockHeight(
   text: string,
@@ -13,9 +14,7 @@ export function textBlockHeight(
 
   const lines = wrappedLineCount(text, width, fontSize)
   const measured = Math.ceil(
-    lines * fontSize * TEXT_LINE_HEIGHT
-      + BOUND_TEXT_PADDING
-      + TEXT_HEIGHT_SAFETY,
+    lines * fontSize * TEXT_LINE_HEIGHT + BOUND_TEXT_PADDING,
   )
   return Math.max(minimum, measured)
 }
@@ -25,24 +24,23 @@ function wrappedLineCount(
   width: number,
   fontSize: number,
 ): number {
-  const columns = Math.max(
+  const maxAdvance = Math.max(
     1,
-    Math.floor(
-      (width - BOUND_TEXT_PADDING) / (fontSize * TEXT_WIDTH_FACTOR),
-    ),
+    (width - BOUND_TEXT_PADDING) / fontSize,
   )
 
   return text
+    .normalize('NFC')
     .split('\n')
     .reduce(
-      (total, line) => total + wrappedPhysicalLineCount(line, columns),
+      (total, line) => total + wrappedPhysicalLineCount(line, maxAdvance),
       0,
     )
 }
 
 function wrappedPhysicalLineCount(
   line: string,
-  columns: number,
+  maxAdvance: number,
 ): number {
   const words = line.trim().split(/\s+/).filter(Boolean)
   if (!words.length) return 1
@@ -51,21 +49,53 @@ function wrappedPhysicalLineCount(
   let used = 0
 
   for (const word of words) {
-    const characters = [...word]
+    const chunks = splitWord(word, maxAdvance)
 
-    for (let offset = 0; offset < characters.length; offset += columns) {
-      const length = Math.min(columns, characters.length - offset)
-      const continuation = offset > 0
-      const gap = used === 0 || continuation ? 0 : 1
-
-      if (used + gap + length <= columns) {
-        used += gap + length
-      } else {
+    if (chunks.length > 1) {
+      if (used > 0) {
         lines += 1
-        used = length
+        used = 0
       }
+      lines += chunks.length - 1
+      used = chunks.at(-1) ?? 0
+      continue
+    }
+
+    const wordAdvance = chunks[0] ?? 0
+    const gap = used === 0 ? 0 : advanceOf(' ')
+
+    if (used + gap + wordAdvance <= maxAdvance) {
+      used += gap + wordAdvance
+    } else {
+      lines += 1
+      used = wordAdvance
     }
   }
 
   return lines
+}
+
+function splitWord(word: string, maxAdvance: number): number[] {
+  const chunks: number[] = []
+  let used = 0
+
+  for (const character of word) {
+    const advance = advanceOf(character)
+    if (used > 0 && used + advance > maxAdvance) {
+      chunks.push(used)
+      used = 0
+    }
+    used += advance
+  }
+
+  if (used > 0) chunks.push(used)
+  return chunks
+}
+
+function advanceOf(character: string): number {
+  if (EMOJI.test(character)) return 2
+  if (character.codePointAt(0)! > 0x7f) return 1
+  if (NARROW_ASCII.includes(character)) return 0.5
+  if (WIDE_ASCII.includes(character)) return 1
+  return 0.75
 }

@@ -1,19 +1,21 @@
 import { expect, test } from '@playwright/test'
 
-const LATIN_SOURCE = \`mindppt
-
-slide fit {
-  layout title-content
-
-  # Geometry contract
-
-  This paragraph intentionally uses enough ordinary words to wrap across several lines while remaining inside the title content semantic region.
-
-  - First list item carries enough detail to wrap inside the semantic box.
-  - Second list item also wraps without asking Excalidraw to grow the container.
-  - Third list item confirms the compiler owns the final text-box geometry.
-}
-\`
+const LATIN_SOURCE = [
+  'mindppt',
+  '',
+  'slide fit {',
+  '  layout title-content',
+  '',
+  '  # Geometry contract',
+  '',
+  '  This paragraph intentionally uses enough ordinary words to wrap across several lines while remaining inside the title content semantic region.',
+  '',
+  '  - First list item carries enough detail to wrap inside the semantic box.',
+  '  - Second list item also wraps without asking Excalidraw to grow the container.',
+  '  - Third list item confirms the compiler owns the final text-box geometry.',
+  '}',
+  '',
+].join('\n')
 
 const CJK_PARAGRAPH =
   '中文段落用于验证编译器拥有文本几何并覆盖实际换行边界'.repeat(4)
@@ -89,16 +91,18 @@ test('CJK overflow keeps the mounted last-good elements files and camera', async
     document.body.append(container)
 
     const fits = '界'.repeat(630)
-    const validSource = \`mindppt
-
-slide fit {
-  layout title-content
-
-  # Boundary
-
-  \${fits}
-}
-\`
+    const validSource = [
+      'mindppt',
+      '',
+      'slide fit {',
+      '  layout title-content',
+      '',
+      '  # Boundary',
+      '',
+      '  ' + fits,
+      '}',
+      '',
+    ].join('\n')
     const invalidSource = validSource.replace(fits, fits + '界')
     const harness = await mountAssetBrowserHarness(
       container,
@@ -126,27 +130,28 @@ slide fit {
     }
   })
 
-  expect(result).toEqual({
-    elementsSame: true,
-    filesSame: true,
-    cameraSame: true,
-    message: 'Content does not fit in the available semantic layout region',
-    block: result.expectedBlock,
-    expectedBlock: result.expectedBlock,
-  })
+  expect(result.elementsSame).toBe(true)
+  expect(result.filesSame).toBe(true)
+  expect(result.cameraSame).toBe(true)
+  expect(result.message).toBe(
+    'Content does not fit in the available semantic layout region',
+  )
+  expect(result.block).toBe(result.expectedBlock)
 })
 
 function titleContentSource(paragraph: string, items: string[]): string {
-  return \`mindppt
-
-slide fit {
-  layout title-content
-
-  # Geometry contract
-
-  \${paragraph}
-
-\${items.map((item) => \`  - \${item}\`).join('\\n')}
-}
-\`
+  return [
+    'mindppt',
+    '',
+    'slide fit {',
+    '  layout title-content',
+    '',
+    '  # Geometry contract',
+    '',
+    '  ' + paragraph,
+    '',
+    ...items.map((item) => '  - ' + item),
+    '}',
+    '',
+  ].join('\n')
 }

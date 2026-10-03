@@ -41,7 +41,21 @@ function layoutDefault(
   const only = slide.content[0]
   if (slide.content.length === 1 && only?.kind === 'title') {
     const width = slideWidth * 0.8
-    const height = 120
+    const height = blockHeight(only, width)
+
+    if (height > slideHeight - CONTENT_TOP - SLIDE_BOTTOM_GAP) {
+      return layoutStack(
+        slide.id,
+        slide.content,
+        {
+          x: (slideWidth - width) / 2,
+          y: CONTENT_TOP,
+          width,
+          height: slideHeight - CONTENT_TOP - SLIDE_BOTTOM_GAP,
+        },
+      )
+    }
+
     return [{
       kind: 'title',
       id: 'slide:' + slide.id + '/title:0',
@@ -57,7 +71,12 @@ function layoutDefault(
   return layoutStack(
     slide.id,
     slide.content,
-    { x: CONTENT_X, y: CONTENT_TOP, width: slideWidth - CONTENT_X * 2 },
+    {
+      x: CONTENT_X,
+      y: CONTENT_TOP,
+      width: slideWidth - CONTENT_X * 2,
+      height: slideHeight - CONTENT_TOP - SLIDE_BOTTOM_GAP,
+    },
   )
 }
 
@@ -67,7 +86,7 @@ function layoutHero(
   slideHeight: number,
 ): ContentNode[] {
   const width = slideWidth - HERO_SIDE_GAP * 2
-  const height = stackHeight(slide.content)
+  const height = stackHeight(slide.content, width)
   const y = Math.max(CONTENT_TOP, (slideHeight - height) / 2)
 
   return layoutStack(
@@ -105,14 +124,21 @@ function layoutTitleContent(
   }
 
   const counts = createContentCounts()
+  const titleWidth = slideWidth - CONTENT_X * 2
   const title = layoutStack(
     slide.id,
     [first],
-    { x: CONTENT_X, y: CONTENT_TOP, width: slideWidth - CONTENT_X * 2 },
+    {
+      x: CONTENT_X,
+      y: CONTENT_TOP,
+      width: titleWidth,
+      height: slideHeight - CONTENT_TOP - SLIDE_BOTTOM_GAP,
+    },
     undefined,
     counts,
   )
-  const bodyY = CONTENT_TOP + blockHeight(first) + TITLE_CONTENT_GAP
+  const titleHeight = title[0]?.height ?? blockHeight(first, titleWidth)
+  const bodyY = CONTENT_TOP + titleHeight + TITLE_CONTENT_GAP
 
   return [
     ...title,
@@ -140,7 +166,12 @@ function layoutTwoColumn(
   const header = layoutStack(
     slide.id,
     slide.content,
-    { x: CONTENT_X, y: CONTENT_TOP, width: contentWidth },
+    {
+      x: CONTENT_X,
+      y: CONTENT_TOP,
+      width: contentWidth,
+      height: slideHeight - CONTENT_TOP - SLIDE_BOTTOM_GAP,
+    },
   )
   const headerBottom = header.length
     ? Math.max(...header.map((node) => node.y + node.height))

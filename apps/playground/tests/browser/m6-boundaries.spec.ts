@@ -51,13 +51,13 @@ slide fit {
     x: 128,
     y: 184,
     width: 1024,
-    height: 121,
+    height: 95,
   })
   expect(geometry.list).toEqual({
     x: 128,
-    y: 325,
+    y: 299,
     width: 1024,
-    height: 176,
+    height: 178,
   })
 })
 

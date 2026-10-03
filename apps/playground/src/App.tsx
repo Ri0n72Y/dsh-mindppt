@@ -136,6 +136,7 @@ export function App({ runtime }: AppProps) {
         elements={snapshot.elements}
         files={snapshot.files}
         focusRequest={snapshot.camera.focusRequest}
+        onFontMetricsReady={runtime.refreshElements}
       />
     </main>
   )

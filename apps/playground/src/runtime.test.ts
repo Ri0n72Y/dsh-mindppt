@@ -121,4 +121,89 @@ describe('playground snapshot asset consistency', () => {
     expect(failed.files).toBe(lastGood.files)
     expect(failed.camera).toEqual(lastGood.camera)
   })
+
+  it('keeps title-content last-good when semantic content overflows', async () => {
+    const initial = `mindppt
+
+slide stable {
+  layout title-content
+
+  # Stable title
+
+  Short body.
+}
+`
+    const runtime = await createPlaygroundRuntime(initial)
+    const lastGood = runtime.getSnapshot()
+    const overflow = `mindppt
+
+slide stable {
+  layout title-content
+
+  # Stable title
+
+  ${'ordinary words '.repeat(120)}
+}
+`
+
+    runtime.setSource(overflow)
+    const failed = runtime.getSnapshot()
+
+    expect(failed.source).toBe(overflow)
+    expect(failed.diagnostics[0]).toEqual(expect.objectContaining({
+      severity: 'error',
+      message: 'Content does not fit in the available semantic layout region',
+      sourceRange: expect.any(Object),
+    }))
+    expect(failed.elements).toBe(lastGood.elements)
+    expect(failed.files).toBe(lastGood.files)
+    expect(failed.camera).toEqual(lastGood.camera)
+  })
+
+  it('keeps two-column last-good when a slot overflows', async () => {
+    const initial = `mindppt
+
+slide stable {
+  layout two-column
+
+  # Stable title
+
+  left {
+    - One item
+  }
+}
+`
+    const runtime = await createPlaygroundRuntime(initial)
+    const lastGood = runtime.getSnapshot()
+    const items = Array.from(
+      { length: 20 },
+      (_, index) => '    - Overflow item ' + (index + 1),
+    ).join('\n')
+    const overflow = `mindppt
+
+slide stable {
+  layout two-column
+
+  # Stable title
+
+  left {
+${items}
+  }
+}
+`
+
+    runtime.setSource(overflow)
+    const failed = runtime.getSnapshot()
+
+    expect(failed.source).toBe(overflow)
+    expect(failed.diagnostics[0]).toEqual(expect.objectContaining({
+      severity: 'error',
+      message: 'Content does not fit in the available semantic layout region',
+      sourceRange: expect.any(Object),
+    }))
+    expect(failed.elements).toBe(lastGood.elements)
+    expect(failed.files).toBe(lastGood.files)
+    expect(failed.camera).toEqual(lastGood.camera)
+  })
+
 })

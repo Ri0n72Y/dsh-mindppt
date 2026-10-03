@@ -54,31 +54,90 @@ test('cold load reaches font-ready hero and agenda geometry without a source edi
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto('/')
 
-  const canvas = page.locator('.canvas-panel canvas.static')
-  const editor = page.getByRole('textbox', { name: 'MindPPT source editor' })
-  await expect(canvas).toBeVisible()
+  await page.evaluate(async () => {
+    const { mountAssetBrowserHarness } = await import(
+      '/src/asset-browser-harness.tsx'
+    )
+    const editor = document.querySelector<HTMLTextAreaElement>(
+      '[aria-label="MindPPT source editor"]',
+    )
+    if (!editor) throw new Error('Missing source editor')
 
-  await page.getByRole('combobox', { name: 'Camera slide target' })
-    .selectOption('hero')
-  await expect(page.getByText('Current: hero', { exact: true }))
-    .toBeVisible()
-  await page.waitForTimeout(900)
+    const container = document.createElement('div')
+    container.style.width = '1200px'
+    container.style.height = '760px'
+    document.body.append(container)
+
+    const harness = await mountAssetBrowserHarness(
+      container,
+      editor.value,
+      { documentPath: 'examples/m6-layout-presets.mindppt', files: {} },
+    )
+
+    Object.assign(window, { __mindPptFontHarness: harness })
+  })
+
+  await page.waitForFunction(() => {
+    const harness = (window as any).__mindPptFontHarness
+    return Boolean(harness?.getApi())
+  })
+
+  const beforeFonts = await readPresetTextGeometry(page)
 
   releaseFonts()
   await page.evaluate(() => document.fonts.ready)
-  await page.waitForTimeout(100)
 
-  const hero = await canvas.screenshot()
-  const agenda = await focusAndCapture(page, canvas, 'agenda')
-  const source = await editor.inputValue()
+  await expect.poll(
+    () => readPresetTextGeometry(page),
+    { timeout: 5_000, intervals: [50, 100, 150, 200] },
+  ).not.toEqual(beforeFonts)
 
-  await editor.fill(source + '\n')
-  await expect(editor).toHaveValue(source + '\n')
-  await page.waitForTimeout(150)
+  const afterFonts = await readPresetTextGeometry(page)
 
-  const agendaAfterRecompile = await canvas.screenshot()
-  const heroAfterRecompile = await focusAndCapture(page, canvas, 'hero')
+  await page.evaluate(() => {
+    const harness = (window as any).__mindPptFontHarness
+    const source = harness.runtime.getSnapshot().source
+    harness.runtime.setSource(source + '\n')
+  })
 
-  expect(agendaAfterRecompile.equals(agenda)).toBe(true)
-  expect(heroAfterRecompile.equals(hero)).toBe(true)
+  await expect.poll(
+    () => readPresetTextGeometry(page),
+    { timeout: 5_000, intervals: [50, 100, 150, 200] },
+  ).toEqual(afterFonts)
+
+  const afterRecompile = await readPresetTextGeometry(page)
+  expect(afterRecompile).toEqual(afterFonts)
 })
+
+async function readPresetTextGeometry(page: Page) {
+  return page.evaluate(() => {
+    const harness = (window as any).__mindPptFontHarness
+    const elements = harness.getApi().getSceneElements()
+    const prefixes = ['slide:hero/', 'slide:agenda/']
+
+    return elements
+      .filter((element: any) => {
+        if (element.type === 'text') {
+          return prefixes.some((prefix) => element.containerId?.startsWith(prefix))
+        }
+        return prefixes.some((prefix) => element.id?.startsWith(prefix))
+          && element.type === 'rectangle'
+          && element.id !== 'slide:hero/surface'
+          && element.id !== 'slide:agenda/surface'
+      })
+      .map((element: any) => ({
+        key: element.type === 'text' ? element.containerId : element.id,
+        type: element.type,
+        x: element.x,
+        y: element.y,
+        width: element.width,
+        height: element.height,
+        text: element.type === 'text' ? element.text : undefined,
+        fontSize: element.type === 'text' ? element.fontSize : undefined,
+        lineHeight: element.type === 'text' ? element.lineHeight : undefined,
+      }))
+      .sort((a: any, b: any) =>
+        (a.key + ':' + a.type).localeCompare(b.key + ':' + b.type),
+      )
+  })
+}

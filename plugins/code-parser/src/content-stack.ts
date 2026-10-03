@@ -132,6 +132,11 @@ export function blockHeight(
     case 'image':
       return IMAGE_HEIGHT
     case 'extension':
-      return Math.max(112, (block.raw.split('\n').length + 1) * 30 + 24)
+      return textBlockHeight(
+        '[' + (block.type || 'extension') + ']\n' + block.raw,
+        width,
+        22,
+        112,
+      )
   }
 }

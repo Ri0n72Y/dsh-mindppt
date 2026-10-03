@@ -534,7 +534,7 @@ Camera remains independent from content types.
 
 ## M6 — Layout + Image + Asset Pipeline
 
-Status: in progress — initial layout preset set complete
+Status: in progress — initial layout/asset boundaries closed
 
 Purpose: make ordinary business presentation pages practical.
 
@@ -548,6 +548,10 @@ Delivered:
 - Excalidraw image skeleton lowering with deterministic file IDs;
 - document-relative local asset resolution in the browser host;
 - Excalidraw `BinaryFiles` delivery;
+- fail-fast semantic region overflow with source-mapped compile errors and last-good preservation;
+- compiler-sized text boxes that stay unchanged through real Excalidraw 0.18 conversion;
+- runtime-local asset revision memoization so unchanged bytes are not re-digested;
+- mounted `BinaryFiles` pruning so the Excalidraw host matches the current logical snapshot;
 - missing / malformed / non-local asset warnings without breaking last-good rendering;
 - canonical fixtures covering all three presets and the focused two-column asset path;
 - Chromium-visible smoke coverage for the three presets, live recompilation, images, last-good, and M5 Camera regression.
@@ -600,7 +604,7 @@ slide customer {
 }
 ```
 
-Layout remains content-agnostic. Semantic text/image boxes belong to the compiler/layout layer; Excalidraw lowering mechanically preserves those boxes and adds the slide's canvas offset. Excalidraw frames remain grouping containers rather than visual slide boundaries.
+Layout remains content-agnostic. Semantic text/image boxes belong to the compiler/layout layer; Excalidraw lowering mechanically preserves those boxes and adds the slide's canvas offset. When authored content cannot fit its semantic region, compilation fails with the source range and existing last-good rendering remains active. Excalidraw frames remain grouping containers rather than visual slide boundaries.
 
 Image support:
 
@@ -615,6 +619,8 @@ Asset work:
 - resolve paths relative to the MindPPT document;
 - load local assets into the Excalidraw file map;
 - keep semantic image identity separate from binary content-revision identity;
+- reuse unchanged binary revisions without re-hashing their bytes on text-only recompiles;
+- prune mounted orphan revisions when assets are replaced or removed;
 - preserve last-good/version consistency through asset warnings and compile failures;
 - treat remote URL loading as runtime policy, not a language guarantee.
 

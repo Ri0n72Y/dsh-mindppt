@@ -6,6 +6,7 @@ const CONTENT_GAP = 20
 const IMAGE_HEIGHT = 390
 const BOUND_TEXT_PADDING = 10
 const TEXT_LINE_HEIGHT = 1.15
+const TEXT_WIDTH_FACTOR = 0.65
 
 const FONT_SIZE = {
   title: 48,
@@ -159,7 +160,9 @@ function wrappedLineCount(
 ): number {
   const columns = Math.max(
     1,
-    Math.floor((width - BOUND_TEXT_PADDING) / fontSize),
+    Math.floor(
+      (width - BOUND_TEXT_PADDING) / (fontSize * TEXT_WIDTH_FACTOR),
+    ),
   )
 
   return text

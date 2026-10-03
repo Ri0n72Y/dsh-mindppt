@@ -12,7 +12,7 @@ import MindPptParserService, {
 } from 'dsh-mindppt-code-parser'
 
 import {
-  resolveCanvasAssets,
+  createCanvasAssetResolver,
   type PlaygroundAssetContext,
   type ResolvedAssets,
 } from './assets.ts'
@@ -78,6 +78,7 @@ export async function createPlaygroundRuntime(
   const cameraService = camera
 
   const listeners = new Set<() => void>()
+  const resolveAssets = createCanvasAssetResolver(assetContext)
   let snapshot: PlaygroundSnapshot = {
     source: '',
     diagnostics: [],
@@ -94,7 +95,7 @@ export async function createPlaygroundRuntime(
   const setSource = (source: string) => {
     const compiled = editorService.setSource(source)
     const assets = compiled
-      ? resolveCanvasAssets(canvasService.assetRequests, assetContext)
+      ? resolveAssets(canvasService.assetRequests)
       : undefined
 
     publish({

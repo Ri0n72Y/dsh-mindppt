@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
 
-import MindPptParserService, { serviceName } from '../src/index.ts'
+import MindPptParserService, { MindPptCompileError, serviceName } from '../src/index.ts'
 
 const M6_TWO_COLUMN = readFileSync(
   new URL('../../../examples/m6-two-column.mindppt', import.meta.url),
@@ -173,4 +173,55 @@ describe('M6 parser and semantic layout', () => {
       },
     })
   })
+
+  it('rejects the first CJK line beyond the title-content region with its block range', async () => {
+    const ctx = new Context()
+    await ctx.plugin(MindPptParserService)
+
+    await ctx.plugin({
+      name: 'mindppt-m6-cjk-overflow-test',
+      inject: [serviceName],
+      apply(child: Context) {
+        const fits = '界'.repeat(630)
+        const overflows = fits + '界'
+        const validSource = titleContentSource(fits)
+        const invalidSource = titleContentSource(overflows)
+
+        expect(() => child.mindpptParser.compile(validSource)).not.toThrow()
+
+        try {
+          child.mindpptParser.compile(invalidSource)
+          throw new Error('Expected semantic overflow')
+        } catch (error) {
+          expect(error).toBeInstanceOf(MindPptCompileError)
+          if (!(error instanceof MindPptCompileError)) return
+
+          expect(error.message).toBe(
+            'Content does not fit in the available semantic layout region',
+          )
+          expect(error.sourceRange).toBeDefined()
+          if (!error.sourceRange) return
+
+          expect(
+            invalidSource
+              .slice(error.sourceRange.start, error.sourceRange.end)
+              .trim(),
+          ).toBe(overflows)
+        }
+      },
+    })
+  })
 })
+
+function titleContentSource(body: string): string {
+  return `mindppt
+
+slide fit {
+  layout title-content
+
+  # Boundary
+
+  ${body}
+}
+`
+}

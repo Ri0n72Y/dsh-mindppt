@@ -1,5 +1,13 @@
+// Excalidraw 0.18 rectangles expose width - 10px to a bound label and
+// create Excalifont labels at lineHeight 1.25. Keep those values here so
+// compiler geometry matches the actual conversion contract.
 const BOUND_TEXT_PADDING = 10
 const TEXT_LINE_HEIGHT = 1.25
+
+// Avoid an average per-codepoint width. The current Excalifont lowering
+// domain uses coarse em ceilings for Basic Latin, a full em for fallback
+// glyphs such as CJK/full-width text, and two em for emoji presentation.
+// Real Chromium conversion regressions pin these buckets to the renderer.
 const NARROW_ASCII = " !\"'(),./:;I[]il|{}"
 const WIDE_ASCII = '#%&@MWmw'
 const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Presentation}]/u

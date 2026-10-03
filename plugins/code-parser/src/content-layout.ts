@@ -42,7 +42,6 @@ function layoutDefault(
   if (slide.content.length === 1 && only?.kind === 'title') {
     const width = slideWidth * 0.8
     const height = blockHeight(only, width)
-
     if (height > slideHeight - CONTENT_TOP - SLIDE_BOTTOM_GAP) {
       return layoutStack(
         slide.id,
@@ -55,7 +54,6 @@ function layoutDefault(
         },
       )
     }
-
     return [{
       kind: 'title',
       id: 'slide:' + slide.id + '/title:0',
@@ -67,7 +65,6 @@ function layoutDefault(
       sourceRange: only.range,
     }]
   }
-
   return layoutStack(
     slide.id,
     slide.content,
@@ -88,7 +85,6 @@ function layoutHero(
   const width = slideWidth - HERO_SIDE_GAP * 2
   const height = stackHeight(slide.content, width)
   const y = Math.max(CONTENT_TOP, (slideHeight - height) / 2)
-
   return layoutStack(
     slide.id,
     slide.content,
@@ -109,7 +105,6 @@ function layoutTitleContent(
   const first = slide.content[0]
   const bodyX = TITLE_CONTENT_X
   const bodyWidth = slideWidth - bodyX * 2
-
   if (first?.kind !== 'title') {
     return layoutStack(
       slide.id,
@@ -122,7 +117,6 @@ function layoutTitleContent(
       },
     )
   }
-
   const counts = createContentCounts()
   const titleWidth = slideWidth - CONTENT_X * 2
   const title = layoutStack(
@@ -139,7 +133,6 @@ function layoutTitleContent(
   )
   const titleHeight = title[0]?.height ?? blockHeight(first, titleWidth)
   const bodyY = CONTENT_TOP + titleHeight + TITLE_CONTENT_GAP
-
   return [
     ...title,
     ...layoutStack(
@@ -181,7 +174,6 @@ function layoutTwoColumn(
     : CONTENT_TOP
   const slotWidth = (contentWidth - TWO_COLUMN_GAP) / 2
   const slotHeight = Math.max(0, slideHeight - slotTop - SLIDE_BOTTOM_GAP)
-
   return [
     ...header,
     ...layoutStack(

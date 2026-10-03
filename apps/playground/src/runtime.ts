@@ -31,6 +31,7 @@ export interface PlaygroundRuntime {
   getSnapshot: () => PlaygroundSnapshot
   subscribe: (listener: () => void) => () => void
   setSource: (source: string) => void
+  refreshElements: () => void
   focusSlide: (slideId: string) => void
   focusParent: () => void
   focusChild: (slideId: string) => void
@@ -79,6 +80,7 @@ export async function createPlaygroundRuntime(
 
   const listeners = new Set<() => void>()
   const resolveAssets = createCanvasAssetResolver(assetContext)
+  let resolvedAssets: ResolvedAssets | undefined
   let snapshot: PlaygroundSnapshot = {
     source: '',
     diagnostics: [],
@@ -98,6 +100,8 @@ export async function createPlaygroundRuntime(
       ? resolveAssets(canvasService.assetRequests)
       : undefined
 
+    if (compiled) resolvedAssets = assets
+
     publish({
       source: editorService.source,
       diagnostics: compiled
@@ -108,6 +112,15 @@ export async function createPlaygroundRuntime(
         : snapshot.elements,
       files: compiled ? (assets?.files ?? {}) : snapshot.files,
       camera: cameraService.view,
+    })
+  }
+
+  const refreshElements = () => {
+    if (!snapshot.elements.length) return
+
+    publish({
+      ...snapshot,
+      elements: compileElements(canvasService, resolvedAssets),
     })
   }
 
@@ -128,6 +141,7 @@ export async function createPlaygroundRuntime(
       return () => listeners.delete(listener)
     },
     setSource,
+    refreshElements,
     focusSlide(slideId) {
       applyCameraAction(() => cameraService.focusSlide(slideId))
     },
@@ -139,7 +153,6 @@ export async function createPlaygroundRuntime(
     },
   }
 }
-
 
 function compileElements(
   canvasService: MindPptCanvasService,

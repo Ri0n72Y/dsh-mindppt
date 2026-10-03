@@ -534,15 +534,15 @@ Camera remains independent from content types.
 
 ## M6 — Layout + Image + Asset Pipeline
 
-Status: in progress — initial layout/asset boundaries closed
+Status: complete
 
 Purpose: make ordinary business presentation pages practical.
 
 Delivered:
 
-- `hero` preset with compiler-owned deterministic centered semantic geometry;
+- `hero` preset with compiler-owned deterministic centered semantic placement;
 - `title-content` preset with a distinct title area and ordinary Markdown content area;
-- `two-column` preset with compiler-owned deterministic geometry;
+- `two-column` preset with compiler-owned deterministic semantic placement;
 - named `left` / `right` slot semantics for two-column;
 - Markdown image nodes with source ranges and stable semantic IDs;
 - Excalidraw image skeleton lowering with deterministic file IDs;
@@ -612,7 +612,7 @@ Image support:
 ![Customer](./assets/customer.png)
 ```
 
-Default image behavior uses the deterministic current box. Broader image-fit behavior remains deferred inside M6 until a concrete presentation use case requires it.
+Default image behavior uses the deterministic current box. Broader image-fit behavior is deferred to the backlog and should return only when a concrete presentation use case requires it.
 
 Asset work:
 
@@ -624,9 +624,6 @@ Asset work:
 - preserve last-good/version consistency through asset warnings and compile failures;
 - treat remote URL loading as runtime policy, not a language guarantee.
 
-Remaining M6 work:
-
-- broader image fit behavior beyond the deterministic current image box.
 
 Visible acceptance:
 
@@ -907,7 +904,8 @@ The following are intentionally outside the core roadmap unless a concrete use c
 - merged table cells;
 - multiple independent primary trees;
 - collaborative editing protocol;
-- generalized third-party extensions to document topology.
+- generalized third-party extensions to document topology;
+- broader image-fit behavior beyond the deterministic current image box, to be reconsidered only when a concrete presentation use case requires it.
 
 ## 8. v0 completion target
 

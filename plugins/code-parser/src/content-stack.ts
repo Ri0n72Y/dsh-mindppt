@@ -7,6 +7,7 @@ const IMAGE_HEIGHT = 390
 const BOUND_TEXT_PADDING = 10
 const TEXT_LINE_HEIGHT = 1.15
 const TEXT_WIDTH_FACTOR = 0.65
+const TEXT_HEIGHT_SAFETY = 2
 
 const FONT_SIZE = {
   title: 48,
@@ -148,7 +149,9 @@ function textBlockHeight(
 
   const lines = wrappedLineCount(text, width, fontSize)
   const measured = Math.ceil(
-    lines * fontSize * TEXT_LINE_HEIGHT + BOUND_TEXT_PADDING,
+    lines * fontSize * TEXT_LINE_HEIGHT
+      + BOUND_TEXT_PADDING
+      + TEXT_HEIGHT_SAFETY,
   )
   return Math.max(minimum, measured)
 }

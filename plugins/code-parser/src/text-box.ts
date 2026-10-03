@@ -3,6 +3,7 @@
 // compiler geometry matches the actual conversion contract.
 const BOUND_TEXT_PADDING = 10
 const TEXT_LINE_HEIGHT = 1.25
+const TAB_SPACES = '        '
 
 // Chromium calibration against Excalidraw 0.18's actual font stack:
 // narrow Basic Latin stays below 0.5em, the default bucket below 0.75em,
@@ -43,6 +44,7 @@ function wrappedLineCount(
 
   return text
     .normalize('NFC')
+    .replace(/\t/g, TAB_SPACES)
     .split('\n')
     .reduce(
       (total, line) => total + wrappedPhysicalLineCount(line, maxAdvance),
@@ -54,14 +56,19 @@ function wrappedPhysicalLineCount(
   line: string,
   maxAdvance: number,
 ): number {
-  const words = line.trim().split(/\s+/).filter(Boolean)
-  if (!words.length) return 1
+  const tokens = line.match(/\s+|\S+/gu) ?? []
+  if (!tokens.length) return 1
 
   let lines = 1
   let used = 0
 
-  for (const word of words) {
-    const chunks = splitWord(word, maxAdvance)
+  for (const token of tokens) {
+    if (/^\s+$/u.test(token)) {
+      for (const whitespace of token) used += advanceOf(whitespace)
+      continue
+    }
+
+    const chunks = splitWord(token, maxAdvance)
 
     if (chunks.length > 1) {
       if (used > 0) {
@@ -74,10 +81,9 @@ function wrappedPhysicalLineCount(
     }
 
     const wordAdvance = chunks[0] ?? 0
-    const gap = used === 0 ? 0 : advanceOf(' ')
 
-    if (used + gap + wordAdvance <= maxAdvance) {
-      used += gap + wordAdvance
+    if (used + wordAdvance <= maxAdvance) {
+      used += wordAdvance
     } else {
       lines += 1
       used = wordAdvance

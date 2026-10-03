@@ -62,7 +62,7 @@ MindPPT source
 hero / title-content / two-column
     |
     v
-compiler-owned semantic boxes
+compiler-owned semantic placement
     |
     +--> ordinary Markdown content
     |
@@ -84,11 +84,11 @@ content-revision binary fileId + Excalidraw BinaryFiles
 visible browser canvas
 ```
 
-`hero` vertically centers a compact ordinary-content stack inside a deterministic slide-relative box. `title-content` separates the first level-one title from the ordinary content region. `two-column` keeps the title in the slide header and lays out named `left` / `right` slots. All three presets produce semantic geometry in the compiler/layout layer; the Excalidraw renderer only lowers those boxes and adds the slide's canvas position.
+`hero` vertically centers a compact ordinary-content stack inside a deterministic slide-relative box. `title-content` separates the first level-one title from the ordinary content region. `two-column` keeps the title in the slide header and lays out named `left` / `right` slots. All three presets produce semantic placement in the compiler/layout layer: slide-relative position, available width, and basic block rhythm. Excalidraw owns real font measurement during conversion rather than the compiler approximating glyph metrics. After Excalidraw's fonts settle, the browser host reconverts the same semantic scene once so cold-start rendering and later source recompiles use the same font metrics.
 
 Image source paths remain semantic source data; browser bytes and Excalidraw binary identity are handled outside the parser model. Binary file IDs are deterministic for unchanged source + bytes and change when the bytes at the same source change. Missing, malformed, or non-local assets produce warnings instead of crashing the live authoring loop.
 
-M3-M5 behavior remains part of the same runtime: failed compiles keep the last-good elements and files, stable slide/content identities are preserved, and Camera remains content-agnostic. Successful asset-warning snapshots publish source, elements, files, and camera from the same logical compile. Chromium coverage exercises all three M6 presets, live recompilation, the local image pipeline, last-good behavior, and the canonical M4 camera flow.
+M3-M5 behavior remains part of the same runtime: failed compiles keep the last-good elements and files, stable slide/content identities are preserved, and Camera remains content-agnostic. Successful asset-warning snapshots publish source, elements, files, and camera from the same logical compile. Chromium coverage exercises all three M6 presets, cold-start font readiness, live recompilation, the local image pipeline, last-good behavior, and the canonical M4 camera flow.
 
 M6 remains in progress only for broader image-fit behavior beyond the deterministic current image box. No generic layout engine, theme system, asset registry, or CSS-like layout DSL is introduced by the initial preset set.
 

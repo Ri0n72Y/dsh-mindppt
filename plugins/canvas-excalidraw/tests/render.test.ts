@@ -64,12 +64,17 @@ describe('MindPptCanvasService', () => {
 
     expect(scene).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        type: 'text',
-        id: 'slide:math/extension:0/text',
-        text: '[latex]\n  e^{i\\pi} + 1 = 0',
-        fontFamily: 2,
+        type: 'rectangle',
+        id: 'slide:math/extension:0/box',
+        label: expect.objectContaining({
+          text: '[latex]\n  e^{i\\pi} + 1 = 0',
+          fontSize: 22,
+        }),
       }),
     ]))
+    expect(
+      scene.some((element) => element.id === 'slide:math/extension:0/text'),
+    ).toBe(false)
   })
   it('renders every M4 slide frame and primary tree arrow', async () => {
     const ctx = new Context()

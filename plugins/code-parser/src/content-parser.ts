@@ -1,25 +1,8 @@
 import { MindPptCompileError } from './errors.ts'
+import type { ParsedContent } from './parsed-types.ts'
 import type { Token } from './tokenizer.ts'
-import type { SourceRange } from './types.ts'
 
-export type ParsedContent =
-  | {
-      kind: 'title' | 'subtitle' | 'text'
-      text: string
-      range: SourceRange
-    }
-  | {
-      kind: 'list'
-      ordered: boolean
-      items: string[]
-      range: SourceRange
-    }
-  | {
-      kind: 'extension'
-      type: string
-      raw: string
-      range: SourceRange
-    }
+const IMAGE = /^!\[([^\]]*)\]\(([^)]+)\)$/
 
 export function parseSlideContent(
   tokens: Token[],
@@ -54,6 +37,13 @@ class ContentParser {
         continue
       }
 
+      const image = parseImageToken(token)
+      if (image) {
+        content.push(image)
+        this.index += 1
+        continue
+      }
+
       if (isParagraphToken(token)) {
         content.push(this.parseParagraph())
         continue
@@ -75,7 +65,7 @@ class ContentParser {
         continue
       }
 
-      this.fail(`contains unsupported ${token.kind}`)
+      this.fail('contains unsupported ' + token.kind)
     }
 
     return content
@@ -91,7 +81,7 @@ class ContentParser {
 
     while (true) {
       const token = this.current()
-      if (!token || !isParagraphToken(token)) break
+      if (!token || !isParagraphToken(token) || parseImageToken(token)) break
       lines.push(paragraphText(token))
       end = token.range.end
       this.index += 1
@@ -138,9 +128,7 @@ class ContentParser {
     kind: K,
   ): Extract<Token, { kind: K }> {
     const token = this.current()
-    if (token?.kind !== kind) {
-      this.fail(`expected ${kind}`)
-    }
+    if (token?.kind !== kind) this.fail('expected ' + kind)
 
     this.index += 1
     return token as Extract<Token, { kind: K }>
@@ -156,7 +144,7 @@ class ContentParser {
     )
 
     throw new MindPptCompileError(
-      `Slide "${this.slideId}" ${message}`,
+      'Slide "' + this.slideId + '" ' + message,
       sourceRange,
     )
   }
@@ -172,3 +160,16 @@ function paragraphText(token: ParagraphToken): string {
   return token.text
 }
 
+function parseImageToken(token: Token): ParsedContent | undefined {
+  if (token.kind !== 'text') return undefined
+
+  const match = IMAGE.exec(token.text)
+  if (!match) return undefined
+
+  return {
+    kind: 'image',
+    alt: match[1]?.trim() ?? '',
+    src: match[2]?.trim() ?? '',
+    range: token.range,
+  }
+}

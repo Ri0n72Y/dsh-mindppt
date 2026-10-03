@@ -1,7 +1,7 @@
 # MindPPT Roadmap
 
 Status: accepted v0 implementation roadmap  
-Baseline: M4 merged to `main`  
+Baseline: M5 merged to `main`  
 Architecture: Cordis-native runtime, React + TypeScript host UI, Excalidraw canvas rendering
 
 ## 1. Product direction
@@ -534,7 +534,27 @@ Camera remains independent from content types.
 
 ## M6 — Layout + Image + Asset Pipeline
 
+Status: complete
+
 Purpose: make ordinary business presentation pages practical.
+
+Delivered:
+
+- `hero` preset with compiler-owned deterministic centered semantic placement;
+- `title-content` preset with a distinct title area and ordinary Markdown content area;
+- `two-column` preset with compiler-owned deterministic semantic placement;
+- named `left` / `right` slot semantics for two-column;
+- Markdown image nodes with source ranges and stable semantic IDs;
+- Excalidraw image skeleton lowering with deterministic file IDs;
+- document-relative local asset resolution in the browser host;
+- Excalidraw `BinaryFiles` delivery;
+- semantic placement boxes that define preset position, width, and basic vertical rhythm without approximating font metrics;
+- font-ready browser reconversion so the first stable scene uses the same Excalidraw measurement as later source recompiles;
+- runtime-local asset revision memoization so unchanged bytes are not re-digested;
+- mounted `BinaryFiles` pruning so the Excalidraw host matches the current logical snapshot;
+- missing / malformed / non-local asset warnings without breaking last-good rendering;
+- canonical fixtures covering all three presets and the focused two-column asset path;
+- Chromium-visible smoke coverage for the three presets, live recompilation, images, last-good, and M5 Camera regression.
 
 Initial layout presets:
 
@@ -542,10 +562,49 @@ Initial layout presets:
 - `title-content`;
 - `two-column`.
 
-Initial layout primitives:
+Authoring remains deliberately small:
 
-- named slots such as `left` and `right`;
-- simple row/column behavior only where required by the presets.
+```mindppt
+slide cover {
+  layout hero
+
+  # Product Direction
+  ## 2026 review
+
+  A short supporting statement.
+}
+
+slide summary {
+  layout title-content
+
+  # Executive Summary
+
+  The title occupies its own semantic area.
+
+  - Ordinary Markdown remains ordinary content
+  - Geometry is deterministic from the slide box
+}
+```
+
+Named slots remain specific to the preset that needs them:
+
+```mindppt
+slide customer {
+  layout two-column
+
+  # Customer Profile
+
+  left {
+    ...
+  }
+
+  right {
+    ...
+  }
+}
+```
+
+Layout remains content-agnostic. The compiler/layout layer owns presentation semantics: slide-relative position, available width, preset regions, and basic block rhythm. It does not reimplement browser or Excalidraw font measurement, and it does not reject text based on predictive glyph budgets. Excalidraw 0.18 owns the actual text measurement during conversion. Because its scene fonts load asynchronously, the browser host reconverts the unchanged semantic scene after those fonts settle so cold-start geometry matches later recompiles without requiring a user edit. Concrete overflow behavior remains deferred until a real presentation case requires it. Excalidraw frames remain grouping containers rather than visual slide boundaries.
 
 Image support:
 
@@ -553,22 +612,24 @@ Image support:
 ![Customer](./assets/customer.png)
 ```
 
-Default image behavior can use `contain`.
-
-Advanced fit behavior may use MindPPT component/layout metadata rather than extending Markdown syntax.
+Default image behavior uses the deterministic current box. Broader image-fit behavior is deferred to the backlog and should return only when a concrete presentation use case requires it.
 
 Asset work:
 
 - resolve paths relative to the MindPPT document;
 - load local assets into the Excalidraw file map;
-- preserve asset identity across recompiles where practical;
+- keep semantic image identity separate from binary content-revision identity;
+- reuse unchanged binary revisions without re-hashing their bytes on text-only recompiles;
+- prune mounted orphan revisions when assets are replaced or removed;
+- preserve last-good/version consistency through asset warnings and compile failures;
 - treat remote URL loading as runtime policy, not a language guarantee.
+
 
 Visible acceptance:
 
-> A two-column slide with text on one side and an image on the other renders correctly.
+> Hero, title-content, and two-column slides compile from MindPPT source into visibly distinct deterministic layouts, including a two-column slide with text and a local image.
 
-Layout remains content-agnostic.
+M6 does not introduce a generic layout engine, constraint solver, theme system, component registry, asset registry, or CSS-like layout DSL.
 
 ---
 
@@ -843,7 +904,8 @@ The following are intentionally outside the core roadmap unless a concrete use c
 - merged table cells;
 - multiple independent primary trees;
 - collaborative editing protocol;
-- generalized third-party extensions to document topology.
+- generalized third-party extensions to document topology;
+- broader image-fit behavior beyond the deterministic current image box, to be reconsidered only when a concrete presentation use case requires it.
 
 ## 8. v0 completion target
 

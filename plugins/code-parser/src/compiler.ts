@@ -1,10 +1,9 @@
 import { MindPptCompileError } from './errors.ts'
-import type { ParsedContent } from './content-parser.ts'
+import { layoutSlideContent } from './content-layout.ts'
 import { parse } from './parser.ts'
 import { tokenize } from './tokenizer.ts'
 import { validatePrimaryTree, validateSlideIds } from './tree-validation.ts'
 import type {
-  ContentNode,
   MindPptDiagnostic,
   MindPptStructure,
   SlideNode,
@@ -17,9 +16,6 @@ const SLIDE_WIDTH = 1280
 const SLIDE_HEIGHT = 720
 const SLIDE_HORIZONTAL_GAP = 600
 const SLIDE_VERTICAL_GAP = 320
-const CONTENT_X = 96
-const CONTENT_WIDTH = SLIDE_WIDTH - CONTENT_X * 2
-const CONTENT_GAP = 20
 
 export function compileSource(
   source: string,
@@ -69,19 +65,21 @@ export function compileSource(
     const position = positions.get(slide.id)
     if (!position) {
       throw new MindPptCompileError(
-        `Slide "${slide.id}" has no layout position`,
+        'Slide "' + slide.id + '" has no layout position',
       )
     }
 
-    return {
+    const node: SlideNode = {
       id: slide.id,
       x: position.x,
       y: position.y,
       width: SLIDE_WIDTH,
       height: SLIDE_HEIGHT,
       sourceRange: slide.range,
-      elements: layoutContent(slide.id, slide.content),
+      elements: layoutSlideContent(slide, SLIDE_WIDTH, SLIDE_HEIGHT),
     }
+    if (slide.layout) node.layout = slide.layout
+    return node
   })
 
   const structure: MindPptStructure = { version: 0, slides }
@@ -177,91 +175,4 @@ function crossCoordinate(
 
 function isHorizontal(direction: TreeDirection): boolean {
   return direction === 'LR' || direction === 'RL'
-}
-
-function layoutContent(
-  slideId: string,
-  content: ParsedContent[],
-): ContentNode[] {
-  const only = content[0]
-  if (content.length === 1 && only?.kind === 'title') {
-    const width = SLIDE_WIDTH * 0.8
-    const height = 120
-    return [
-      {
-        kind: 'title',
-        id: `slide:${slideId}/title:0`,
-        text: only.text,
-        x: (SLIDE_WIDTH - width) / 2,
-        y: (SLIDE_HEIGHT - height) / 2,
-        width,
-        height,
-        sourceRange: only.range,
-      },
-    ]
-  }
-
-  const counts = {
-    title: 0,
-    subtitle: 0,
-    text: 0,
-    list: 0,
-    extension: 0,
-  }
-  const nodes: ContentNode[] = []
-  let y = 56
-
-  for (const block of content) {
-    const id = `slide:${slideId}/${block.kind}:${counts[block.kind]++}`
-    const height = blockHeight(block)
-    const box = {
-      id,
-      x: CONTENT_X,
-      y,
-      width: CONTENT_WIDTH,
-      height,
-      sourceRange: block.range,
-    }
-
-    if (block.kind === 'list') {
-      nodes.push({
-        ...box,
-        kind: 'list',
-        ordered: block.ordered,
-        items: block.items,
-      })
-    } else if (block.kind === 'extension') {
-      nodes.push({
-        ...box,
-        kind: 'extension',
-        type: block.type,
-        raw: block.raw,
-      })
-    } else {
-      nodes.push({
-        ...box,
-        kind: block.kind,
-        text: block.text,
-      })
-    }
-
-    y += height + CONTENT_GAP
-  }
-
-  return nodes
-}
-
-function blockHeight(block: ParsedContent): number {
-  switch (block.kind) {
-    case 'title':
-      return 84
-    case 'subtitle':
-      return 56
-    case 'text':
-      return 72
-    case 'list':
-      return Math.max(72, block.items.length * 38 + 24)
-    case 'extension':
-      return Math.max(112, (block.raw.split('\n').length + 1) * 30 + 24)
-  }
 }

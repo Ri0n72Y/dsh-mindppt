@@ -1,5 +1,6 @@
 import { Context } from '@deepseek-ai/cordis'
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
+import type { BinaryFiles } from '@excalidraw/excalidraw/types'
 
 import MindPptCameraService, {
   type CameraView,
@@ -10,12 +11,19 @@ import MindPptParserService, {
   type MindPptDiagnostic,
 } from 'dsh-mindppt-code-parser'
 
+import {
+  createCanvasAssetResolver,
+  type PlaygroundAssetContext,
+  type ResolvedAssets,
+} from './assets.ts'
+
 export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
 
 export interface PlaygroundSnapshot {
   source: string
   diagnostics: readonly MindPptDiagnostic[]
   elements: CompiledElements
+  files: BinaryFiles
   camera: CameraView
 }
 
@@ -23,6 +31,7 @@ export interface PlaygroundRuntime {
   getSnapshot: () => PlaygroundSnapshot
   subscribe: (listener: () => void) => () => void
   setSource: (source: string) => void
+  refreshElements: () => void
   focusSlide: (slideId: string) => void
   focusParent: () => void
   focusChild: (slideId: string) => void
@@ -30,6 +39,7 @@ export interface PlaygroundRuntime {
 
 export async function createPlaygroundRuntime(
   initialSource: string,
+  assetContext?: PlaygroundAssetContext,
 ): Promise<PlaygroundRuntime> {
   const ctx = new Context()
 
@@ -69,10 +79,13 @@ export async function createPlaygroundRuntime(
   const cameraService = camera
 
   const listeners = new Set<() => void>()
+  const resolveAssets = createCanvasAssetResolver(assetContext)
+  let resolvedAssets: ResolvedAssets | undefined
   let snapshot: PlaygroundSnapshot = {
     source: '',
     diagnostics: [],
     elements: [],
+    files: {},
     camera: cameraService.view,
   }
 
@@ -83,14 +96,31 @@ export async function createPlaygroundRuntime(
 
   const setSource = (source: string) => {
     const compiled = editorService.setSource(source)
+    const assets = compiled
+      ? resolveAssets(canvasService.assetRequests)
+      : undefined
+
+    if (compiled) resolvedAssets = assets
 
     publish({
       source: editorService.source,
-      diagnostics: [...parserService.diagnostics],
+      diagnostics: compiled
+        ? [...parserService.diagnostics, ...(assets?.diagnostics ?? [])]
+        : [...parserService.diagnostics],
       elements: compiled
-        ? convertToExcalidrawElements(canvasService.scene, { regenerateIds: false })
+        ? compileElements(canvasService, assets)
         : snapshot.elements,
+      files: compiled ? (assets?.files ?? {}) : snapshot.files,
       camera: cameraService.view,
+    })
+  }
+
+  const refreshElements = () => {
+    if (!snapshot.elements.length) return
+
+    publish({
+      ...snapshot,
+      elements: compileElements(canvasService, resolvedAssets),
     })
   }
 
@@ -111,6 +141,7 @@ export async function createPlaygroundRuntime(
       return () => listeners.delete(listener)
     },
     setSource,
+    refreshElements,
     focusSlide(slideId) {
       applyCameraAction(() => cameraService.focusSlide(slideId))
     },
@@ -121,4 +152,18 @@ export async function createPlaygroundRuntime(
       applyCameraAction(() => cameraService.focusChild(slideId))
     },
   }
+}
+
+function compileElements(
+  canvasService: MindPptCanvasService,
+  assets: ResolvedAssets | undefined,
+): CompiledElements {
+  const scene = canvasService.scene.map((element) => {
+    if (element.type !== 'image' || !element.id) return element
+
+    const fileId = assets?.elementFileIds[element.id]
+    return fileId ? { ...element, fileId } : element
+  })
+
+  return convertToExcalidrawElements(scene, { regenerateIds: false })
 }

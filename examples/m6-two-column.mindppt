@@ -1,0 +1,18 @@
+mindppt
+
+slide customer {
+  layout two-column
+
+  # Customer Profile
+
+  left {
+    Outdoor teams need a fast way to explain the product story.
+
+    - Clear value at a glance
+    - Stable setup for field use
+  }
+
+  right {
+    ![Customer workshop](./assets/customer.svg)
+  }
+}

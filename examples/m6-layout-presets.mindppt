@@ -1,0 +1,44 @@
+mindppt
+
+tree LR {
+  hero --> agenda
+  agenda --> customer
+}
+
+slide hero {
+  layout hero
+
+  # M6 Presentation Layouts
+
+  ## Hero preset
+
+  Semantic layout stays in the compiler.
+}
+
+slide agenda {
+  layout title-content
+
+  # Title + Content
+
+  Ordinary Markdown stays ordinary content.
+
+  - Deterministic semantic geometry
+  - Stable semantic IDs
+}
+
+slide customer {
+  layout two-column
+
+  # Customer Profile
+
+  left {
+    Outdoor teams need a fast way to explain the product story.
+
+    - Clear value at a glance
+    - Stable setup for field use
+  }
+
+  right {
+    ![Customer workshop](./assets/customer.svg)
+  }
+}

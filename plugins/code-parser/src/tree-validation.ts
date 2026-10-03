@@ -1,5 +1,5 @@
 import { MindPptCompileError } from './errors.ts'
-import type { ParsedSlide, ParsedTreeEdge } from './parser.ts'
+import type { ParsedSlide, ParsedTreeEdge } from './parsed-types.ts'
 import type { MindPptDiagnostic, TreeEdge } from './types.ts'
 
 export interface ValidatedPrimaryTree {

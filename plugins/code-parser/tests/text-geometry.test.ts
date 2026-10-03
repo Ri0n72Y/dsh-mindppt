@@ -48,18 +48,20 @@ describe('M6 text geometry', () => {
 })
 
 function source(): string {
-  return \`mindppt
-
-slide fit {
-  layout title-content
-
-  # Geometry contract
-
-  \${PARAGRAPH}
-
-  - \${ITEM}
-  - \${ITEM}
-  - \${ITEM}
-}
-\`
+  return [
+    'mindppt',
+    '',
+    'slide fit {',
+    '  layout title-content',
+    '',
+    '  # Geometry contract',
+    '',
+    '  ' + PARAGRAPH,
+    '',
+    '  - ' + ITEM,
+    '  - ' + ITEM,
+    '  - ' + ITEM,
+    '}',
+    '',
+  ].join('\n')
 }

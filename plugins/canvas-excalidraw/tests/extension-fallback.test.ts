@@ -22,7 +22,7 @@ const SOURCE = [
 ].join('\n')
 
 describe('M6 extension fallback lowering', () => {
-  it('binds fallback text to the compiler-owned semantic box', async () => {
+  it('binds fallback text to the semantic placement box', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
     await ctx.plugin(MindPptCanvasService)
@@ -43,7 +43,7 @@ describe('M6 extension fallback lowering', () => {
           x: 96,
           y: 176,
           width: 520,
-          height: 285,
+          height: 112,
           strokeStyle: 'dashed',
           label: expect.objectContaining({
             text: '[demo]\n' + 'W'.repeat(200),

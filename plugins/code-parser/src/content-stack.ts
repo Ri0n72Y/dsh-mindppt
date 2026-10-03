@@ -1,8 +1,18 @@
+import { MindPptCompileError } from './errors.ts'
 import type { ParsedContent } from './parsed-types.ts'
 import type { ContentNode, LayoutSlot } from './types.ts'
 
 const CONTENT_GAP = 20
 const IMAGE_HEIGHT = 390
+const BOUND_TEXT_PADDING = 10
+const TEXT_LINE_HEIGHT = 1.15
+
+const FONT_SIZE = {
+  title: 48,
+  subtitle: 30,
+  text: 24,
+  list: 24,
+} as const
 
 export function layoutStack(
   slideId: string,
@@ -18,8 +28,19 @@ export function layoutStack(
     const prefix = 'slide:' + slideId + (slot ? '/' + slot : '')
     const id = prefix + '/' + block.kind + ':' + counts[block.kind]++
     const height = block.kind === 'image'
-      ? Math.min(IMAGE_HEIGHT, box.height ?? IMAGE_HEIGHT)
-      : blockHeight(block)
+      ? IMAGE_HEIGHT
+      : blockHeight(block, box.width)
+
+    if (
+      box.height !== undefined
+      && (box.height < 0 || y + height > box.y + box.height)
+    ) {
+      throw new MindPptCompileError(
+        'Content does not fit in the available semantic layout region',
+        block.range,
+      )
+    }
+
     const geometry = {
       id,
       x: box.x,
@@ -65,10 +86,13 @@ export function layoutStack(
   return nodes
 }
 
-export function stackHeight(content: ParsedContent[]): number {
+export function stackHeight(
+  content: ParsedContent[],
+  width: number,
+): number {
   return content.reduce(
     (height, block, index) =>
-      height + blockHeight(block) + (index ? CONTENT_GAP : 0),
+      height + blockHeight(block, width) + (index ? CONTENT_GAP : 0),
     0,
   )
 }
@@ -84,19 +108,94 @@ export function createContentCounts(): Record<ParsedContent['kind'], number> {
   }
 }
 
-export function blockHeight(block: ParsedContent): number {
+export function blockHeight(
+  block: ParsedContent,
+  width = Number.POSITIVE_INFINITY,
+): number {
   switch (block.kind) {
     case 'title':
-      return 84
+      return textBlockHeight(block.text, width, FONT_SIZE.title, 84)
     case 'subtitle':
-      return 56
+      return textBlockHeight(block.text, width, FONT_SIZE.subtitle, 56)
     case 'text':
-      return 72
-    case 'list':
-      return Math.max(72, block.items.length * 38 + 24)
+      return textBlockHeight(block.text, width, FONT_SIZE.text, 72)
+    case 'list': {
+      const text = block.items
+        .map((item, index) =>
+          block.ordered ? (index + 1) + '. ' + item : '• ' + item,
+        )
+        .join('\n')
+      return Math.max(
+        block.items.length * 38 + 24,
+        textBlockHeight(text, width, FONT_SIZE.list, 72),
+      )
+    }
     case 'image':
       return IMAGE_HEIGHT
     case 'extension':
       return Math.max(112, (block.raw.split('\n').length + 1) * 30 + 24)
   }
+}
+
+function textBlockHeight(
+  text: string,
+  width: number,
+  fontSize: number,
+  minimum: number,
+): number {
+  if (!Number.isFinite(width)) return minimum
+
+  const lines = wrappedLineCount(text, width, fontSize)
+  const measured = Math.ceil(
+    lines * fontSize * TEXT_LINE_HEIGHT + BOUND_TEXT_PADDING,
+  )
+  return Math.max(minimum, measured)
+}
+
+function wrappedLineCount(
+  text: string,
+  width: number,
+  fontSize: number,
+): number {
+  const columns = Math.max(
+    1,
+    Math.floor((width - BOUND_TEXT_PADDING) / fontSize),
+  )
+
+  return text
+    .split('\n')
+    .reduce(
+      (total, line) => total + wrappedPhysicalLineCount(line, columns),
+      0,
+    )
+}
+
+function wrappedPhysicalLineCount(
+  line: string,
+  columns: number,
+): number {
+  const words = line.trim().split(/\s+/).filter(Boolean)
+  if (!words.length) return 1
+
+  let lines = 1
+  let used = 0
+
+  for (const word of words) {
+    const characters = [...word]
+
+    for (let offset = 0; offset < characters.length; offset += columns) {
+      const length = Math.min(columns, characters.length - offset)
+      const continuation = offset > 0
+      const gap = used === 0 || continuation ? 0 : 1
+
+      if (used + gap + length <= columns) {
+        used += gap + length
+      } else {
+        lines += 1
+        used = length
+      }
+    }
+  }
+
+  return lines
 }

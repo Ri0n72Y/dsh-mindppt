@@ -633,47 +633,124 @@ M6 does not introduce a generic layout engine, constraint solver, theme system, 
 
 ---
 
-## M7 — Core Table + Chart
+## M7 — Core Structured Table + Chart
 
-Purpose: support common data-driven presentation pages.
+Purpose: prove the first real data-analysis presentation slice through the existing source -> semantic structure -> layout -> Excalidraw delivery path.
 
-Tables remain core semantic content.
+Tables are core semantic content. Charts remain semantic until renderer lowering.
 
-Do not add Markdown table syntax in v0.
+Do not add Markdown/GFM table syntax in v0. Table and chart authoring are MindPPT core structured content, not fenced extensions. This keeps structured data available for validation, deterministic identity, layout, rendering, and later agent edits without creating a competing Markdown representation or overloading the generic extension envelope.
 
-Reason:
+The authoring direction should be explicit enough to support the first slice without freezing a broader grammar or option schema prematurely. Conceptually:
 
-- avoid a second competing table representation;
-- avoid expanding the Markdown profile into GFM;
-- preserve structured data for layout and QA.
+~~~mindppt
+table {
+  header [...]
+  row [...]
+}
 
-Initial table support:
+chart bar {
+  labels [...]
+  values [...]
+}
+~~~
 
-- header row;
+Exact statement names and optional fields remain an implementation detail until the M7.1 slice requires them.
+
+### M7.1 — Table + Single-Series Bar Vertical Slice
+
+The first M7 slice must integrate all three parts in one real presentation page:
+
+~~~text
+structured core table
+        +
+single-series bar chart
+        +
+existing two-column layout
+~~~
+
+It is not complete if table and chart exist only as isolated parser features.
+
+Table v1 commits to:
+
+- one header row;
 - rows;
-- string and numeric cells;
+- string cells;
+- numeric cells;
 - equal-width columns;
-- theme-level basic styling.
+- deterministic semantic identity;
+- source ranges;
+- simple fixed presentation styling implemented by the current core renderer.
 
-Charts remain semantic until renderer lowering.
+Table v1 explicitly does not commit to:
 
-Initial chart types:
+- Markdown/GFM table syntax;
+- formulas;
+- merged cells;
+- spreadsheet editing;
+- arbitrary wrapped-cell auto layout;
+- auto-fit or shrink-to-fit;
+- theme APIs.
 
-- bar;
-- line;
-- radar.
+Chart v1 commits to:
+
+- chart type: bar;
+- one categorical label axis;
+- one numeric series;
+- semantic numeric data;
+- deterministic semantic IDs;
+- compiler-owned chart region and bar geometry;
+- mechanical lowering to Excalidraw-compatible primitives.
+
+Chart v1 explicitly does not commit to:
+
+- line chart before M7.1 is proven;
+- radar;
+- pie, scatter, waterfall, or funnel charts;
+- multiple axes;
+- advanced legends;
+- a generic chart engine;
+- a chart-library abstraction.
+
+Architecture alignment:
+
+- table and chart extend the core `ContentNode` semantic model;
+- layout remains content-agnostic and only assigns each content node a placement region;
+- layout does not inspect table cells or chart series to decide slide topology;
+- the compiler owns presentation semantic placement and chart/bar geometry;
+- the renderer mechanically lowers semantic table/chart nodes into Excalidraw-compatible primitives;
+- simple fixed table/chart presentation styling stays local to the current core renderer and does not establish a theme API;
+- Excalidraw continues to own actual font measurement/render geometry; M7 must not recreate precise font measurement in the compiler;
+- Camera remains unaware of table/chart internals;
+- the asset pipeline has no M7 coupling;
+- no new package, service, registry, chart engine, or framework is introduced unless implementation reveals a real independent lifecycle.
 
 Visible acceptance:
 
-> A data-analysis slide can contain one table and one native Excalidraw-compatible chart.
+> A two-column MindPPT slide contains a structured table on one side and a single-series bar chart on the other. Editing table or chart source data updates the visible Excalidraw scene through the existing live-authoring path while stable semantic identity, source ranges, last-good rendering, and Camera behavior remain intact.
 
-Deferred:
+### M7.2 — Evidence-Gated Follow-up
 
+Only after M7.1 is complete and clean should concrete presentation use cases decide whether a line chart belongs in M7.
+
+Adding a line chart must reuse the proven semantic/rendering boundary rather than justify a generic chart framework.
+
+Deferred from the initial M7 scope:
+
+- radar;
+- theme system and theme APIs;
+- Markdown/GFM tables;
 - formulas;
-- merged table cells;
+- merged cells;
 - spreadsheet editing;
-- pie/scatter/waterfall/funnel;
-- secondary axes.
+- advanced cell auto-layout;
+- auto-fit and shrink-to-fit;
+- multi-series or general chart frameworks;
+- pie, scatter, waterfall, and funnel charts;
+- secondary axes;
+- advanced legends.
+
+Broader table/chart features should return only when concrete presentation use cases justify them.
 
 ---
 

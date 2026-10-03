@@ -604,7 +604,7 @@ slide customer {
 }
 ```
 
-Layout remains content-agnostic. Semantic text/image boxes belong to the compiler/layout layer; Excalidraw lowering mechanically preserves those boxes and adds the slide's canvas offset. When authored content cannot fit its semantic region, compilation fails with the source range and existing last-good rendering remains active. Excalidraw frames remain grouping containers rather than visual slide boundaries.
+Layout remains content-agnostic. Semantic text/image boxes belong to the compiler/layout layer; Excalidraw lowering mechanically preserves those boxes and adds the slide's canvas offset. Text sizing follows the Excalidraw 0.18 bound-label padding and line-height contract with deterministic conservative glyph budgets, including CJK/full-width and emoji fallback content. When authored content cannot fit its semantic region, compilation fails with the source range and existing last-good rendering remains active. Excalidraw frames remain grouping containers rather than visual slide boundaries.
 
 Image support:
 

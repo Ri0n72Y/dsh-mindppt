@@ -37,6 +37,7 @@ export async function mountAssetBrowserHarness(
         onApi={(nextApi) => {
           api = nextApi
         }}
+        onFontMetricsReady={runtime.refreshElements}
       />,
     )
   }

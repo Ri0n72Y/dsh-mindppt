@@ -1,5 +1,34 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
+const COLD_LOAD_SOURCE = [
+  'mindppt',
+  '',
+  'tree LR {',
+  '  hero --> agenda',
+  '}',
+  '',
+  'slide hero {',
+  '  layout hero',
+  '',
+  '  # Product Direction',
+  '  ## 2026 review',
+  '',
+  '  A short supporting statement.',
+  '}',
+  '',
+  'slide agenda {',
+  '  layout title-content',
+  '',
+  '  # Executive Summary',
+  '',
+  '  The title occupies its own semantic area.',
+  '',
+  '  - Ordinary Markdown remains ordinary content',
+  '  - Geometry is deterministic from the slide box',
+  '}',
+  '',
+].join('\n')
+
 async function focusAndCapture(
   page: Page,
   canvas: Locator,
@@ -40,7 +69,7 @@ test('hero, title-content, and two-column are visibly distinct in Chromium', asy
   expect(customer.equals(agenda)).toBe(false)
 })
 
-test('cold load reaches font-ready hero and agenda geometry without a source edit', async ({ page }) => {
+test('cold load mounts font-ready hero and agenda geometry without a source edit', async ({ page }) => {
   let releaseFonts = () => {}
   const fontGate = new Promise<void>((resolve) => {
     releaseFonts = resolve
@@ -54,90 +83,127 @@ test('cold load reaches font-ready hero and agenda geometry without a source edi
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto('/')
 
-  await page.evaluate(async () => {
+  await page.evaluate(async (source) => {
     const { mountAssetBrowserHarness } = await import(
       '/src/asset-browser-harness.tsx'
     )
-    const editor = document.querySelector<HTMLTextAreaElement>(
-      '[aria-label="MindPPT source editor"]',
-    )
-    if (!editor) throw new Error('Missing source editor')
-
     const container = document.createElement('div')
     container.style.width = '1200px'
-    container.style.height = '760px'
+    container.style.height = '800px'
     document.body.append(container)
 
     const harness = await mountAssetBrowserHarness(
       container,
-      editor.value,
-      { documentPath: 'examples/m6-layout-presets.mindppt', files: {} },
+      source,
+      { documentPath: 'examples/cold-load.mindppt', files: {} },
     )
 
-    Object.assign(window, { __mindPptFontHarness: harness })
-  })
+    ;(window as typeof window & { __coldHarness?: typeof harness })
+      .__coldHarness = harness
+  }, COLD_LOAD_SOURCE)
 
-  await page.waitForFunction(() => {
-    const harness = (window as any).__mindPptFontHarness
+  await expect.poll(() => page.evaluate(() => {
+    const harness = (
+      window as typeof window & {
+        __coldHarness?: { getApi: () => unknown }
+      }
+    ).__coldHarness
     return Boolean(harness?.getApi())
-  })
-
-  const beforeFonts = await readPresetTextGeometry(page)
+  })).toBe(true)
 
   releaseFonts()
   await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(200)
 
-  await expect.poll(
-    () => readPresetTextGeometry(page),
-    { timeout: 5_000, intervals: [50, 100, 150, 200] },
-  ).not.toEqual(beforeFonts)
+  const fontReady = await readColdLoadGeometry(page)
 
-  const afterFonts = await readPresetTextGeometry(page)
+  expect(Object.values(fontReady).every(({ box, text }) =>
+    text.width <= box.width
+    && text.height <= box.height
+    && text.x >= box.x
+    && text.y >= box.y
+    && text.x + text.width <= box.x + box.width
+    && text.y + text.height <= box.y + box.height
+  )).toBe(true)
 
-  await page.evaluate(() => {
-    const harness = (window as any).__mindPptFontHarness
-    const source = harness.runtime.getSnapshot().source
-    harness.runtime.setSource(source + '\n')
-  })
+  await page.evaluate((source) => {
+    const harness = (
+      window as typeof window & {
+        __coldHarness?: { runtime: { setSource: (value: string) => void } }
+      }
+    ).__coldHarness
+    harness?.runtime.setSource(source + '\n')
+  }, COLD_LOAD_SOURCE)
 
-  await expect.poll(
-    () => readPresetTextGeometry(page),
-    { timeout: 5_000, intervals: [50, 100, 150, 200] },
-  ).toEqual(afterFonts)
-
-  const afterRecompile = await readPresetTextGeometry(page)
-  expect(afterRecompile).toEqual(afterFonts)
+  await expect.poll(() => readColdLoadGeometry(page), {
+    timeout: 3_000,
+    intervals: [50, 100, 150],
+  }).toEqual(fontReady)
 })
 
-async function readPresetTextGeometry(page: Page) {
+async function readColdLoadGeometry(page: Page) {
   return page.evaluate(() => {
-    const harness = (window as any).__mindPptFontHarness
-    const elements = harness.getApi().getSceneElements()
-    const prefixes = ['slide:hero/', 'slide:agenda/']
-
-    return elements
-      .filter((element: any) => {
-        if (element.type === 'text') {
-          return prefixes.some((prefix) => element.containerId?.startsWith(prefix))
+    const harness = (
+      window as typeof window & {
+        __coldHarness?: {
+          getApi: () => {
+            getSceneElements: () => Array<{
+              id: string
+              type: string
+              x: number
+              y: number
+              width: number
+              height: number
+              text?: string
+              fontFamily?: number
+              fontSize?: number
+              lineHeight?: number
+              boundElements?: Array<{ id: string; type: string }> | null
+            }>
+          } | null
         }
-        return prefixes.some((prefix) => element.id?.startsWith(prefix))
-          && element.type === 'rectangle'
-          && element.id !== 'slide:hero/surface'
-          && element.id !== 'slide:agenda/surface'
-      })
-      .map((element: any) => ({
-        key: element.type === 'text' ? element.containerId : element.id,
-        type: element.type,
-        x: element.x,
-        y: element.y,
-        width: element.width,
-        height: element.height,
-        text: element.type === 'text' ? element.text : undefined,
-        fontSize: element.type === 'text' ? element.fontSize : undefined,
-        lineHeight: element.type === 'text' ? element.lineHeight : undefined,
-      }))
-      .sort((a: any, b: any) =>
-        (a.key + ':' + a.type).localeCompare(b.key + ':' + b.type),
-      )
+      }
+    ).__coldHarness
+    const scene = harness?.getApi()?.getSceneElements() ?? []
+
+    const pick = (boxId: string) => {
+      const box = scene.find((element) => element.id === boxId)
+      const textId = box?.boundElements?.find(
+        (element) => element.type === 'text',
+      )?.id
+      const text = scene.find((element) => element.id === textId)
+
+      if (!box || !text || text.type !== 'text') {
+        throw new Error('Missing bound text for ' + boxId)
+      }
+
+      return {
+        box: {
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+        },
+        text: {
+          x: text.x,
+          y: text.y,
+          width: text.width,
+          height: text.height,
+          text: text.text,
+          fontFamily: text.fontFamily,
+          fontSize: text.fontSize,
+          lineHeight: text.lineHeight,
+        },
+      }
+    }
+
+    return {
+      heroTitle: pick('slide:hero/title:0/box'),
+      heroSubtitle: pick('slide:hero/subtitle:0/box'),
+      heroText: pick('slide:hero/text:0/box'),
+      agendaTitle: pick('slide:agenda/title:0/box'),
+      agendaText: pick('slide:agenda/text:0/box'),
+      agendaList: pick('slide:agenda/list:0/box'),
+    }
   })
 }

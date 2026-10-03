@@ -44,7 +44,7 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 - `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
 
-## Current vertical slice: M6
+## Completed vertical slice: M6
 
 M6 now includes the complete initial layout preset set plus the first local image/asset pipeline slice.
 
@@ -90,7 +90,7 @@ Image source paths remain semantic source data; browser bytes and Excalidraw bin
 
 M3-M5 behavior remains part of the same runtime: failed compiles keep the last-good elements and files, stable slide/content identities are preserved, and Camera remains content-agnostic. Successful asset-warning snapshots publish source, elements, files, and camera from the same logical compile. Chromium coverage exercises all three M6 presets, cold-start font readiness, live recompilation, the local image pipeline, last-good behavior, and the canonical M4 camera flow.
 
-M6 remains in progress only for broader image-fit behavior beyond the deterministic current image box. No generic layout engine, theme system, asset registry, or CSS-like layout DSL is introduced by the initial preset set.
+M6 is complete at the current product boundary. Broader image-fit behavior beyond the deterministic current image box is deferred to the backlog until a concrete presentation use case requires it. No generic layout engine, theme system, asset registry, or CSS-like layout DSL is introduced by the initial preset set.
 
 Run the standalone playground with:
 

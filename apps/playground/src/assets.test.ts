@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { CanvasAssetRequest } from 'dsh-mindppt-canvas-excalidraw'
 
-import { resolveCanvasAssets } from './assets.ts'
+import {
+  createCanvasAssetResolver,
+  resolveCanvasAssets,
+} from './assets.ts'
 
 const DOCUMENT_PATH = 'examples/m6-two-column.mindppt'
 
@@ -155,6 +158,40 @@ describe('playground local asset resolution', () => {
     expect(readded.files[readdedId!]?.dataURL).toBe(
       'data:image/svg+xml,version-2',
     )
+  })
+
+  it('reuses unchanged asset digests and rehashes changed same-path bytes', () => {
+    const files = {
+      'examples/assets/customer.svg': {
+        mimeType: 'image/svg+xml' as const,
+        dataURL: 'data:image/svg+xml,version-1',
+      },
+    }
+    const digest = vi.fn((
+      source: string,
+      mimeType: string,
+      dataURL: string,
+    ) => source + ':' + mimeType + ':' + dataURL)
+    const resolve = createCanvasAssetResolver(
+      { documentPath: DOCUMENT_PATH, files },
+      digest,
+    )
+    const assetRequest = request('./assets/customer.svg')
+
+    const first = resolve([assetRequest])
+    const unchanged = resolve([assetRequest])
+
+    expect(digest).toHaveBeenCalledTimes(1)
+    expect(unchanged.elementFileIds).toEqual(first.elementFileIds)
+
+    files['examples/assets/customer.svg'] = {
+      mimeType: 'image/svg+xml',
+      dataURL: 'data:image/svg+xml,version-2',
+    }
+    const replaced = resolve([assetRequest])
+
+    expect(digest).toHaveBeenCalledTimes(2)
+    expect(replaced.elementFileIds).not.toEqual(first.elementFileIds)
   })
 
   it('reports missing and non-local assets without throwing', () => {

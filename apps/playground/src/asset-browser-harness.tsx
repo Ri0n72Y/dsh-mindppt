@@ -1,3 +1,7 @@
+import type {
+  BinaryFiles,
+  ExcalidrawImperativeAPI,
+} from '@excalidraw/excalidraw/types'
 import { createRoot } from 'react-dom/client'
 
 import { MindPptCanvas } from './MindPptCanvas.tsx'
@@ -9,6 +13,8 @@ import type { PlaygroundAssetContext } from './assets.ts'
 
 export interface AssetBrowserHarness {
   runtime: PlaygroundRuntime
+  getApi: () => ExcalidrawImperativeAPI | null
+  getMountedFiles: () => BinaryFiles
   dispose: () => void
 }
 
@@ -19,6 +25,7 @@ export async function mountAssetBrowserHarness(
 ): Promise<AssetBrowserHarness> {
   const runtime = await createPlaygroundRuntime(source, assetContext)
   const root = createRoot(container)
+  let api: ExcalidrawImperativeAPI | null = null
 
   const render = () => {
     const snapshot = runtime.getSnapshot()
@@ -27,6 +34,9 @@ export async function mountAssetBrowserHarness(
         elements={snapshot.elements}
         files={snapshot.files}
         focusRequest={snapshot.camera.focusRequest}
+        onApi={(nextApi) => {
+          api = nextApi
+        }}
       />,
     )
   }
@@ -36,6 +46,8 @@ export async function mountAssetBrowserHarness(
 
   return {
     runtime,
+    getApi: () => api,
+    getMountedFiles: () => api?.getFiles() ?? {},
     dispose() {
       unsubscribe()
       root.unmount()

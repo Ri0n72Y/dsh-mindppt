@@ -548,8 +548,8 @@ Delivered:
 - Excalidraw image skeleton lowering with deterministic file IDs;
 - document-relative local asset resolution in the browser host;
 - Excalidraw `BinaryFiles` delivery;
-- fail-fast semantic region overflow with source-mapped compile errors and last-good preservation;
-- compiler-sized text boxes that stay unchanged through real Excalidraw 0.18 conversion;
+- semantic placement boxes that define preset position, width, and basic vertical rhythm without approximating font metrics;
+- font-ready browser reconversion so the first stable scene uses the same Excalidraw measurement as later source recompiles;
 - runtime-local asset revision memoization so unchanged bytes are not re-digested;
 - mounted `BinaryFiles` pruning so the Excalidraw host matches the current logical snapshot;
 - missing / malformed / non-local asset warnings without breaking last-good rendering;
@@ -604,7 +604,7 @@ slide customer {
 }
 ```
 
-Layout remains content-agnostic. Semantic text/image boxes belong to the compiler/layout layer; Excalidraw lowering mechanically preserves those boxes and adds the slide's canvas offset. Text sizing follows the Excalidraw 0.18 bound-label padding and line-height contract with deterministic conservative glyph budgets, including CJK/full-width and emoji fallback content. When authored content cannot fit its semantic region, compilation fails with the source range and existing last-good rendering remains active. Excalidraw frames remain grouping containers rather than visual slide boundaries.
+Layout remains content-agnostic. The compiler/layout layer owns presentation semantics: slide-relative position, available width, preset regions, and basic block rhythm. It does not reimplement browser or Excalidraw font measurement, and it does not reject text based on predictive glyph budgets. Excalidraw 0.18 owns the actual text measurement during conversion. Because its scene fonts load asynchronously, the browser host reconverts the unchanged semantic scene after those fonts settle so cold-start geometry matches later recompiles without requiring a user edit. Concrete overflow behavior remains deferred until a real presentation case requires it. Excalidraw frames remain grouping containers rather than visual slide boundaries.
 
 Image support:
 

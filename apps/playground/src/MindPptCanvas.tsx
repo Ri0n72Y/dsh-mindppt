@@ -17,6 +17,7 @@ interface MindPptCanvasProps {
   files: BinaryFiles
   focusRequest: CameraFocusRequest | undefined
   onApi?: (api: ExcalidrawImperativeAPI) => void
+  onFontMetricsReady?: () => void
 }
 
 export function MindPptCanvas({
@@ -24,6 +25,7 @@ export function MindPptCanvas({
   files,
   focusRequest,
   onApi,
+  onFontMetricsReady,
 }: MindPptCanvasProps) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
   const transitionRef = useRef<CameraTransitionController | null>(null)
@@ -35,6 +37,23 @@ export function MindPptCanvas({
     api.updateScene({ elements })
     transitionRef.current?.reconcileScene()
   }, [api, elements, files])
+
+  useEffect(() => {
+    if (!api || !onFontMetricsReady) return
+
+    let cancelled = false
+    const refresh = () => {
+      if (!cancelled) onFontMetricsReady()
+    }
+
+    document.fonts.addEventListener('loadingdone', refresh)
+    void document.fonts.ready.then(refresh)
+
+    return () => {
+      cancelled = true
+      document.fonts.removeEventListener('loadingdone', refresh)
+    }
+  }, [api, onFontMetricsReady])
 
   useEffect(() => {
     if (!api || !focusRequest) return

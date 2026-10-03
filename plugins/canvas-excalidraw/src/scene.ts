@@ -10,10 +10,6 @@ import { renderTreeScene } from './tree-scene.ts'
 
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
-// Excalidraw 0.18 FONT_FAMILY.Helvetica. Kept local so the renderer does not
-// pull the browser runtime into Node-based tests just to access an enum value.
-const EXCALIDRAW_SYSTEM_FONT_FAMILY = 2
-
 export function renderScene(structure: MindPptStructure): ExcalidrawScene {
   return [
     ...renderTreeScene(structure),
@@ -109,33 +105,26 @@ function renderExtensionFallback(
   const y = slide.y + element.y
   const text = contentText(element)
 
-  return [
-    {
-      type: 'rectangle',
-      id: element.id + '/box',
-      x,
-      y,
-      width: element.width,
-      height: element.height,
-      backgroundColor: '#f8f9fa',
-      strokeColor: '#adb5bd',
-      strokeStyle: 'dashed',
-      fillStyle: 'solid',
-      roughness: 0,
-    },
-    {
-      type: 'text',
-      id: element.id + '/text',
-      x: x + 16,
-      y: y + 16,
+  return [{
+    type: 'rectangle',
+    id: element.id + '/box',
+    x,
+    y,
+    width: element.width,
+    height: element.height,
+    backgroundColor: '#f8f9fa',
+    strokeColor: '#adb5bd',
+    strokeStyle: 'dashed',
+    fillStyle: 'solid',
+    roughness: 0,
+    label: {
       text,
       fontSize: contentFontSize(element),
-      fontFamily: EXCALIDRAW_SYSTEM_FONT_FAMILY,
       textAlign: 'left',
       verticalAlign: 'top',
       strokeColor: '#1b1b1f',
     },
-  ]
+  }]
 }
 
 function contentText(element: ContentNode): string {

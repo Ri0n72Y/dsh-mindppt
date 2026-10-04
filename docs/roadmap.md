@@ -728,7 +728,7 @@ Chart v1 commits to:
 
 Chart v1 explicitly does not commit to:
 
-- line chart before M7.1 is proven;
+- line chart without a concrete presentation use case;
 - radar;
 - pie, scatter, waterfall, or funnel charts;
 - multiple axes;

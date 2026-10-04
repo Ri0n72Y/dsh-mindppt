@@ -6,6 +6,7 @@ import type {
 } from 'dsh-mindppt-code-parser'
 
 import { semanticImageFileId } from './assets.ts'
+import { renderSoftLinkScene } from './soft-link-scene.ts'
 import { renderBarChart, renderTable } from './structured-scene.ts'
 import { renderTreeScene } from './tree-scene.ts'
 
@@ -14,6 +15,7 @@ export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 export function renderScene(structure: MindPptStructure): ExcalidrawScene {
   return [
     ...renderTreeScene(structure),
+    ...renderSoftLinkScene(structure),
     ...structure.slides.flatMap(renderSlide),
   ]
 }

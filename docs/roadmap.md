@@ -988,12 +988,13 @@ Visible acceptance:
 
 ## M9 — Content Plugin Contract + LaTeX Reference Plugin
 
-Status: implementation complete; automated acceptance complete
-Post-M9 Manual Acceptance Gate: pending
+Status: complete
+Post-M9 Manual Acceptance Gate: complete
+M0-M9 standalone baseline: accepted
 
 Purpose: prove open content as one runtime capability-lifecycle vertical slice without changing grammar, semantic structure, or compiler-owned geometry.
 
-Delivered implementation keeps registration inside `mindpptCanvas`, binds renderer cleanup to the registering Cordis fiber, reprojects the same last-successful structure on capability changes, exposes active renderer types from real registration state, and ships `dsh-mindppt-latex` as the reference renderer. Independent review, merge, and the Post-M9 Manual Acceptance Gate remain outside this implementation PR.
+Delivered implementation keeps registration inside `mindpptCanvas`, binds renderer cleanup to the registering Cordis fiber, reprojects the same last-successful structure on capability changes, exposes active renderer types from real registration state, and ships `dsh-mindppt-latex` as the reference renderer. Independent review, merge, focused post-M9 fixes, and the integrated real-machine M7/M8/M9 acceptance pass are complete; M0-M9 is now the accepted standalone baseline.
 
 M9 delivers together:
 
@@ -1239,73 +1240,296 @@ Visible acceptance:
 
 ### Post-M9 Manual Acceptance Gate
 
-After M9 implementation, independent review, and merge are complete, but before M10 implementation begins, run one integrated manual acceptance pass on a real machine for the previously under-validated M7/M8/M9 user flow.
+Status: complete.
 
-The gate should cover:
+The focused real-machine pass covered the integrated M7/M8/M9 user flow:
 
 - M7 table/bar visual proportion and live data edits;
 - M8 saved path traversal, repeated occurrence, route switching, real SoftLink follow, and actual Camera feel;
 - M9 fallback, live capability load, specialized LaTeX rendering, unload-to-fallback, and stale scene/handler behavior;
 - diagnostics, last-good behavior, and cross-milestone regression feel.
 
-This gate does not replace M9 automated acceptance. If it exposes real defects, fix only those defects rather than using the gate to start a visual or architecture redesign.
-
-M10 implementation must not begin before this gate is complete.
+The gate exposed only focused post-M9 rendering defects, which were fixed and re-accepted without starting a visual or architecture redesign. M0-M9 is therefore the accepted standalone baseline for M10.
 
 ---
 
 ## M10 — DSH Integration + Agent Authoring
 
-Purpose: expose the mature MindPPT authoring loop to DSH and agents.
+Status: requirement baseline locked; implementation not started
 
-Add:
+Purpose: expose the accepted M0-M9 MindPPT authoring runtime to one real DSH Host/Client session and prove a guarded Agent source-edit loop through the existing compiler and Excalidraw projection.
 
-- `dsh-mindppt-sidebar`;
-- `dsh-capability`.
+M10 is one end-to-end vertical slice:
 
-The sidebar reuses the existing React + TypeScript components and Cordis services.
+~~~text
+existing MindPPT Host runtime
+        +
+dsh-capability model tools
+        +
+guarded source patch authoring
+        +
+narrow DSH Host/Client bridge
+        +
+dsh-mindppt-sidebar
+        +
+real visible Excalidraw update
+~~~
 
-The capability layer exposes:
+M10 does not add a second authoring runtime, generic Agent framework, generic RPC framework, standalone SourceMap service, AST mutation API, semantic-node mutation API, or Excalidraw authoring API.
+
+### M10 Host/Client ownership
+
+The DSH Host owns the single MindPPT runtime.
+
+~~~text
+DSH Host
+  |- existing mindpptEditor / parser / canvas / camera
+  |- dsh-capability
+  |    |- Agent-facing tools
+  |    `- narrow bridge handlers
+  |
+  `- one current MindPPT document/state
+
+DSH Client
+  `- dsh-mindppt-sidebar
+       `- reads/mutates the Host state through the narrow bridge
+~~~
+
+`dsh-capability` is Host-side. `dsh-mindppt-sidebar` is Client-side React UI.
+
+The sidebar must not instantiate a second independent authoring runtime. Agent tools and human sidebar edits operate on the same Host source/state.
+
+Source remains the sole semantic truth. Excalidraw remains projection only.
+
+Do not assume DSH Client Context can directly access Host Cordis services. The exact transport API must be chosen from the actual installed/current DSH version during implementation, using the smallest supported Host/Client seam rather than inventing a generic RPC layer.
+
+### Current document and mutation path
+
+M10 operates on one current MindPPT document.
+
+The current source truth is:
+
+~~~text
+mindpptEditor.source
+~~~
+
+All accepted source mutations route through the existing editor/compiler path:
+
+~~~text
+mindpptEditor.setSource()
+  -> parser.compile()
+  -> success publishes current structure/render
+  -> compile error keeps invalid current source + diagnostics
+     while preserving last-good structure/render
+~~~
+
+M10 does not add a workspace document manager, project database, document persistence framework, multi-document tabs, or file browser. Visible acceptance may use the canonical integrated MindPPT fixture as the current document.
+
+### Agent-facing capability boundary
+
+M10 v0 exposes only the minimum model-facing actions needed for the authoring loop:
+
+- inspect current authoring state;
+- apply one guarded contiguous source patch;
+- read concise current-language guidance/examples.
+
+Exact tool names and signatures remain implementation detail.
+
+The tool layer must not expose operations that:
+
+- set `MindPptStructure` directly;
+- mutate semantic nodes directly;
+- mutate canvas state directly;
+- read or write raw Excalidraw JSON;
+- execute arbitrary JavaScript.
+
+Static supported syntax belongs to language guidance.
+
+Dynamic runtime extension capability comes from the real M9 registration state:
+
+~~~text
+mindpptCanvas.extensionRendererTypes
+~~~
+
+Do not build a generic CapabilityRegistry, installed-package discovery system, parser-known extension catalog, or M11-style capability framework.
+
+### Guarded source patch contract
+
+M10 v0 supports one contiguous replacement.
+
+Conceptually:
+
+~~~ts
+{
+  start: number
+  end: number
+  expected: string
+  replacement: string
+}
+~~~
+
+`[start, end)` uses the same JavaScript string offsets as existing `SourceRange` values.
+
+Before mutation:
+
+~~~text
+currentSource.slice(start, end) === expected
+~~~
+
+must be true.
+
+If it is false:
+
+- reject the patch as stale source;
+- do not mutate source;
+- do not compile.
+
+If it is true:
+
+- construct the new source;
+- route it through `mindpptEditor.setSource()`;
+- run the existing compile path.
+
+An accepted patch is not automatically rolled back when compilation fails. If the patch creates invalid source:
+
+- current source remains patched and invalid;
+- current diagnostics describe that source;
+- the last-successful semantic structure remains available;
+- the last-good rendered presentation remains visible.
+
+Do not add multi-range transactions, AST mutation, semantic-node mutation, a diff engine, OT, CRDT, revision service, or refactoring framework.
+
+### Inspection and last-good semantics
+
+Model-facing inspection must distinguish current authoring state from last-good compiled state.
+
+It exposes at least:
 
 - current source;
-- source patches;
+- current diagnostics;
+- semantic structure when current, otherwise the last-good semantic structure;
+- an explicit state equivalent to `structureCurrent: true | false`;
+- active extension renderer types.
+
+When `structureCurrent` is false, an Agent must not assume semantic source ranges belong to the invalid current source.
+
+Structure inspection may expose:
+
+- slide/content semantic IDs;
+- embedded source ranges;
+- content kinds;
+- primary tree;
+- SoftLinks;
+- PresentationPaths;
+- compiler-owned geometry where useful.
+
+Model-facing inspection must not expose Excalidraw skeletons, raw Excalidraw JSON, or direct canvas mutation.
+
+### Source mapping boundary
+
+M10 does not introduce a standalone `SourceMap` abstraction merely because older design text used that concept.
+
+The v0 precise-edit contract is the existing combination of:
+
+~~~text
+stable semantic IDs
++
+embedded SourceRange { start, end }
+~~~
+
+Only add finer source ranges if a concrete M10 acceptance edit cannot be expressed safely using current ranges and current source.
+
+### Render feedback boundary
+
+Agent-facing feedback is semantic and compile-oriented:
+
+- compile status;
 - diagnostics;
-- structure inspection;
-- current content capabilities;
-- preview/render feedback;
-- language guidance and examples.
+- semantic inspection;
+- whether the inspected structure corresponds to current source or last-good source;
+- active renderer types.
 
-Agent loop:
+Human-facing feedback is the actual visible Excalidraw preview in the DSH sidebar.
 
-```text
-inspect source
-    |
-    v
-inspect runtime capabilities
-    |
-    v
-patch source
-    |
-    v
-compile
-    |
-    +---- error -> diagnostics -> revise
-    |
-    v
-render
-    |
-    v
-inspect result
-    |
-    v
-revise
-```
+Raw Excalidraw scene data may exist internally as Host/Client transport if the real DSH integration requires it, but it is never part of the model-facing authoring API.
 
-At this stage, source maps and stable semantic IDs should support precise edits rather than full-file regeneration.
+### Sidebar and synchronization
+
+The DSH sidebar should reuse the existing React/Excalidraw authoring behavior:
+
+- source editor;
+- diagnostics;
+- visible canvas;
+- Camera controls where useful.
+
+Minimal component extraction/reuse is allowed because M10 creates a second real host UI. Do not create a general UI framework/package unless actual code reuse requires it.
+
+Agent patches through the Host must cause an already-open sidebar to show updated source, diagnostics, and preview without manual reload.
+
+Human sidebar edits must update the same Host source.
+
+Use the smallest DSH-supported synchronization mechanism. Do not add a generic reactive/distributed-state framework.
+
+### Camera and asset boundaries
+
+Camera remains independent of Agent authoring capability.
+
+The human sidebar may reuse Camera controls, but M10 Agent authoring tools do not require Camera/navigation tools.
+
+DSH preview must preserve the existing M6 asset contract:
+
+- local image source semantics remain in `MindPptStructure`;
+- asset bytes/resolution remain outside parser;
+- if the DSH Host must resolve local files, reuse the existing Canvas asset-request boundary plus the smallest current DSH/workspace file seam.
+
+Do not add an asset registry, document database, file manager, or remote asset platform.
+
+### Language guidance
+
+Provide concise guidance for current v0 only:
+
+- slide/tree/link/path;
+- the current Markdown profile;
+- hero/title-content/two-column;
+- image;
+- table;
+- chart bar;
+- extension fences;
+- active extension renderer discovery.
+
+Deferred features must not be described as available capabilities.
+
+### Visible end-to-end acceptance
+
+One real DSH session must demonstrate:
+
+1. the MindPPT sidebar is open on the canonical integrated document;
+2. the visible presentation renders through the existing Excalidraw pipeline;
+3. the Agent calls MindPPT inspect;
+4. inspect returns current source, diagnostics, semantic IDs/source ranges, and active extension renderer types;
+5. the Agent makes one local guarded source patch, such as changing a title, paragraph, or one chart values line;
+6. the patch uses the expected-text guard;
+7. the existing editor/compiler path runs;
+8. on a valid edit, diagnostics are valid, semantic structure updates, sidebar source updates, and visible presentation updates without page reload;
+9. the Agent intentionally makes one invalid local patch;
+10. current source shows the invalid edit, diagnostics report the error, and the sidebar keeps the last-good presentation;
+11. the Agent reads diagnostics and applies a repair patch;
+12. the presentation updates again;
+13. at no point does the Agent read or write Excalidraw JSON.
+
+This is the M10 end-to-end proof.
+
+### Real DSH integration gate
+
+Unit/browser mocks alone are not enough to declare M10 integration proven.
+
+After automated implementation review and merge, run one focused real DSH acceptance using the installed DSH environment.
+
+Do not start post-v0 expansion until that real integration pass succeeds.
 
 Visible acceptance:
 
-> A DSH agent can read an existing MindPPT document, make a local source change, inspect compiler feedback, and see the updated presentation without manipulating Excalidraw JSON.
+> In one real DSH session, Agent and human sidebar share one Host-owned MindPPT document; guarded source edits flow through the existing editor/compiler path, valid edits visibly update Excalidraw, invalid edits preserve last-good rendering with current diagnostics, and the Agent never manipulates Excalidraw JSON.
 
 ## 6. Cross-cutting capabilities
 
@@ -1333,7 +1557,7 @@ Start with structural ranges in M1.
 
 Expand in M2-M3 to Markdown content and diagnostics.
 
-By M10, source mapping should support precise agent patches and editor navigation.
+By M10, stable semantic IDs plus embedded `SourceRange { start, end }` values support guarded precise Agent patches and editor navigation. A standalone SourceMap object is not required by the v0 contract.
 
 ### 6.3 Diagnostics
 

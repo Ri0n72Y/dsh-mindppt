@@ -61,8 +61,14 @@ export function layoutBarChart(
   const values = block.values.map((entry) => entry.value)
   const domainMin = Math.min(0, ...values)
   const domainMax = Math.max(0, ...values)
-  const domainSpan = domainMax - domainMin || 1
-  const baselineY = plotY + (domainMax / domainSpan) * plotHeight
+  const domainScale = Math.max(
+    Math.abs(domainMin),
+    Math.abs(domainMax),
+  ) || 1
+  const normalizedMin = domainMin / domainScale
+  const normalizedMax = domainMax / domainScale
+  const domainSpan = normalizedMax - normalizedMin || 1
+  const baselineY = plotY + (normalizedMax / domainSpan) * plotHeight
   const categoryWidth = plotWidth / block.labels.length
   const barWidth = categoryWidth * 0.56
   const labelY = plotY + plotHeight + 12
@@ -70,7 +76,9 @@ export function layoutBarChart(
 
   const bars = block.labels.map((label, index) => {
     const value = block.values[index]!
-    const valueHeight = Math.abs(value.value / domainSpan) * plotHeight
+    const valueHeight = Math.abs(
+      (value.value / domainScale) / domainSpan,
+    ) * plotHeight
     const x = plotX + index * categoryWidth + (categoryWidth - barWidth) / 2
     const y = value.value >= 0 ? baselineY - valueHeight : baselineY
     const valueLabelY = value.value >= 0

@@ -83,6 +83,30 @@ describe('M7.1 structured table and bar chart', () => {
         const cases = [
           {
             source: M7.replace(
+              'header ["Channel", "Orders", "Revenue"]',
+              'header []',
+            ),
+            message: 'table header must contain at least one cell',
+            slice: '      header []',
+          },
+          {
+            source: M7.replace(
+              'row ["Partner", 121, 31900]',
+              'row []',
+            ),
+            message: 'table row width must match header column count',
+            slice: '      row []',
+          },
+          {
+            source: M7.replace(
+              'labels ["Direct", "Partner", "Marketplace"]',
+              'labels []',
+            ),
+            message: 'chart bar requires at least one category',
+            slice: '      labels []',
+          },
+          {
+            source: M7.replace(
               'row ["Partner", 121, 31900]',
               'row ["Partner", 121]',
             ),

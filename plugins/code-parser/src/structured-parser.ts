@@ -13,7 +13,9 @@ export function parseTableBlock(
   slideId: string,
 ): ParsedContent {
   let header: ParsedStructuredValue[] | undefined
+  let headerRange: SourceRange | undefined
   const rows: ParsedStructuredValue[][] = []
+  const rowRanges: SourceRange[] = []
 
   for (const line of token.lines) {
     if (!line.text) continue
@@ -22,11 +24,13 @@ export function parseTableBlock(
       if (header) {
         failStructured(slideId, 'table must contain exactly one header row', line.range)
       }
+      headerRange = line.range
       header = parseStructuredValues(line, 'header', slideId, 'table')
       continue
     }
 
     if (line.text.startsWith('row ')) {
+      rowRanges.push(line.range)
       rows.push(parseStructuredValues(line, 'row', slideId, 'table'))
       continue
     }
@@ -38,15 +42,19 @@ export function parseTableBlock(
     failStructured(slideId, 'table requires exactly one header row', token.range)
   }
   if (header.length === 0) {
-    failStructured(slideId, 'table header must contain at least one cell', token.range)
+    failStructured(
+      slideId,
+      'table header must contain at least one cell',
+      headerRange ?? token.range,
+    )
   }
 
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     if (row.length !== header.length) {
       failStructured(
         slideId,
         'table row width must match header column count',
-        row[0]?.range ?? token.range,
+        rowRanges[index] ?? token.range,
       )
     }
   }
@@ -59,6 +67,7 @@ export function parseBarChartBlock(
   slideId: string,
 ): ParsedContent {
   let labels: ParsedChartLabel[] | undefined
+  let labelsRange: SourceRange | undefined
   let values: ParsedChartValue[] | undefined
   let valuesRange: SourceRange | undefined
 
@@ -67,6 +76,7 @@ export function parseBarChartBlock(
 
     if (line.text.startsWith('labels ')) {
       if (labels) failStructured(slideId, 'chart bar has duplicate labels', line.range)
+      labelsRange = line.range
       const parsed = parseArray(line, 'labels', slideId, 'chart bar')
       labels = parsed.map((value) => {
         if (typeof value !== 'string') {
@@ -96,7 +106,11 @@ export function parseBarChartBlock(
   if (!labels) failStructured(slideId, 'chart bar requires labels', token.range)
   if (!values) failStructured(slideId, 'chart bar requires values', token.range)
   if (labels.length === 0) {
-    failStructured(slideId, 'chart bar requires at least one category', token.range)
+    failStructured(
+      slideId,
+      'chart bar requires at least one category',
+      labelsRange ?? token.range,
+    )
   }
   if (labels.length !== values.length) {
     failStructured(

@@ -1,0 +1,106 @@
+mindppt
+
+tree LR {
+  hero --> agenda
+  hero --> problem
+  agenda --> customer
+  agenda --> analysis
+  problem --> summary
+}
+
+link customer -.-> summary
+
+slide hero {
+  layout hero
+
+  # M9 Content Plugin Contract
+
+  ## Same source, renderer lifecycle changes projection only
+
+  Primary tree geometry stays canonical while navigation gains routes.
+}
+
+slide agenda {
+  layout title-content
+
+  # Analysis Flow
+
+  The M9 slice reuses the existing presentation pipeline.
+
+  - Primary tree remains the spatial skeleton
+  - Paths only define playback order
+}
+
+slide problem {
+  layout title-content
+
+  # Alternate Route
+
+  The same semantic box can gain specialized formula rendering at runtime.
+
+  ```latex
+  e^{i\pi} + 1 = 0
+  ```
+}
+
+slide customer {
+  layout two-column
+
+  # Customer Profile
+
+  left {
+    Outdoor teams need a fast way to explain the product story.
+
+    - Clear value at a glance
+    - Stable setup for field use
+  }
+
+  right {
+    ![Customer workshop](./assets/customer.svg)
+  }
+}
+
+slide analysis {
+  layout two-column
+
+  # Q3 Channel Performance
+
+  left {
+    table {
+      header ["Channel", "Orders", "Revenue"]
+      row ["Direct", 184, 42600]
+      row ["Partner", 121, 31900]
+      row ["Marketplace", 96, 24700]
+    }
+  }
+
+  right {
+    chart bar {
+      labels ["Direct", "Partner", "Marketplace"]
+      values [184, 121, 96]
+    }
+  }
+}
+
+path main {
+  hero
+  agenda
+  customer
+  analysis
+  customer
+  summary
+}
+
+path short {
+  hero
+  problem
+  summary
+}
+
+slide summary {
+  layout hero
+
+  # One Summary
+
+  ## One canvas, multiple saved routes.
+}

@@ -25,6 +25,9 @@ importers:
       dsh-mindppt-code-editor:
         specifier: workspace:*
         version: link:../../plugins/code-editor
+      dsh-mindppt-latex:
+        specifier: workspace:*
+        version: link:../../plugins/latex
       dsh-mindppt-code-parser:
         specifier: workspace:*
         version: link:../../plugins/code-parser
@@ -116,6 +119,30 @@ importers:
       '@types/node':
         specifier: ^22.20.0
         version: 22.20.4
+      dsh-mindppt-code-parser:
+        specifier: workspace:*
+        version: link:../code-parser
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.14(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.11(@types/node@22.20.4)(vite@7.3.6(@types/node@22.20.4))
+
+  plugins/latex:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.4
+        version: 4.0.4
+      '@types/node':
+        specifier: ^22.20.0
+        version: 22.20.4
+      dsh-mindppt-canvas-excalidraw:
+        specifier: workspace:*
+        version: link:../canvas-excalidraw
       dsh-mindppt-code-parser:
         specifier: workspace:*
         version: link:../code-parser

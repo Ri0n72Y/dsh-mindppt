@@ -18,7 +18,8 @@
     "dsh-mindppt-code-editor": "workspace:*",
     "dsh-mindppt-code-parser": "workspace:*",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "dsh-mindppt-latex": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

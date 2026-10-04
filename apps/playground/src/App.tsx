@@ -3,6 +3,7 @@ import { useRef, useSyncExternalStore } from 'react'
 import type { MindPptDiagnostic } from 'dsh-mindppt-code-parser'
 
 import { CameraControls } from './CameraControls.tsx'
+import { ExtensionControls } from './ExtensionControls.tsx'
 import { MindPptCanvas } from './MindPptCanvas.tsx'
 import type { PlaygroundRuntime } from './runtime.ts'
 
@@ -76,6 +77,11 @@ export function App({ runtime }: AppProps) {
             </button>
           ))}
         </div>
+
+        <ExtensionControls
+          rendererTypes={snapshot.extensionRendererTypes}
+          runtime={runtime}
+        />
 
         <CameraControls camera={snapshot.camera} runtime={runtime} />
       </aside>

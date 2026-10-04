@@ -988,9 +988,12 @@ Visible acceptance:
 
 ## M9 — Content Plugin Contract + LaTeX Reference Plugin
 
-Status: requirement baseline; implementation pending
+Status: implementation complete; automated acceptance complete
+Post-M9 Manual Acceptance Gate: pending
 
 Purpose: prove open content as one runtime capability-lifecycle vertical slice without changing grammar, semantic structure, or compiler-owned geometry.
+
+Delivered implementation keeps registration inside `mindpptCanvas`, binds renderer cleanup to the registering Cordis fiber, reprojects the same last-successful structure on capability changes, exposes active renderer types from real registration state, and ships `dsh-mindppt-latex` as the reference renderer. Independent review, merge, and the Post-M9 Manual Acceptance Gate remain outside this implementation PR.
 
 M9 delivers together:
 

@@ -1,0 +1,4 @@
+- insert:
+    - id: mindppt-latex
+      name: "dsh-mindppt-latex"
+      inject: [mindpptCanvas]

@@ -410,7 +410,7 @@ At most one active renderer may claim one extension type. A duplicate claim is a
 
 Runtime discovery exposes the extension renderer types that are actually active. It is not derived from fence types present in source, parser-known types, installed packages, or a hard-coded list.
 
-The M9 reference capability is `dsh-mindppt-latex`, which claims only `latex` and must produce visibly specialized formula rendering inside the existing semantic box. A second Mermaid plugin is not required for M9.
+The M9 reference capability is `dsh-mindppt-latex`. Its implemented renderer claims only `latex`, uses the existing compiler-owned semantic box, and projects supported formulas into deterministic Excalidraw primitives with separate mathematical script placement. A second Mermaid plugin is not required for M9.
 
 ## 12. Layout DSL
 

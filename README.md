@@ -140,3 +140,12 @@ Presentation paths compile into named ordered occurrences. Repeated slide IDs ar
 The playground exposes only the controls needed for this slice: a saved-path selector, previous/next buttons, visible occurrence state, and outgoing SoftLink actions derived from compiled semantics. Failed source edits retain the last-good scene and Camera/path state; successful recompiles preserve an active path only when the exact occurrence still resolves to the current slide.
 
 M8 intentionally adds no generic graph model, route engine, path registry, navigation framework, transition family, canvas-edge clicking, or presentation-player subsystem.
+
+
+## M9 implementation delivered: content renderer lifecycle + LaTeX reference plugin
+
+M9 implementation adds the minimum runtime content-renderer contract to `mindpptCanvas`. Renderer registrations are local to one Canvas service instance, duplicate type claims are rejected deterministically, renderer failure falls back per node, and active renderer discovery reflects the actual registration map. Loading or unloading a renderer reprojects the current last-successful `MindPptStructure`; it does not edit source, invoke parser compilation, change compiler-owned geometry, or reset Camera/path state.
+
+The reference package `dsh-mindppt-latex` is a real Cordis plugin that claims only `latex`. Its registration is wrapped in `ctx.effect()`, so disposing the plugin fiber automatically removes the capability and restores generic fallback. The M9 formula profile renders exponent syntax such as `e^{i\\pi} + 1 = 0` with separate baseline and superscript primitives inside the existing semantic box rather than presenting the raw fence text.
+
+The standalone playground uses `examples/m9-content-plugin-latex.mindppt`, keeps the M6/M7/M8 integrated behaviors, and exposes only two lifecycle controls: Enable LaTeX and Disable LaTeX, plus the active renderer list. The Post-M9 Manual Acceptance Gate remains pending until after independent review and merge.

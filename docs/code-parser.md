@@ -574,6 +574,8 @@ Semantic transformation, sizing hints, and layout hints are not part of the M9 c
 
 Renderer registration belongs to the runtime canvas/rendering responsibility, scoped to the Cordis runtime and registering fiber. It must not be module-global.
 
+M9 implements this boundary in `mindpptCanvas`: registration state is instance-local, renderer cleanup is attached to the registering plugin through Cordis lifecycle effects, and capability changes re-render the stored last-successful structure without invoking `compile(source)`.
+
 Capability lifecycle is therefore separate from parser lifecycle:
 
 ~~~text

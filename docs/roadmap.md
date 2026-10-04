@@ -988,7 +988,7 @@ Visible acceptance:
 
 ## M9 — Content Plugin Contract + LaTeX Reference Plugin
 
-Status: complete
+Status: implementation complete; automated acceptance pending CI
 Post-M9 Manual Acceptance Gate: pending
 
 Purpose: prove open content as one runtime capability-lifecycle vertical slice without changing grammar, semantic structure, or compiler-owned geometry.

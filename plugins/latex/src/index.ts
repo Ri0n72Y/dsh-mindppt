@@ -58,8 +58,6 @@ export const renderLatex: ExtensionRenderer = ({ slide, element }) => {
     formula.base,
     startX,
     baselineY,
-    baseWidth,
-    fontSize * 1.25,
     fontSize,
   ))
 
@@ -71,8 +69,6 @@ export const renderLatex: ExtensionRenderer = ({ slide, element }) => {
       formula.superscript,
       cursorX,
       baselineY - scriptSize * 0.7,
-      scriptWidth,
-      scriptSize * 1.2,
       scriptSize,
     ))
     cursorX += scriptWidth
@@ -84,8 +80,6 @@ export const renderLatex: ExtensionRenderer = ({ slide, element }) => {
       formula.suffix,
       cursorX,
       baselineY,
-      suffixWidth,
-      fontSize * 1.25,
       fontSize,
     ))
   }
@@ -145,28 +139,16 @@ function textSegment(
   text: string,
   x: number,
   y: number,
-  width: number,
-  height: number,
   fontSize: number,
 ): ReturnType<ExtensionRenderer>[number] {
   return {
-    type: 'rectangle',
+    type: 'text',
     id,
     x,
     y,
-    width,
-    height,
-    backgroundColor: 'transparent',
-    strokeColor: 'transparent',
-    fillStyle: 'solid',
-    roughness: 0,
-    label: {
-      text,
-      fontSize,
-      fontFamily: LATEX_FONT_FAMILY,
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      strokeColor: '#111827',
-    },
+    text,
+    fontSize,
+    fontFamily: LATEX_FONT_FAMILY,
+    strokeColor: '#111827',
   }
 }

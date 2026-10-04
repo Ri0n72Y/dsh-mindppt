@@ -4,8 +4,8 @@ import type { ExtensionRenderer } from 'dsh-mindppt-canvas-excalidraw'
 export const name = 'dsh-mindppt-latex'
 export const inject = ['mindpptCanvas']
 
-// Excalidraw 0.18 FONT_FAMILY.Helvetica is the built-in normal font.
-const LATEX_FONT_FAMILY = 2 as const
+// Excalidraw 0.18 DEFAULT_FONT_FAMILY is FONT_FAMILY.Excalifont.
+const LATEX_FONT_FAMILY = 5 as const
 
 interface FormulaParts {
   base: string

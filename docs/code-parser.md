@@ -189,7 +189,7 @@ Core structural references include:
 
 Declaration order must not decide validity.
 
-M8 keeps these as direct core references. Reference resolution does not create a generic graph model, route registry, or navigation engine.
+M8 keeps these as direct core references. Reference resolution resolves SoftLink endpoints; whether the two resolved endpoints are the same slide is a semantic-validation concern. This does not create a generic graph model, route registry, or navigation engine.
 
 Later references may include named structured components only when a concrete feature requires them.
 
@@ -210,9 +210,10 @@ M8 SoftLink validation adds:
 
 - unknown source slide;
 - unknown target slide;
+- self-link relation where source == target;
 - duplicate identical source -> target relation.
 
-The reverse target -> source relation is independent and valid when declared separately.
+Soft links therefore connect distinct slides. The reverse target -> source relation is independent and valid when declared separately between distinct endpoints. No self-loop routing or renderer behavior is required.
 
 M8 PresentationPath validation adds:
 

@@ -3,9 +3,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 import MindPptCanvasService, {
   serviceName as canvasServiceName,
+  type ExtensionNode,
 } from 'dsh-mindppt-canvas-excalidraw'
-import MindPptParserService from 'dsh-mindppt-code-parser'
-import MindPptLatexPlugin from '../src/index.ts'
+import MindPptParserService, {
+  type SlideNode,
+} from 'dsh-mindppt-code-parser'
+import MindPptLatexPlugin, { renderLatex } from '../src/index.ts'
 
 const SOURCE = [
   'mindppt',
@@ -20,7 +23,44 @@ const SOURCE = [
   '',
 ].join('\n')
 
+const EXCALIDRAW_HELVETICA_FONT_FAMILY = 2
+
 describe('dsh-mindppt-latex', () => {
+  it('pins every formula text primitive to Excalidraw Helvetica', () => {
+    const element: ExtensionNode = {
+      kind: 'extension',
+      type: 'latex',
+      id: 'slide:math/extension:0',
+      raw: 'e^{i\\pi} + 1 = 0',
+      x: 40,
+      y: 100,
+      width: 640,
+      height: 140,
+      sourceRange: { start: 0, end: 1 },
+    }
+    const slide: SlideNode = {
+      id: 'math',
+      x: 100,
+      y: 200,
+      width: 900,
+      height: 500,
+      elements: [element],
+      sourceRange: { start: 0, end: 1 },
+    }
+
+    const scene = renderLatex({ slide, element })
+
+    for (const segment of ['base', 'superscript', 'suffix']) {
+      expect(scene.find(
+        ({ id }) => id === element.id + '/latex/' + segment,
+      )).toEqual(expect.objectContaining({
+        label: expect.objectContaining({
+          fontFamily: EXCALIDRAW_HELVETICA_FONT_FAMILY,
+        }),
+      }))
+    }
+  })
+
   it('loads and unloads specialized projection without recompiling', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)

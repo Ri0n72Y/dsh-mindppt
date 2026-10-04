@@ -53,7 +53,7 @@ describe('M8 SoftLink Excalidraw lowering', () => {
         expect([
           link.x,
           link.y,
-          ...link.points.flat(),
+          ...(link.points?.flat() ?? []),
         ].every(Number.isFinite)).toBe(true)
         expect(structure.slides.map(({ id, x, y }) => [id, x, y]))
           .toEqual(positions)

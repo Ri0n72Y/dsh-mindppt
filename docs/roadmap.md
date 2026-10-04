@@ -783,45 +783,175 @@ Broader table/chart features should return only when concrete presentation use c
 
 ## M8 — Soft Links + Presentation Paths
 
-Purpose: complete the core nonlinear presentation model.
+Status: planned
 
-Soft links:
+Purpose: complete the core nonlinear presentation model as one end-to-end vertical slice through the existing source -> semantic structure -> renderer / Camera -> browser delivery path.
 
-```mindppt
+M8 must deliver together:
+
+~~~text
+core SoftLink semantics
+        +
+core PresentationPath semantics
+        +
+existing Camera path playback
+        +
+visible soft-link relation
+        +
+two saved routes in Chromium
+~~~
+
+This is one vertical slice, not separate parser, graph, route, or animation projects.
+
+Authoring direction remains:
+
+~~~mindppt
 link competitor -.-> summary
-```
+~~~
 
-Paths:
+and:
 
-```mindppt
+~~~mindppt
 path main {
   intro
   market
-  customer
-  product
+  size
+  market
   summary
 }
-```
+~~~
 
-Semantic separation becomes explicit:
+Semantic separation is strict:
 
-```text
-Tree      = canonical hierarchy and spatial skeleton
-Soft Link = cross-branch semantic relation
-Path      = ordered presentation route
-```
+~~~text
+Tree      = canonical hierarchy + parent/child ownership + spatial skeleton
+Soft Link = visible directed cross-branch semantic relation
+Path      = ordered presentation playback only
+~~~
 
-Rules:
+### M8 SoftLink semantics
 
-- soft links do not change tree ownership;
-- soft links do not drive primary tree layout;
-- paths may revisit slides;
-- multiple paths may coexist;
-- camera can use a distinct transition for arbitrary or soft-link jumps.
+SoftLink is core document structure. It is not slide content, an extension block, or a plugin capability.
+
+M8 requires:
+
+- a directed from -> to semantic relation;
+- both source and target to resolve to existing slides;
+- stable deterministic semantic identity and a usable source range;
+- an error for an identical duplicate from -> to relation;
+- the reverse to -> from relation to remain a separate valid relation;
+- no change to primary-tree parent ownership;
+- no participation in primary-tree spatial layout;
+- renderer lowering that makes the relation visibly distinct from primary-tree edges without moving slides.
+
+M8 does not introduce a generic graph model or topology abstraction layer.
+
+### M8 PresentationPath semantics
+
+PresentationPath is named core document structure.
+
+M8 requires:
+
+- a unique path name / semantic ID;
+- a non-empty ordered sequence of slide occurrences;
+- every occurrence to resolve to an existing slide;
+- repeated slide IDs to remain valid distinct occurrences;
+- multiple named paths to coexist;
+- deterministic semantic identity and source ranges for the path and its occurrences.
+
+A path step may follow a primary-tree edge, follow a soft link, or jump to any other slide. M8 performs no path adjacency validation and no cycle validation.
+
+Paths do not change tree ownership or world layout and are not rendered as another canvas topology edge set.
+
+M8 does not introduce route optimization, graph-derived routes, a route registry, or a generic navigation engine.
+
+### M8 Camera path playback
+
+Path playback extends the existing Cordis-native Camera transient navigation boundary. M8 does not add a route/path service.
+
+The minimum playback state must express:
+
+~~~text
+selectedPathId
+current path occurrence index
+currentSlideId
+~~~
+
+The occurrence index is the authoritative route cursor. It must never be inferred from currentSlideId, because one path may contain the same slide more than once.
+
+Minimum deterministic behavior:
+
+- selecting a path starts at its first occurrence;
+- next moves to the next occurrence when one exists;
+- previous moves to the previous occurrence when one exists;
+- two consecutive or separated occurrences of the same slide remain distinct path steps;
+- focusing a path occurrence ultimately reuses the existing Camera focus request and M5 geometry-based viewport choreography.
+
+Non-path navigation exits active path playback context instead of trying to reconcile a cursor. This applies to direct focus, parent/child navigation, and following a soft link.
+
+Following a soft link uses the existing semantic slide-focus behavior and existing M5 choreography. M8 does not require a soft-link-specific or arbitrary-jump transition family.
+
+### Recompile and last-good semantics
+
+The existing last-good contract remains authoritative.
+
+- compile failure keeps the last-good structure and the current Camera/path playback state;
+- after a successful recompile, active path playback is preserved only when the selected path still exists, the current occurrence index is still in range, and that exact occurrence still resolves to the current slide;
+- otherwise Camera clears only the active path playback context safely, while ordinary current-slide preservation follows the existing M5 recompile rules.
+
+M8 does not add cursor reconciliation or route-migration machinery.
+
+### Validation
+
+M8 validation must at least cover:
+
+Soft links:
+
+- unknown source slide;
+- unknown target slide;
+- duplicate identical relation.
+
+Paths:
+
+- duplicate path ID;
+- empty path;
+- unknown slide occurrence.
+
+Repeated occurrences are valid. M8 adds no path-cycle validation, path-adjacency validation, route optimization, or automatic graph-derived route generation.
+
+### Canonical fixture
+
+M8 implementation must evolve the existing multi-slide presentation into a real canonical fixture rather than add an isolated syntax-only fixture.
+
+The fixture must include:
+
+- a branching primary tree;
+- one visible soft link;
+- two named presentation paths;
+- different traversal order between the two paths;
+- at least one path containing a repeated slide occurrence.
+
+This fixture should remain the evolving v0 "one project demonstrates everything so far" proof.
+
+### Renderer and UI boundary
+
+Primary-tree rendering remains unchanged.
+
+The renderer may lower SoftLink semantics into a visually distinct relation, but must not derive or mutate slide geometry from soft links. Paths have no canvas-edge rendering. The renderer does not parse link/path authoring source.
+
+The playground needs only the minimum controls required to prove the semantic capability:
+
+- path selection;
+- previous;
+- next;
+- linked-target controls only if needed for visible acceptance.
+
+M8 does not design a presentation-player framework, route timeline/editor, transition framework, path registry, or new navigation service.
 
 Visible acceptance:
 
-> The same mind map can be played through at least two different saved presentation routes.
+> In the same canonical mind map, primary-tree geometry remains identical while at least one soft link is visibly distinct from tree edges. The user can select either of two saved paths and move previous/next through their ordered occurrences; the two paths produce different traversal order, and a repeated slide occurrence is traversed as a distinct step. Following the soft link reuses the existing Camera focus behavior and M5 choreography. Live source edits continue to publish valid changes, while invalid source preserves diagnostics, the last-good structure, and active Camera/path state.
+
 
 ---
 

@@ -255,7 +255,6 @@ interface MindPptStructure {
   links: SoftLink[]
   paths: PresentationPath[]
   diagnostics: Diagnostic[]
-  sourceMap: SourceMap
 }
 
 interface SoftLink {
@@ -278,6 +277,8 @@ interface PresentationPathOccurrence {
   sourceRange: SourceRange
 }
 ~~~
+
+Source mapping in v0 is carried by stable semantic IDs and embedded `SourceRange` values on the relevant semantic nodes/declarations. `MindPptStructure` does not expose a required standalone `SourceMap` object.
 
 Soft links and paths remain resolved core semantics after parsing. Soft links may be lowered by the renderer as visually distinct relations. Paths remain ordered Camera playback data and are not canvas topology edges.
 

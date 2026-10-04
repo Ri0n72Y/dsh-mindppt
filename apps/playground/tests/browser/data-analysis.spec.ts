@@ -22,12 +22,57 @@ async function pagePause(canvas: Locator, milliseconds: number): Promise<void> {
   }), milliseconds)
 }
 
+async function readVisibleBarHeights(canvas: Locator): Promise<number[]> {
+  return canvas.evaluate((element) => {
+    const node = element as HTMLCanvasElement
+    const context = node.getContext('2d')
+    if (!context) return []
+
+    const data = context.getImageData(0, 0, node.width, node.height).data
+    const counts = Array.from({ length: node.width }, () => 0)
+
+    for (let y = 0; y < node.height; y += 1) {
+      for (let x = 0; x < node.width; x += 1) {
+        const index = (y * node.width + x) * 4
+        const red = data[index] ?? 0
+        const green = data[index + 1] ?? 0
+        const blue = data[index + 2] ?? 0
+        const alpha = data[index + 3] ?? 0
+
+        if (
+          Math.abs(red - 99) <= 18
+          && Math.abs(green - 102) <= 18
+          && Math.abs(blue - 241) <= 18
+          && alpha > 220
+        ) {
+          counts[x]! += 1
+        }
+      }
+    }
+
+    const groups: number[][] = []
+    let current: number[] = []
+
+    for (let x = 0; x < counts.length; x += 1) {
+      if ((counts[x] ?? 0) >= 4) {
+        current.push(counts[x] ?? 0)
+      } else if (current.length) {
+        if (current.length >= 8) groups.push(current)
+        current = []
+      }
+    }
+    if (current.length >= 8) groups.push(current)
+
+    return groups.map((group) => Math.max(...group))
+  })
+}
+
 test('M7.1 table and bar chart are visible and live through last-good recovery', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto('/')
 
   const editor = page.getByRole('textbox', { name: 'MindPPT source editor' })
-  const canvas = page.locator('.canvas-panel canvas.static')
+  const canvas = page.locator('main.playground > .canvas-panel canvas.static')
   const cameraTarget = page.getByRole('combobox', { name: 'Camera slide target' })
 
   await expect(editor).toBeVisible()
@@ -42,6 +87,11 @@ test('M7.1 table and bar chart are visible and live through last-good recovery',
   await cameraTarget.selectOption('analysis')
   await expect(page.getByText('Current: analysis', { exact: true })).toBeVisible()
   await page.waitForTimeout(900)
+
+  const initialBars = await readVisibleBarHeights(canvas)
+  expect(initialBars).toHaveLength(3)
+  expect(initialBars[0]).toBeGreaterThan(initialBars[1] ?? 0)
+  expect(initialBars[1]).toBeGreaterThan(initialBars[2] ?? 0)
 
   const initial = await canvas.screenshot()
   const tableEdit = source.replace(
@@ -60,40 +110,11 @@ test('M7.1 table and bar chart are visible and live through last-good recovery',
   await expect(page.getByText('Compiled', { exact: true })).toBeVisible()
   const afterChart = await expectCanvasChange(canvas, afterTable)
 
-  await page.evaluate(async (fixture) => {
-    const { mountAssetBrowserHarness } = await import(
-      '/src/asset-browser-harness.tsx'
-    )
-    const container = document.createElement('div')
-    container.id = 'm7-analysis-harness'
-    container.style.width = '1200px'
-    container.style.height = '800px'
-    container.style.position = 'fixed'
-    container.style.inset = '0'
-    container.style.zIndex = '-1'
-    document.body.append(container)
-
-    const harness = await mountAssetBrowserHarness(
-      container,
-      fixture,
-      { documentPath: 'examples/m7-data-analysis.mindppt', files: {} },
-    )
-    ;(window as any).__m7Harness = harness
-  }, chartEdit)
-
-  const barHeights = await page.evaluate(() => {
-    const snapshot = (window as any).__m7Harness.runtime.getSnapshot()
-    return snapshot.elements
-      .filter((element: any) =>
-        element.type === 'rectangle'
-        && element.id?.startsWith('slide:analysis/right/bar-chart:0/bar:')
-        && element.id.endsWith('/box')
-      )
-      .map((element: any) => element.height)
-  })
-  expect(barHeights).toHaveLength(3)
-  expect(barHeights[0]).toBeGreaterThan(barHeights[1])
-  expect(barHeights[1]).toBeGreaterThan(barHeights[2])
+  const editedBars = await readVisibleBarHeights(canvas)
+  expect(editedBars).toHaveLength(3)
+  expect(editedBars[1]).toBeGreaterThan(initialBars[1] ?? 0)
+  expect(editedBars[0]).toBeGreaterThan(editedBars[1] ?? 0)
+  expect(editedBars[1]).toBeGreaterThan(editedBars[2] ?? 0)
 
   const invalid = chartEdit.replace(
     'values [184, 160, 96]',

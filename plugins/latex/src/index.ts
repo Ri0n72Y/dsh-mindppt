@@ -4,7 +4,6 @@ import type { ExtensionRenderer } from 'dsh-mindppt-canvas-excalidraw'
 export const name = 'dsh-mindppt-latex'
 export const inject = ['mindpptCanvas']
 
-
 interface FormulaParts {
   base: string
   superscript?: string

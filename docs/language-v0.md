@@ -244,15 +244,18 @@ link competitor -.-> summary
 
 For M8:
 
-- the source and target must each resolve to an existing slide;
+- the source and target must resolve to distinct existing slides;
+- a self-link whose source and target are the same slide is invalid;
 - the relation has stable deterministic semantic identity and a usable source range;
 - an identical duplicate source -> target relation is invalid;
-- the reverse target -> source relation is a separate valid relation;
+- the reverse target -> source relation is a separate valid relation when its endpoints are distinct;
 - soft links do not change primary-tree parent ownership;
 - soft links do not participate in primary-tree spatial layout;
 - renderer lowering may show them as a relation visually distinct from primary-tree edges without moving slides.
 
-Following a soft link is navigation to its target slide. It reuses the existing Camera slide-focus request and M5 geometry-based choreography; it does not create a soft-link-specific animation family.
+Soft links connect distinct slides. M8 does not define self-loop routing, loop geometry, or special self-link renderer behavior.
+
+Following a soft link is navigation from the current slide through one of its declared outgoing SoftLink relations to that relation's target slide. The target must come from compiled SoftLink semantics, not from UI hard-coding or re-parsing authoring source. The follow action reuses the existing Camera slide-focus request and M5 geometry-based choreography; it does not create a soft-link-specific animation family.
 
 Soft links do not establish a generic graph model. The dotted-arrow spelling remains intentionally Mermaid-like.
 
@@ -587,6 +590,8 @@ Minimum path playback behavior:
 - focusing any path occurrence reuses the existing Camera focus request and M5 choreography.
 
 Direct focus, parent/child navigation, and following a soft link are non-path navigation. Each exits active path playback context instead of trying to reconcile a cursor.
+
+A declared SoftLink follow must derive its target from the compiled SoftLink semantics for the current slide before issuing the existing Camera focus request. UI code must not re-parse source or hard-code a target for this interaction. M8 does not freeze whether this is exposed through Camera view data, a runtime action, or another equivalent minimal API.
 
 Compile failure keeps the last-good structure and current Camera/path state. After a successful recompile, active path playback is preserved only when the selected path still exists, the current occurrence index remains in range, and that exact occurrence still resolves to currentSlideId. Otherwise Camera clears the path playback context; ordinary current-slide preservation continues to follow the existing M5 rules.
 

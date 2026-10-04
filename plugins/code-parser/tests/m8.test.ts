@@ -70,7 +70,10 @@ describe('M8 SoftLink and PresentationPath semantics', () => {
 
     const withoutM8 = M8
       .replace('link customer -.-> summary\n\n', '')
-      .replace(/\npath main \{[\s\S]*$/, '\n')
+      .replace(
+        /path main \{[\s\S]*?\}\n\npath short \{[\s\S]*?\}\n\n/,
+        '',
+      )
     const base = parser.compile(withoutM8)
 
     expect(first.slides.map(({ id, x, y }) => [id, x, y]))

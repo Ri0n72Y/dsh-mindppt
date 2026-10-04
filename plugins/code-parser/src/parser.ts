@@ -3,7 +3,9 @@ import { MindPptCompileError } from './errors.ts'
 import type {
   ParsedContent,
   ParsedDocument,
+  ParsedPresentationPath,
   ParsedSlide,
+  ParsedSoftLink,
   ParsedTree,
   ParsedTreeEdge,
 } from './parsed-types.ts'
@@ -29,6 +31,8 @@ class Parser {
     this.expect('marker')
 
     const slides: ParsedSlide[] = []
+    const links: ParsedSoftLink[] = []
+    const paths: ParsedPresentationPath[] = []
     let tree: ParsedTree | undefined
 
     while (this.current()) {
@@ -42,6 +46,21 @@ class Parser {
         continue
       }
 
+      if (token.kind === 'soft-link') {
+        links.push({
+          fromSlideId: token.from,
+          toSlideId: token.to,
+          range: token.range,
+        })
+        this.index += 1
+        continue
+      }
+
+      if (token.kind === 'path-start') {
+        paths.push(this.parsePath())
+        continue
+      }
+
       if (token.kind === 'slide-start') {
         slides.push(this.parseSlide())
         continue
@@ -50,7 +69,9 @@ class Parser {
       this.fail('Unexpected document statement: ' + token.kind)
     }
 
-    return tree ? { slides, tree } : { slides }
+    const document: ParsedDocument = { slides, links, paths }
+    if (tree) document.tree = tree
+    return document
   }
 
   private parseTree(): ParsedTree {
@@ -78,6 +99,33 @@ class Parser {
     return {
       direction: start.direction,
       edges,
+      range: { start: start.range.start, end: end.range.end },
+    }
+  }
+
+  private parsePath(): ParsedPresentationPath {
+    const start = this.expect('path-start')
+    const occurrences: ParsedPresentationPath['occurrences'] = []
+
+    while (true) {
+      this.skipBlanks()
+      const token = this.current()
+      if (!token) this.fail('Unclosed path "' + start.name + '"', start.range)
+      if (token.kind === 'block-end') break
+      if (
+        token.kind !== 'text'
+        || !/^[A-Za-z_][A-Za-z0-9_-]*$/.test(token.text)
+      ) {
+        this.fail('Invalid path occurrence in "' + start.name + '"', token.range)
+      }
+      occurrences.push({ slideId: token.text, range: token.range })
+      this.index += 1
+    }
+
+    const end = this.expect('block-end')
+    return {
+      name: start.name,
+      occurrences,
       range: { start: start.range.start, end: end.range.end },
     }
   }

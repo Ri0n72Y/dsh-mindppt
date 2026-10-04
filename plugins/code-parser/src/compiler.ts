@@ -1,5 +1,9 @@
 import { MindPptCompileError } from './errors.ts'
 import { layoutSlideContent } from './content-layout.ts'
+import {
+  resolvePresentationPaths,
+  resolveSoftLinks,
+} from './document-semantics.ts'
 import { parse } from './parser.ts'
 import { tokenize } from './tokenizer.ts'
 import { validatePrimaryTree, validateSlideIds } from './tree-validation.ts'
@@ -27,6 +31,9 @@ export function compileSource(
   if (document.slides.length === 0) {
     throw new MindPptCompileError('Document must contain at least one slide')
   }
+
+  const links = resolveSoftLinks(document.links, slideIds)
+  const paths = resolvePresentationPaths(document.paths, slideIds)
 
   let tree: TreeSpec | undefined
   const positions = new Map<string, { x: number; y: number }>()
@@ -84,6 +91,8 @@ export function compileSource(
 
   const structure: MindPptStructure = { version: 0, slides }
   if (tree) structure.tree = tree
+  if (links.length) structure.links = links
+  if (paths.length) structure.paths = paths
   return structure
 }
 

@@ -7,6 +7,8 @@ export interface StructuredLine {
 export type Token =
   | { kind: 'marker'; range: SourceRange }
   | { kind: 'tree-start'; direction: string; range: SourceRange }
+  | { kind: 'soft-link'; from: string; to: string; range: SourceRange }
+  | { kind: 'path-start'; name: string; range: SourceRange }
   | { kind: 'slide-start'; id: string; range: SourceRange }
   | { kind: 'layout'; preset: string; range: SourceRange }
   | { kind: 'slot-start'; name: LayoutSlot; range: SourceRange }
@@ -21,6 +23,10 @@ export type Token =
   | { kind: 'block-end'; range: SourceRange }
 const ID = '[A-Za-z_][A-Za-z0-9_-]*'
 const TREE_START = new RegExp('^tree\\s+([A-Za-z]+)\\s*\\{$')
+const SOFT_LINK = new RegExp(
+  '^link\\s+(' + ID + ')\\s*-\\.->\\s*(' + ID + ')$',
+)
+const PATH_START = new RegExp('^path\\s+(' + ID + ')\\s*\\{$')
 const SLIDE_START = new RegExp('^slide\\s+(' + ID + ')\\s*\\{$')
 const LAYOUT = /^layout\s+([A-Za-z][A-Za-z0-9-]*)$/
 const SLOT_START = /^(left|right)\s*\{$/
@@ -113,6 +119,16 @@ export function tokenize(source: string): Token[] {
     const tree = TREE_START.exec(text)
     if (tree?.[1]) {
       tokens.push({ kind: 'tree-start', direction: tree[1], range })
+      continue
+    }
+    const link = SOFT_LINK.exec(text)
+    if (link?.[1] && link[2]) {
+      tokens.push({ kind: 'soft-link', from: link[1], to: link[2], range })
+      continue
+    }
+    const path = PATH_START.exec(text)
+    if (path?.[1]) {
+      tokens.push({ kind: 'path-start', name: path[1], range })
       continue
     }
     const slide = SLIDE_START.exec(text)

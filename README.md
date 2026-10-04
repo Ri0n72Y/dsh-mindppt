@@ -127,3 +127,16 @@ pnpm dev
 ```
 
 The canvas remains a projection of source code. Direct canvas editing is not a semantic authoring path.
+
+
+## M8 complete: soft links + presentation paths
+
+M8 completes the first nonlinear presentation slice on top of the existing primary-tree and Camera architecture. The canonical source is `examples/m8-soft-links-presentation-paths.mindppt`: it keeps a branching primary tree, M6 layout/image behavior, and the M7 structured table + single-series bar chart while adding one visible directed SoftLink and two saved presentation paths.
+
+Soft links compile into resolved directional semantics with deterministic IDs and source ranges. They never participate in primary-tree ownership or world layout. `canvas-excalidraw` lowers them as straight dashed directed arrows using only the already-computed source and target slide boxes.
+
+Presentation paths compile into named ordered occurrences. Repeated slide IDs are valid because Camera tracks the occurrence index as the authoritative route cursor. Path selection, previous, and next reuse the existing Camera focus request and M5 viewport choreography. Direct focus, parent/child navigation, and declared SoftLink follow exit active path playback.
+
+The playground exposes only the controls needed for this slice: a saved-path selector, previous/next buttons, visible occurrence state, and outgoing SoftLink actions derived from compiled semantics. Failed source edits retain the last-good scene and Camera/path state; successful recompiles preserve an active path only when the exact occurrence still resolves to the current slide.
+
+M8 intentionally adds no generic graph model, route engine, path registry, navigation framework, transition family, canvas-edge clicking, or presentation-player subsystem.

@@ -554,7 +554,7 @@ path short {
 
 For M8:
 
-- the path name / semantic ID is unique;
+- the path name is unique and compiles to a deterministic `path:<name>` semantic ID;
 - a path is non-empty;
 - each entry is one ordered slide occurrence and must resolve to an existing slide;
 - repeated slide IDs are valid because occurrences, not unique slide IDs, define route position;

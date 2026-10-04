@@ -92,6 +92,33 @@ M3-M5 behavior remains part of the same runtime: failed compiles keep the last-g
 
 M6 is complete at the current product boundary. Broader image-fit behavior beyond the deterministic current image box is deferred to the backlog until a concrete presentation use case requires it. No generic layout engine, theme system, asset registry, or CSS-like layout DSL is introduced by the initial preset set.
 
+## Completed vertical slice: M7.1
+
+M7.1 adds the first core structured data-analysis page without changing the M6/M5 architecture boundary.
+
+The canonical source is `examples/m7-data-analysis.mindppt`. It keeps the existing hero, title-content, two-column, local-image, and Camera smoke path, then adds one analysis slide whose left slot is a structured table and whose right slot is a single-series bar chart.
+
+The v1 grammar is intentionally narrow:
+
+~~~mindppt
+table {
+  header ["Channel", "Orders", "Revenue"]
+  row ["Direct", 184, 42600]
+  row ["Partner", 121, 31900]
+}
+
+chart bar {
+  labels ["Direct", "Partner"]
+  values [184, 121]
+}
+~~~
+
+Array payloads use JSON literals. Table cells may be strings or finite numbers; one header is required and every row must match its column count. Bar charts accept one string-label array and one finite-number array with equal lengths.
+
+Both constructs are core `ContentNode` variants, not Markdown/GFM tables and not fenced extensions. The compiler assigns their two-column placement plus deterministic table-cell/bar geometry and semantic IDs. `canvas-excalidraw` only lowers that semantic geometry to fixed Excalidraw rectangles, labels, and a baseline. There is no chart engine, table framework, theme API, registry, new service, multi-series support, or line/radar implementation.
+
+Chromium coverage exercises the canonical table/chart page, visible table edits, visible numeric bar edits, structured diagnostics with last-good retention, automatic repair recovery, and the existing M5/M6 browser regressions.
+
 Run the standalone playground with:
 
 ```sh

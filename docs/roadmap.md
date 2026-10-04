@@ -655,11 +655,31 @@ chart bar {
 }
 ~~~
 
-Exact statement names and optional fields remain an implementation detail until the M7.1 slice requires them.
+M7.1 now fixes only this minimal grammar: `header`, repeated `row`, `labels`, and `values` statements whose array payloads are JSON literals. No option schema is introduced.
 
 ### M7.1 — Table + Single-Series Bar Vertical Slice
 
-The first M7 slice must integrate all three parts in one real presentation page:
+Status: complete
+
+Delivered grammar:
+
+~~~mindppt
+table {
+  header ["Channel", "Orders", "Revenue"]
+  row ["Direct", 184, 42600]
+  row ["Partner", 121, 31900]
+}
+
+chart bar {
+  labels ["Direct", "Partner"]
+  values [184, 121]
+}
+~~~
+
+Array payloads are JSON literals. The parser keeps table cells and chart data structured, diagnostics stay source-ranged, the compiler owns table-cell and bar geometry inside the assigned content box, and `canvas-excalidraw` mechanically lowers that geometry. The canonical `examples/m7-data-analysis.mindppt` fixture exercises both constructs together in the existing two-column layout through the live authoring and Chromium path.
+
+
+The delivered M7.1 slice integrates all three parts in one real presentation page:
 
 ~~~text
 structured core table

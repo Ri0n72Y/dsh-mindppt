@@ -1,5 +1,9 @@
 import { MindPptCompileError } from './errors.ts'
 import type { ParsedContent } from './parsed-types.ts'
+import {
+  parseBarChartBlock,
+  parseTableBlock,
+} from './structured-parser.ts'
 import type { Token } from './tokenizer.ts'
 
 const IMAGE = /^!\[([^\]]*)\]\(([^)]+)\)$/
@@ -33,6 +37,18 @@ class ContentParser {
           text: token.text,
           range: token.range,
         })
+        this.index += 1
+        continue
+      }
+
+      if (token.kind === 'table-block') {
+        content.push(parseTableBlock(token, this.slideId))
+        this.index += 1
+        continue
+      }
+
+      if (token.kind === 'bar-chart-block') {
+        content.push(parseBarChartBlock(token, this.slideId))
         this.index += 1
         continue
       }

@@ -6,6 +6,7 @@ import type {
 } from 'dsh-mindppt-code-parser'
 
 import { semanticImageFileId } from './assets.ts'
+import { renderBarChart, renderTable } from './structured-scene.ts'
 import { renderTreeScene } from './tree-scene.ts'
 
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
@@ -69,6 +70,9 @@ function renderContent(
   if (element.kind === 'extension') {
     return renderExtensionFallback(slide, element)
   }
+
+  if (element.kind === 'table') return renderTable(slide, element)
+  if (element.kind === 'bar-chart') return renderBarChart(slide, element)
 
   return [{
     type: 'rectangle',
@@ -141,6 +145,7 @@ function contentText(element: ContentNode): string {
   }
 
   if (element.kind === 'image') return element.alt
+  if (element.kind === 'table' || element.kind === 'bar-chart') return ''
   return element.text
 }
 
@@ -156,5 +161,8 @@ function contentFontSize(element: ContentNode): number {
       return 24
     case 'extension':
       return 22
+    case 'table':
+    case 'bar-chart':
+      return 17
   }
 }

@@ -1,0 +1,67 @@
+mindppt
+
+tree LR {
+  hero --> agenda
+  agenda --> customer
+  customer --> analysis
+}
+
+slide hero {
+  layout hero
+
+  # M7 Data Analysis
+
+  ## Structured table + bar chart
+
+  Core data stays semantic until Excalidraw lowering.
+}
+
+slide agenda {
+  layout title-content
+
+  # Analysis Flow
+
+  The first M7 slice reuses the existing presentation pipeline.
+
+  - Core structured authoring
+  - Deterministic semantic geometry
+}
+
+slide customer {
+  layout two-column
+
+  # Customer Profile
+
+  left {
+    Outdoor teams need a fast way to explain the product story.
+
+    - Clear value at a glance
+    - Stable setup for field use
+  }
+
+  right {
+    ![Customer workshop](./assets/customer.svg)
+  }
+}
+
+slide analysis {
+  layout two-column
+
+  # Q3 Channel Performance
+
+  left {
+    table {
+      header ["Channel", "Orders", "Revenue"]
+      row ["Direct", 184, 42600]
+      row ["Partner", 121, 31900]
+      row ["Marketplace", 96, 24700]
+    }
+  }
+
+  right {
+    chart bar {
+      labels ["Direct", "Partner", "Marketplace"]
+      values [184, 121, 96]
+    }
+  }
+}

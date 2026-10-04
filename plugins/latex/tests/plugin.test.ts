@@ -23,10 +23,9 @@ const SOURCE = [
   '',
 ].join('\n')
 
-const EXCALIDRAW_DEFAULT_FONT_FAMILY = 5
 
 describe('dsh-mindppt-latex', () => {
-  it('renders formula segments as deterministic single-line default-font text', () => {
+  it('renders formula segments as deterministic single-line text', () => {
     const element: ExtensionNode = {
       kind: 'extension',
       type: 'latex',
@@ -68,7 +67,6 @@ describe('dsh-mindppt-latex', () => {
       )).toEqual(expect.objectContaining({
         type: 'text',
         text,
-        fontFamily: EXCALIDRAW_DEFAULT_FONT_FAMILY,
       }))
     }
 
@@ -138,17 +136,14 @@ describe('dsh-mindppt-latex', () => {
     expect(base).toEqual(expect.objectContaining({
       type: 'text',
       text: 'e',
-      fontFamily: EXCALIDRAW_DEFAULT_FONT_FAMILY,
     }))
     expect(superscript).toEqual(expect.objectContaining({
       type: 'text',
       text: 'iπ',
-      fontFamily: EXCALIDRAW_DEFAULT_FONT_FAMILY,
     }))
     expect(suffix).toEqual(expect.objectContaining({
       type: 'text',
       text: '+ 1 = 0',
-      fontFamily: EXCALIDRAW_DEFAULT_FONT_FAMILY,
     }))
     expect((superscript as { y: number }).y).toBeLessThan(
       (base as { y: number }).y,

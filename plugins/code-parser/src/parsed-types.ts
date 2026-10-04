@@ -78,7 +78,26 @@ export interface ParsedTree {
   range: SourceRange
 }
 
+export interface ParsedSoftLink {
+  fromSlideId: string
+  toSlideId: string
+  range: SourceRange
+}
+
+export interface ParsedPathOccurrence {
+  slideId: string
+  range: SourceRange
+}
+
+export interface ParsedPresentationPath {
+  name: string
+  occurrences: ParsedPathOccurrence[]
+  range: SourceRange
+}
+
 export interface ParsedDocument {
   slides: ParsedSlide[]
+  links: ParsedSoftLink[]
+  paths: ParsedPresentationPath[]
   tree?: ParsedTree
 }

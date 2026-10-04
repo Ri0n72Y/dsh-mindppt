@@ -255,7 +255,6 @@ interface MindPptStructure {
   links: SoftLink[]
   paths: PresentationPath[]
   diagnostics: Diagnostic[]
-  sourceMap: SourceMap
 }
 
 interface SoftLink {
@@ -278,6 +277,8 @@ interface PresentationPathOccurrence {
   sourceRange: SourceRange
 }
 ~~~
+
+Source mapping in v0 is carried by stable semantic IDs and embedded `SourceRange` values on the relevant semantic nodes/declarations. `MindPptStructure` does not expose a required standalone `SourceMap` object.
 
 Soft links and paths remain resolved core semantics after parsing. Soft links may be lowered by the renderer as visually distinct relations. Paths remain ordered Camera playback data and are not canvas topology edges.
 
@@ -456,7 +457,7 @@ This supports:
 - future diffing;
 - precise source mapping.
 
-## 14. Source map
+## 14. Source ranges and precise-edit mapping
 
 Source ranges are first-class compiler output from the first real parser milestone.
 
@@ -464,36 +465,28 @@ M1 starts with structural ranges.
 
 M2-M3 expand ranges to Markdown content and diagnostics.
 
+The current implementation contract is embedded semantic ranges, not a standalone `SourceMap` service or object.
+
 Conceptually:
 
 ~~~text
-slide:market
-  -> lines 20-42
-
-slide:market/title:0
-  -> line 23
-
-slide:market/chart:growth
-  -> lines 31-37
-
-link:competitor->summary
-  -> line 48
-
-path:main
-  -> lines 50-57
-
-path:main/occurrence:3
-  -> line 54
+stable semantic ID
+  +
+SourceRange { start, end }
+  -> [start, end) JavaScript string offsets
+     into the source that produced this structure
 ~~~
 
-Source maps later enable:
+These ranges support:
 
 - editor navigation;
 - diagnostics;
-- precise DSH agent patches;
-- refactoring tools.
+- guarded precise DSH Agent patches;
+- future refactoring tools when a concrete requirement exists.
 
-The M0 bootstrap parser intentionally omits source maps.
+M10 must reuse these existing ranges. It should add finer ranges only if a concrete acceptance edit cannot be expressed safely with the current semantic ranges and current source.
+
+The parser owns production of semantic identity, ranges, diagnostics, and compiled structure. It does not own applying Agent patches.
 
 ## 15. Diagnostics and last-good output
 
@@ -523,9 +516,13 @@ structure
 
 A half-written block must not blank the presentation.
 
+For M10 inspection, current source/diagnostics must be distinguished from semantic structure currency. When the current source is invalid, the available semantic structure is last-good and callers need an explicit state equivalent to `structureCurrent: false`.
+
+The parser does not auto-rollback an accepted source edit merely because compilation fails.
+
 ## 16. Cordis service boundary
 
-The public service stays small.
+The public parser service stays small.
 
 Conceptually:
 
@@ -533,8 +530,9 @@ Conceptually:
 ctx.mindpptParser.compile(source)
 ctx.mindpptParser.structure
 ctx.mindpptParser.diagnostics
-ctx.mindpptParser.sourceMap
 ~~~
+
+Source ranges are carried by the semantic output itself; no separate `ctx.mindpptParser.sourceMap` API is required by the current v0 implementation.
 
 Expected events may include:
 
@@ -546,6 +544,8 @@ mindppt/diagnostics
 Exact public names can evolve with implementation.
 
 No supported standalone parser API outside Cordis is required.
+
+Guarded patch application belongs to the authoring/editor boundary. M10 patches the source through the existing editor mutation path and then invokes the existing parser compile path; code-parser does not become an Agent mutation service.
 
 ## 17. Extension capability boundary
 
@@ -621,11 +621,13 @@ code-parser does not own:
 - active path selection or occurrence cursor state;
 - cursor reconciliation or route migration;
 - DSH prompts and authoring policy;
+- guarded source-patch application;
+- Host/Client bridge ownership;
 - sidebar mounting;
 - final PPTX export;
 - extension-specific grammars.
 
-It enforces structure, content-profile parsing, semantic validity, identity, source mapping, and geometry.
+It enforces structure, content-profile parsing, semantic validity, stable identity, embedded source ranges, diagnostics, and geometry.
 
 ## 19. Current implementation boundary
 

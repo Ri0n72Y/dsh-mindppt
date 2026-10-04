@@ -6,9 +6,9 @@ import type {
   SoftLink,
 } from 'dsh-mindppt-code-parser'
 
+import { createCameraView } from './camera-view.ts'
 import type {
   CameraFocusRequest,
-  CameraTarget,
   CameraView,
 } from './types.ts'
 
@@ -49,41 +49,13 @@ export default class MindPptCameraService extends Service {
   }
 
   get view(): CameraView {
-    const current = this.activeSlideId
-    const slide = current ? this.findSlide(current) : undefined
-    const parent = current ? this.findParent(current) : undefined
-    const path = this.findPath(this.selectedPathId)
-    const index = this.pathIndex
-
-    return {
-      slideIds: this.structure?.slides.map(({ id }) => id) ?? [],
-      childSlideIds: current ? this.findChildren(current) : [],
-      pathOptions: this.structure?.paths?.map(({ id, name }) => ({
-        id,
-        name,
-      })) ?? [],
-      outgoingSoftLinks: current
-        ? this.findOutgoingLinks(current).map(({ id, toSlideId }) => ({
-            id,
-            targetSlideId: toSlideId,
-          }))
-        : [],
-      canPathPrevious: Boolean(path && index !== undefined && index > 0),
-      canPathNext: Boolean(
-        path && index !== undefined && index + 1 < path.occurrences.length,
-      ),
-      ...(current ? { currentSlideId: current } : {}),
-      ...(slide ? { target: toCameraTarget(slide) } : {}),
-      ...(parent ? { parentSlideId: parent } : {}),
-      ...(path ? { selectedPathId: path.id } : {}),
-      ...(path && index !== undefined
-        ? {
-            currentPathOccurrenceIndex: index,
-            currentPathOccurrenceCount: path.occurrences.length,
-          }
-        : {}),
-      ...(this.request ? { focusRequest: this.request } : {}),
-    }
+    return createCameraView(
+      this.structure,
+      this.activeSlideId,
+      this.selectedPathId,
+      this.pathIndex,
+      this.request,
+    )
   }
 
   focusSlide(slideId: string): boolean {
@@ -213,12 +185,3 @@ export default class MindPptCameraService extends Service {
   }
 }
 
-function toCameraTarget(slide: SlideNode): CameraTarget {
-  return {
-    slideId: slide.id,
-    x: slide.x,
-    y: slide.y,
-    width: slide.width,
-    height: slide.height,
-  }
-}

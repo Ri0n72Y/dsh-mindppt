@@ -267,6 +267,7 @@ interface SoftLink {
 
 interface PresentationPath {
   id: string
+  name: string
   occurrences: PresentationPathOccurrence[]
   sourceRange: SourceRange
 }

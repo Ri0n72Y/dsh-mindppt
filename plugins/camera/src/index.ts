@@ -1,33 +1,26 @@
 import { Service, type Context } from '@deepseek-ai/cordis'
 import type {
   MindPptStructure,
+  PresentationPath,
   SlideNode,
+  SoftLink,
 } from 'dsh-mindppt-code-parser'
 
+import type {
+  CameraFocusRequest,
+  CameraTarget,
+  CameraView,
+} from './types.ts'
+
+export type {
+  CameraFocusRequest,
+  CameraPathOption,
+  CameraSoftLink,
+  CameraTarget,
+  CameraView,
+} from './types.ts'
+
 export const serviceName = 'mindpptCamera' as const
-
-export interface CameraTarget {
-  slideId: string
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
-export interface CameraFocusRequest {
-  revision: number
-  slideId: string
-  fromSlideId?: string
-}
-
-export interface CameraView {
-  slideIds: readonly string[]
-  childSlideIds: readonly string[]
-  currentSlideId?: string
-  target?: CameraTarget
-  parentSlideId?: string
-  focusRequest?: CameraFocusRequest
-}
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -40,17 +33,15 @@ export default class MindPptCameraService extends Service {
 
   private structure: MindPptStructure | undefined
   private activeSlideId: string | undefined
+  private selectedPathId: string | undefined
+  private pathIndex: number | undefined
   private revision = 0
   private request: CameraFocusRequest | undefined
 
   constructor(ctx: Context) {
     super(ctx, serviceName)
-
     this.structure = ctx.mindpptParser.structure
-
-    ctx.on('mindppt/compiled', (structure) => {
-      this.acceptStructure(structure)
-    })
+    ctx.on('mindppt/compiled', (structure) => this.acceptStructure(structure))
   }
 
   get currentSlideId(): string | undefined {
@@ -58,29 +49,101 @@ export default class MindPptCameraService extends Service {
   }
 
   get view(): CameraView {
-    const currentSlideId = this.activeSlideId
-    const slide = currentSlideId
-      ? this.findSlide(currentSlideId)
-      : undefined
-    const parentSlideId = currentSlideId
-      ? this.findParent(currentSlideId)
-      : undefined
+    const current = this.activeSlideId
+    const slide = current ? this.findSlide(current) : undefined
+    const parent = current ? this.findParent(current) : undefined
+    const path = this.findPath(this.selectedPathId)
+    const index = this.pathIndex
 
     return {
       slideIds: this.structure?.slides.map(({ id }) => id) ?? [],
-      childSlideIds: currentSlideId
-        ? this.findChildren(currentSlideId)
+      childSlideIds: current ? this.findChildren(current) : [],
+      pathOptions: this.structure?.paths?.map(({ id, name }) => ({
+        id,
+        name,
+      })) ?? [],
+      outgoingSoftLinks: current
+        ? this.findOutgoingLinks(current).map(({ id, toSlideId }) => ({
+            id,
+            targetSlideId: toSlideId,
+          }))
         : [],
-      ...(currentSlideId ? { currentSlideId } : {}),
+      canPathPrevious: Boolean(path && index !== undefined && index > 0),
+      canPathNext: Boolean(
+        path && index !== undefined && index + 1 < path.occurrences.length,
+      ),
+      ...(current ? { currentSlideId: current } : {}),
       ...(slide ? { target: toCameraTarget(slide) } : {}),
-      ...(parentSlideId ? { parentSlideId } : {}),
+      ...(parent ? { parentSlideId: parent } : {}),
+      ...(path ? { selectedPathId: path.id } : {}),
+      ...(path && index !== undefined
+        ? {
+            currentPathOccurrenceIndex: index,
+            currentPathOccurrenceCount: path.occurrences.length,
+          }
+        : {}),
       ...(this.request ? { focusRequest: this.request } : {}),
     }
   }
 
   focusSlide(slideId: string): boolean {
-    const slide = this.findSlide(slideId)
-    if (!slide) return false
+    if (!this.findSlide(slideId)) return false
+    this.clearPath()
+    return this.issueFocus(slideId)
+  }
+
+  focusParent(): boolean {
+    const current = this.activeSlideId
+    const parent = current ? this.findParent(current) : undefined
+    return parent ? this.focusSlide(parent) : false
+  }
+
+  focusChild(slideId: string): boolean {
+    const current = this.activeSlideId
+    if (!current || !this.findChildren(current).includes(slideId)) return false
+    return this.focusSlide(slideId)
+  }
+
+  selectPath(pathId: string): boolean {
+    const path = this.findPath(pathId)
+    return path ? this.focusPathOccurrence(path, 0) : false
+  }
+
+  pathNext(): boolean {
+    const path = this.findPath(this.selectedPathId)
+    const index = this.pathIndex
+    return path && index !== undefined
+      ? this.focusPathOccurrence(path, index + 1)
+      : false
+  }
+
+  pathPrevious(): boolean {
+    const path = this.findPath(this.selectedPathId)
+    const index = this.pathIndex
+    return path && index !== undefined && index > 0
+      ? this.focusPathOccurrence(path, index - 1)
+      : false
+  }
+
+  followSoftLink(linkId: string): boolean {
+    const current = this.activeSlideId
+    if (!current) return false
+
+    const link = this.findOutgoingLinks(current).find(({ id }) => id === linkId)
+    return link ? this.focusSlide(link.toSlideId) : false
+  }
+
+  private focusPathOccurrence(path: PresentationPath, index: number): boolean {
+    const occurrence = path.occurrences[index]
+    if (!occurrence || !this.findSlide(occurrence.slideId)) return false
+
+    this.selectedPathId = path.id
+    this.pathIndex = index
+    return this.issueFocus(occurrence.slideId)
+  }
+
+  private issueFocus(slideId: string): boolean {
+    if (!this.findSlide(slideId)) return false
 
     const fromSlideId = this.activeSlideId
     this.activeSlideId = slideId
@@ -93,36 +156,44 @@ export default class MindPptCameraService extends Service {
     return true
   }
 
-  focusParent(): boolean {
-    const currentSlideId = this.activeSlideId
-    if (!currentSlideId) return false
-
-    const parentSlideId = this.findParent(currentSlideId)
-    return parentSlideId ? this.focusSlide(parentSlideId) : false
-  }
-
-  focusChild(slideId: string): boolean {
-    const currentSlideId = this.activeSlideId
-    if (!currentSlideId) return false
-    if (!this.findChildren(currentSlideId).includes(slideId)) return false
-
-    return this.focusSlide(slideId)
-  }
-
   private acceptStructure(structure: MindPptStructure): void {
     this.structure = structure
 
-    if (
-      this.activeSlideId
-      && !structure.slides.some(({ id }) => id === this.activeSlideId)
-    ) {
+    if (!this.activeSlideId) {
+      this.clearPath()
+      return
+    }
+
+    if (!this.findSlide(this.activeSlideId)) {
       this.activeSlideId = undefined
       this.request = undefined
+      this.clearPath()
+      return
     }
+
+    const path = this.findPath(this.selectedPathId)
+    const occurrence = path && this.pathIndex !== undefined
+      ? path.occurrences[this.pathIndex]
+      : undefined
+
+    if (!occurrence || occurrence.slideId !== this.activeSlideId) {
+      this.clearPath()
+    }
+  }
+
+  private clearPath(): void {
+    this.selectedPathId = undefined
+    this.pathIndex = undefined
   }
 
   private findSlide(slideId: string): SlideNode | undefined {
     return this.structure?.slides.find(({ id }) => id === slideId)
+  }
+
+  private findPath(pathId?: string): PresentationPath | undefined {
+    return pathId
+      ? this.structure?.paths?.find(({ id }) => id === pathId)
+      : undefined
   }
 
   private findParent(slideId: string): string | undefined {
@@ -133,6 +204,12 @@ export default class MindPptCameraService extends Service {
     return this.structure?.tree?.edges
       .filter(({ from }) => from === slideId)
       .map(({ to }) => to) ?? []
+  }
+
+  private findOutgoingLinks(slideId: string): SoftLink[] {
+    return this.structure?.links?.filter(
+      ({ fromSlideId }) => fromSlideId === slideId,
+    ) ?? []
   }
 }
 

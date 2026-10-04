@@ -12,6 +12,8 @@ slide demo {
   \`\`\`latex
   f(x) = { x | x > 0 }
   A --> B
+  link A -.-> B
+  path main {
   \`\`\`
 }
 `
@@ -22,10 +24,13 @@ slide demo {
     expect(fence).toEqual(expect.objectContaining({
       kind: 'fence',
       type: 'latex',
-      raw: '  f(x) = { x | x > 0 }\n  A --> B',
+      raw: '  f(x) = { x | x > 0 }\n  A --> B'
+        + '\n  link A -.-> B\n  path main {',
     }))
 
     expect(tokens.filter((token) => token.kind === 'edge')).toHaveLength(0)
+    expect(tokens.filter((token) => token.kind === 'soft-link')).toHaveLength(0)
+    expect(tokens.filter((token) => token.kind === 'path-start')).toHaveLength(0)
     expect(tokens.filter((token) => token.kind === 'block-end')).toHaveLength(1)
   })
 })

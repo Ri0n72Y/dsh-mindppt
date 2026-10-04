@@ -24,16 +24,21 @@ Excalidraw
 
 A slide is rendered as an Excalidraw frame. Tree edges define the primary spatial structure, soft links add cross-tree relations, and presentation paths define optional playback routes through that structure.
 
-## Initial plugin split
+## Plugin split
+
+Current standalone runtime:
 
 - `code-editor` — edits MindPPT source; source code is the single source of truth.
-- `code-parser` — parses MindPPT source into the renderable structure.
+- `code-parser` — parses MindPPT source into semantic structure with stable IDs and embedded source ranges.
 - `canvas-excalidraw` — subscribes to compiled structures and lowers them to Excalidraw elements.
 - `camera` — controls presentation navigation and viewport transitions.
-- `dsh-capability` — exposes authoring knowledge, source access, templates, and agent-facing tools to DSH.
-- `dsh-mindppt-sidebar` — mounts MindPPT into the DSH sidebar.
 
-The standalone web host will run the same Cordis plugins without requiring DSH.
+M10 adds two DSH integration packages, but they do not exist in the accepted M0-M9 standalone baseline yet:
+
+- `dsh-capability` — Host-side Agent tools over the existing MindPPT runtime.
+- `dsh-mindppt-sidebar` — Client-side React UI connected to that same Host-owned source/state through a narrow DSH bridge.
+
+The standalone web host runs the existing Cordis plugins without requiring DSH.
 
 Web graphical interfaces are written in React + TypeScript. React owns host UI composition; Excalidraw remains the canvas renderer rather than the application state model.
 
@@ -148,4 +153,19 @@ M9 implementation adds the minimum runtime content-renderer contract to `mindppt
 
 The reference package `dsh-mindppt-latex` is a real Cordis plugin that claims only `latex`. Its registration is wrapped in `ctx.effect()`, so disposing the plugin fiber automatically removes the capability and restores generic fallback. The M9 formula profile renders exponent syntax such as `e^{i\\pi} + 1 = 0` with separate baseline and superscript primitives inside the existing semantic box rather than presenting the raw fence text.
 
-The standalone playground uses `examples/m9-content-plugin-latex.mindppt`, keeps the M6/M7/M8 integrated behaviors, and exposes only two lifecycle controls: Enable LaTeX and Disable LaTeX, plus the active renderer list. The Post-M9 Manual Acceptance Gate remains pending until after independent review and merge.
+The standalone playground uses `examples/m9-content-plugin-latex.mindppt`, keeps the M6/M7/M8 integrated behaviors, and exposes only two lifecycle controls: Enable LaTeX and Disable LaTeX, plus the active renderer list. Independent review, merge, focused post-M9 fixes, and the integrated real-machine M7/M8/M9 acceptance pass are complete. M0-M9 is the accepted standalone baseline.
+
+
+## M10 requirement baseline: DSH integration + Agent authoring
+
+M10 is documentation-defined but not implemented.
+
+The DSH Host will own the single existing MindPPT runtime. Host-side `dsh-capability` will expose only the minimum Agent loop: inspect current source/diagnostics/semantic state, apply one expected-text-guarded contiguous source replacement, and provide concise current-language guidance. Client-side `dsh-mindppt-sidebar` will reuse the existing React/Excalidraw authoring behavior through the smallest supported Host/Client bridge; it must not create a second authoring runtime.
+
+Precise edits reuse stable semantic IDs plus embedded `SourceRange { start, end }` values. M10 does not introduce a standalone SourceMap abstraction. Inspection must distinguish current source/diagnostics from last-good semantic structure with an explicit state equivalent to `structureCurrent`, so an Agent never applies stale last-good ranges to invalid current source.
+
+All accepted edits continue through `mindpptEditor.setSource()` and the existing compiler path. A compile failure keeps the invalid current source and current diagnostics while preserving the last-good semantic structure and visible Excalidraw presentation; source patches are not auto-rolled back.
+
+Dynamic extension capability discovery comes from the real M9 `mindpptCanvas.extensionRendererTypes` state. Agent-facing APIs never read or write raw Excalidraw JSON.
+
+M10 is proven only after the automated implementation path is followed by one focused real DSH session where Agent and sidebar share the same Host source, valid guarded edits visibly update Excalidraw without reload, an intentional invalid edit preserves last-good rendering, and a repair patch restores the current presentation.

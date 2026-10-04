@@ -989,56 +989,266 @@ Visible acceptance:
 
 ## M9 — Content Plugin Contract + LaTeX Reference Plugin
 
-Purpose: prove open content through a real external capability.
+Status: requirement baseline; implementation pending
 
-The core parser continues to emit generic `ExtensionNode` values.
+Purpose: prove open content as one runtime capability-lifecycle vertical slice without changing grammar, semantic structure, or compiler-owned geometry.
 
-It does not gain LaTeX grammar.
+M9 delivers together:
 
-Add the smallest Cordis-native extension capability required by a real plugin.
+~~~text
+existing generic ExtensionNode semantics
+        +
+runtime extension renderer capability
+        +
+Cordis-scoped registration lifecycle
+        +
+same-source rerender on capability change
+        +
+active renderer-type discovery
+        +
+dsh-mindppt-latex reference plugin
+~~~
 
-Reference plugin:
+This is not a parser milestone, generic extension platform, semantic-transformation framework, or layout-plugin architecture.
 
-```text
+### M9 semantic boundary
+
+The core parser continues to emit the same generic `ExtensionNode` whether or not any extension renderer is loaded.
+
+For one unchanged source, capability load/unload must not change:
+
+- node kind;
+- extension type;
+- raw payload;
+- source range;
+- semantic identity;
+- slide-local `x / y / width / height`;
+- slide world geometry;
+- tree, SoftLink, or PresentationPath semantics.
+
+Capability lifecycle changes only the canvas rendering projection. It does not register new outer grammar, mutate source, transform the node into a new compiler semantic type, re-enter slide layout, request new compiler geometry, or change Camera semantic state.
+
+M9 v0 establishes one capability only:
+
+~~~text
+extension renderer capability
+~~~
+
+Semantic transformation, sizing hints, and layout hints remain deferred until a concrete extension cannot work inside the existing compiler-owned semantic box.
+
+### Capability ownership and registration
+
+The existing `mindpptCanvas` / `canvas-excalidraw` responsibility owns the minimum runtime-local extension-renderer registration surface because rendering projection is the only current consumer.
+
+M9 does not require a standalone extension registry/service. A new service is justified only if implementation discovers a concrete independent lifecycle blocker that prevents this acceptance.
+
+The minimum registration semantics are:
+
+~~~text
+extension type -> one active renderer capability
+~~~
+
+A renderer consumes the resolved generic `ExtensionNode`, its existing semantic geometry, and only the minimum context required for mechanical lowering. It returns Excalidraw-compatible specialized rendering.
+
+Exact TypeScript method names and signatures remain an implementation detail.
+
+Registration state must be:
+
+- runtime-local, never module-global;
+- deterministic;
+- bound to the registering Cordis fiber lifecycle.
+
+### Cordis lifecycle and same-source rerender
+
+Lifecycle behavior is:
+
+~~~text
+plugin load
+  -> registration becomes active
+
+plugin unload / fiber dispose
+  -> registration automatically disappears
+~~~
+
+The host does not manually unregister plugin-owned handlers.
+
+Capability-set changes must rebuild the rendering projection from the current last-successful `MindPptStructure` without editing source or invoking parser compilation.
+
+The canonical lifecycle acceptance fixes the same:
+
+~~~text
+source
+MindPptStructure
+ExtensionNode
+semantic ID
+sourceRange
+x / y / width / height
+~~~
+
+and verifies:
+
+~~~text
+no plugin
+  -> generic fallback visible
+
+load dsh-mindppt-latex
+  -> specialized formula rendering visible
+
+unload plugin
+  -> generic fallback restored
+~~~
+
+If this requires a minimal canvas scene-change notification, M9 may add that lifecycle hook. It must not grow into a generic reactive framework, event-bus redesign, projection scheduler, or runtime dependency graph.
+
+Plugin load/unload must not:
+
+- create a new parser compile revision;
+- change parser diagnostics;
+- modify source;
+- update the last-good semantic structure;
+- reset Camera;
+- change current slide or active path occurrence;
+- emit a navigation request.
+
+M9 therefore distinguishes compile-state changes from projection-capability changes.
+
+### Fallback, handler failure, and conflict
+
+Unknown extension types are always valid.
+
+When no matching renderer is active, the existing generic raw fallback remains visible. Raw payload remains preserved regardless of specialized rendering availability.
+
+If a matching renderer fails on one payload, the presentation must not blank or fail as a whole. The minimum safe behavior is:
+
+~~~text
+specialized render failure
+  -> generic extension fallback
+~~~
+
+Existing minimal warning mechanisms may be reused, but M9 does not require a new runtime diagnostics subsystem.
+
+At most one active renderer may claim an extension type.
+
+For a duplicate claim:
+
+~~~text
+renderer A claims "latex"
+renderer B attempts to claim "latex"
+~~~
+
+the result must be deterministic:
+
+- B registration does not become active;
+- A remains active;
+- no silent last-loaded-wins behavior;
+- B failure/disposal cannot remove or poison A.
+
+M9 adds no priorities, overrides, provider ranking, fallback chain, or multi-handler composition. Duplicate claims are runtime capability conflicts, not parser grammar errors.
+
+### Capability discovery
+
+M9 exposes the currently active extension renderer types from actual runtime registration state.
+
+For example:
+
+~~~text
+[]
+load latex -> ["latex"]
+unload latex -> []
+~~~
+
+Discovery must not be derived from source fence types, parser-known extension types, installed packages, or a hard-coded list.
+
+M9 does not define the M10 Agent capability schema.
+
+### LaTeX reference plugin
+
+M9 adds one independent Cordis plugin/package:
+
+~~~text
 dsh-mindppt-latex
-```
+~~~
 
-Expected lifecycle:
+It proves that the generic contract can be consumed by a real external capability.
 
-```text
-plugin not loaded
-  -> latex fence renders as generic fallback
+The plugin:
 
-plugin loaded
-  -> latex ExtensionNode handled by plugin
-  -> formula output
-  -> Excalidraw-compatible rendering
+- claims only `latex`;
+- does not modify `code-parser`;
+- does not add LaTeX outer grammar;
+- consumes `ExtensionNode.raw`;
+- preserves the existing semantic content box;
+- produces visibly specialized formula rendering;
+- follows Cordis registration lifecycle.
 
-plugin unloaded
-  -> registration disappears with Cordis fiber
-  -> fallback remains valid
-```
+The browser-visible specialized result must be materially different from the generic fallback:
 
-Possible plugin capabilities:
+~~~text
+[latex]
+e^{i\pi}+1=0
+~~~
 
-- extension type declaration;
-- optional semantic transformation;
-- renderer;
-- optional size/layout hint.
+Changing only color, removing `[latex]`, or displaying another raw-text fallback does not satisfy acceptance.
 
-Do not introduce a global singleton registry.
+M9 does not require full LaTeX compatibility, arbitrary document LaTeX, equation numbering, a math editor, or a LaTeX layout engine. The requirement also does not freeze KaTeX, MathJax, SVG, canvas, or the specific Excalidraw primitive strategy; implementation should choose the smallest real approach that fits the existing pipeline.
 
-Capability discovery should expose the extension types currently available in the runtime.
+A second Mermaid reference plugin is not required. Genericity can be proven with registration/runtime tests using an arbitrary test extension type. Mermaid remains deferred until a concrete use case exists.
 
-If multiple plugins claim the same extension type, the runtime should report a capability conflict rather than silently choosing a last-loaded handler.
+### Stable identity, geometry, and Camera boundary
 
-If useful, a second reference plugin such as Mermaid may be added to verify that the contract is not LaTeX-specific.
+Capability lifecycle must not alter:
 
-Mermaid-like tree syntax remains core regardless of whether a Mermaid content plugin exists.
+- `ExtensionNode` semantic ID;
+- source range;
+- slide position;
+- extension content box;
+- primary tree;
+- SoftLinks;
+- PresentationPaths;
+- Camera current slide or path occurrence.
+
+Specialized render element IDs should derive deterministically from the existing `ExtensionNode` identity.
+
+Camera remains unaware of content renderer type.
+
+### Canonical fixture and browser-visible acceptance
+
+M9 should evolve `examples/m8-soft-links-presentation-paths.mindppt`, or a semantically equivalent next-generation integrated fixture, instead of using an isolated LaTeX-only demo as the sole acceptance proof.
+
+The canonical presentation adds at least one LaTeX fenced `ExtensionNode` while retaining the already delivered branching tree, ordinary Markdown, M6 layout/image behavior, M7 table/bar page, M8 SoftLink, M8 PresentationPaths, and Camera traversal.
+
+Browser-visible acceptance is:
+
+1. the canonical source compiles and renders normally with no LaTeX plugin;
+2. the LaTeX fence is visible through generic fallback;
+3. without source edits or parser recompile, load `dsh-mindppt-latex`;
+4. the same semantic `ExtensionNode` in the same semantic box becomes specialized formula rendering;
+5. capability discovery reports `latex` active;
+6. without source edits or parser recompile, unload the plugin;
+7. specialized rendering disappears and generic fallback returns;
+8. discovery removes `latex`;
+9. ordinary content, layout, assets, table/chart, tree, SoftLink, PresentationPaths, last-good behavior, and Camera state remain intact across the lifecycle.
+
+The playground may add only the minimum affordance needed to drive runtime enable/disable of the LaTeX capability. M9 does not introduce a plugin manager, settings system, marketplace, package installer, or dynamic remote loader.
 
 Visible acceptance:
 
-> The same source file remains valid with or without the LaTeX plugin; only rendering capability changes.
+> The same canonical source and same compiled `ExtensionNode` switch from generic fallback to specialized LaTeX rendering and back again solely through Cordis capability load/unload, with discovery tracking the active renderer and no source edit, semantic recompile, geometry change, or Camera reset.
+
+### Post-M9 Manual Acceptance Gate
+
+After M9 implementation, independent review, and merge are complete, but before M10 implementation begins, run one integrated manual acceptance pass on a real machine for the previously under-validated M7/M8/M9 user flow.
+
+The gate should cover:
+
+- M7 table/bar visual proportion and live data edits;
+- M8 saved path traversal, repeated occurrence, route switching, real SoftLink follow, and actual Camera feel;
+- M9 fallback, live capability load, specialized LaTeX rendering, unload-to-fallback, and stale scene/handler behavior;
+- diagnostics, last-good behavior, and cross-milestone regression feel.
+
+This gate does not replace M9 automated acceptance. If it exposes real defects, fix only those defects rather than using the gate to start a visual or architecture redesign.
+
+M10 implementation must not begin before this gate is complete.
 
 ---
 

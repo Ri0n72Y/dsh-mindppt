@@ -92,9 +92,9 @@ M3-M5 behavior remains part of the same runtime: failed compiles keep the last-g
 
 M6 is complete at the current product boundary. Broader image-fit behavior beyond the deterministic current image box is deferred to the backlog until a concrete presentation use case requires it. No generic layout engine, theme system, asset registry, or CSS-like layout DSL is introduced by the initial preset set.
 
-## Completed vertical slice: M7.1
+## M7 complete: delivered through M7.1
 
-M7.1 adds the first core structured data-analysis page without changing the M6/M5 architecture boundary.
+M7 is complete at the current product/v0 boundary. M7.1 is the delivered vertical slice: it adds the first core structured data-analysis page without changing the M6/M5 architecture boundary, and its table + single-series bar chart satisfies the v0 table/chart requirement.
 
 The canonical source is `examples/m7-data-analysis.mindppt`. It keeps the existing hero, title-content, two-column, local-image, and Camera smoke path, then adds one analysis slide whose left slot is a structured table and whose right slot is a single-series bar chart.
 

@@ -181,30 +181,49 @@ Missing an extension plugin must not cause a parser error.
 
 References are resolved after the complete structural document has been parsed.
 
-Initial references include:
+Core structural references include:
 
-- tree edges to slide IDs;
-- soft links to slide IDs;
-- path entries to slide IDs.
-
-Later references may include named structured components where a real feature requires them.
+- primary-tree edge endpoints -> slide IDs;
+- SoftLink source and target -> slide IDs;
+- each PresentationPath occurrence -> a slide ID.
 
 Declaration order must not decide validity.
 
+M8 keeps these as direct core references. Reference resolution resolves SoftLink endpoints; whether the two resolved endpoints are the same slide is a semantic-validation concern. This does not create a generic graph model, route registry, or navigation engine.
+
+Later references may include named structured components only when a concrete feature requires them.
+
 ## 8. Semantic validation
 
-Validation grows with the roadmap.
+Validation grows with the roadmap while keeping primary-tree, soft-link, and path semantics separate.
 
-Graph validation includes:
+Primary-tree validation includes:
 
 - duplicate slide IDs;
-- unresolved slide references;
+- unresolved tree-edge slide references;
 - duplicate tree edges;
 - multiple parents;
 - cycles;
 - unreachable slides as warnings.
 
-Structured content validation later includes:
+M8 SoftLink validation adds:
+
+- unknown source slide;
+- unknown target slide;
+- self-link relation where source == target;
+- duplicate identical source -> target relation.
+
+Soft links therefore connect distinct slides. The reverse target -> source relation is independent and valid when declared separately between distinct endpoints. No self-loop routing or renderer behavior is required.
+
+M8 PresentationPath validation adds:
+
+- duplicate path ID;
+- empty path;
+- unknown slide occurrence.
+
+Repeated slide occurrences are valid. Paths are ordered playback data, so the compiler performs no path adjacency validation, path cycle validation, route optimization, or graph-derived route generation.
+
+Structured content validation includes:
 
 - invalid layout-slot usage;
 - table shape errors;
@@ -238,7 +257,30 @@ interface MindPptStructure {
   diagnostics: Diagnostic[]
   sourceMap: SourceMap
 }
+
+interface SoftLink {
+  id: string
+  fromSlideId: string
+  toSlideId: string
+  sourceRange: SourceRange
+}
+
+interface PresentationPath {
+  id: string
+  occurrences: PresentationPathOccurrence[]
+  sourceRange: SourceRange
+}
+
+interface PresentationPathOccurrence {
+  id: string
+  slideId: string
+  sourceRange: SourceRange
+}
 ~~~
+
+Soft links and paths remain resolved core semantics after parsing. Soft links may be lowered by the renderer as visually distinct relations. Paths remain ordered Camera playback data and are not canvas topology edges.
+
+Downstream renderer and Camera code consume these semantics; they do not parse link/path authoring source.
 
 A slide contains world-space geometry and slide-local semantic nodes:
 
@@ -376,18 +418,23 @@ Supported direction projections are:
 
 Sibling/subtree ordering is deterministic, and identical source produces identical semantic IDs and coordinates.
 
-Soft links do not alter parent ownership or primary placement.
+Soft links do not alter parent ownership or primary placement. Presentation paths do not participate in mind-map placement at all.
 
 ## 13. Stable semantic identity
 
 Recompilation must not make every semantic object appear new.
 
-Named declarations naturally provide stable keys:
+Named declarations and core relations provide stable keys:
 
 ~~~text
 slide:market
 slide:market/chart:growth
+link:competitor->summary
+path:main
+path:main/occurrence:3
 ~~~
+
+A SoftLink identity is directional, so reversing its endpoints produces a different semantic identity. A path occurrence identity is tied to its deterministic occurrence position rather than inferred from slide ID; repeated slide IDs therefore remain distinct semantic occurrences.
 
 Unnamed Markdown content derives deterministic keys from stable structural position:
 
@@ -427,6 +474,15 @@ slide:market/title:0
 
 slide:market/chart:growth
   -> lines 31-37
+
+link:competitor->summary
+  -> line 48
+
+path:main
+  -> lines 50-57
+
+path:main/occurrence:3
+  -> line 54
 ~~~
 
 Source maps later enable:
@@ -516,6 +572,8 @@ code-parser does not own:
 - direct canvas mutation;
 - viewport animation;
 - camera timing;
+- active path selection or occurrence cursor state;
+- cursor reconciliation or route migration;
 - DSH prompts and authoring policy;
 - sidebar mounting;
 - final PPTX export;

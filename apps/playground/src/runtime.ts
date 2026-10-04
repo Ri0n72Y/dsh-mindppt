@@ -35,6 +35,10 @@ export interface PlaygroundRuntime {
   focusSlide: (slideId: string) => void
   focusParent: () => void
   focusChild: (slideId: string) => void
+  selectPath: (pathId: string) => void
+  pathPrevious: () => void
+  pathNext: () => void
+  followSoftLink: (linkId: string) => void
 }
 
 export async function createPlaygroundRuntime(
@@ -150,6 +154,18 @@ export async function createPlaygroundRuntime(
     },
     focusChild(slideId) {
       applyCameraAction(() => cameraService.focusChild(slideId))
+    },
+    selectPath(pathId) {
+      applyCameraAction(() => cameraService.selectPath(pathId))
+    },
+    pathPrevious() {
+      applyCameraAction(() => cameraService.pathPrevious())
+    },
+    pathNext() {
+      applyCameraAction(() => cameraService.pathNext())
+    },
+    followSoftLink(linkId) {
+      applyCameraAction(() => cameraService.followSoftLink(linkId))
     },
   }
 }

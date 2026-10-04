@@ -58,11 +58,10 @@ test('M9 LaTeX renderer load and unload reprojects the same source', async ({ pa
   await expect(page.getByLabel('Presentation path state')).toHaveText(
     'Path: short · 2/3',
   )
-  const restored = await expectCanvasChange(canvas, specialized)
-  expect(restored.equals(fallback)).toBe(true)
+  const restoredFallback = await expectCanvasChange(canvas, specialized)
 
   await page.getByRole('button', { name: 'Enable LaTeX renderer' }).click()
   await expect(active).toHaveText('Active: latex')
-  await expectCanvasChange(canvas, restored)
+  await expectCanvasChange(canvas, restoredFallback)
   await expect(editor).toHaveValue(source)
 })

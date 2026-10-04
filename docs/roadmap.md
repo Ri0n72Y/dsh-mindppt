@@ -836,10 +836,11 @@ SoftLink is core document structure. It is not slide content, an extension block
 M8 requires:
 
 - a directed from -> to semantic relation;
-- both source and target to resolve to existing slides;
+- source and target to resolve to distinct existing slides;
 - stable deterministic semantic identity and a usable source range;
+- an error when source and target are the same slide;
 - an error for an identical duplicate from -> to relation;
-- the reverse to -> from relation to remain a separate valid relation;
+- the reverse to -> from relation to remain a separate valid relation when its endpoints are distinct;
 - no change to primary-tree parent ownership;
 - no participation in primary-tree spatial layout;
 - renderer lowering that makes the relation visibly distinct from primary-tree edges without moving slides.
@@ -889,7 +890,19 @@ Minimum deterministic behavior:
 
 Non-path navigation exits active path playback context instead of trying to reconcile a cursor. This applies to direct focus, parent/child navigation, and following a soft link.
 
-Following a soft link uses the existing semantic slide-focus behavior and existing M5 choreography. M8 does not require a soft-link-specific or arbitrary-jump transition family.
+Following a soft link must be a real semantic interaction:
+
+~~~text
+current slide
+-> declared outgoing SoftLink from compiled semantics
+-> linked target slide
+-> existing Camera focus request
+-> existing M5 choreography
+~~~
+
+The user must be able to follow at least one actual outgoing SoftLink from the current slide. The linked target must come from the compiled SoftLink semantics; UI code must not hard-code the target or re-parse authoring source to recover it. The follow action then reuses the existing semantic slide-focus behavior and M5 choreography, and because it is non-path navigation it exits active path playback context.
+
+M8 does not freeze the public API shape for exposing linked targets or triggering the follow action. It does not require canvas-edge clicking, a new navigation service, or a soft-link-specific / arbitrary-jump transition family.
 
 ### Recompile and last-good semantics
 
@@ -909,7 +922,10 @@ Soft links:
 
 - unknown source slide;
 - unknown target slide;
+- self-link relation where source == target;
 - duplicate identical relation.
+
+A -> B and B -> A remain two independent valid relations. M8 does not implement self-loop routing, loop geometry, or special self-link renderer behavior.
 
 Paths:
 
@@ -944,13 +960,15 @@ The playground needs only the minimum controls required to prove the semantic ca
 - path selection;
 - previous;
 - next;
-- linked-target controls only if needed for visible acceptance.
+- at least one minimal user-visible SoftLink affordance that follows an actual declared outgoing relation from the current slide.
+
+That SoftLink affordance must obtain its linked target from compiled SoftLink semantics. It must not re-parse source, hard-code a target, or substitute an arbitrary direct slide selector for SoftLink follow acceptance.
 
 M8 does not design a presentation-player framework, route timeline/editor, transition framework, path registry, or new navigation service.
 
 Visible acceptance:
 
-> In the same canonical mind map, primary-tree geometry remains identical while at least one soft link is visibly distinct from tree edges. The user can select either of two saved paths and move previous/next through their ordered occurrences; the two paths produce different traversal order, and a repeated slide occurrence is traversed as a distinct step. Following the soft link reuses the existing Camera focus behavior and M5 choreography. Live source edits continue to publish valid changes, while invalid source preserves diagnostics, the last-good structure, and active Camera/path state.
+> In the same canonical mind map, primary-tree geometry remains identical while at least one soft link is visibly distinct from tree edges. The user can select either of two saved paths and move previous/next through their ordered occurrences; the two paths produce different traversal order, and a repeated slide occurrence is traversed as a distinct step. With `competitor -.-> summary` declared and `competitor` as the current slide, the user can use the SoftLink affordance to navigate to `summary`; the target is derived from compiled SoftLink semantics, and an ordinary arbitrary slide selector cannot substitute for this acceptance. The follow action reuses the existing Camera focus behavior and M5 choreography and exits active path playback context. Live source edits continue to publish valid changes, while invalid source preserves diagnostics, the last-good structure, and active Camera/path state.
 
 
 ---

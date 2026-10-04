@@ -635,7 +635,11 @@ M6 does not introduce a generic layout engine, constraint solver, theme system, 
 
 ## M7 — Core Structured Table + Chart
 
+Status: complete
+
 Purpose: prove the first real data-analysis presentation slice through the existing source -> semantic structure -> layout -> Excalidraw delivery path.
+
+M7.1's structured table + single-series bar chart satisfies this purpose and the v0 requirement for one table plus one bar or line chart. The current repository has no concrete line-chart presentation requirement, accepted fixture need, unresolved M7 acceptance item, or downstream M8-M10 dependency. M7 is therefore complete at the current product/v0 boundary.
 
 Tables are core semantic content. Charts remain semantic until renderer lowering.
 
@@ -749,14 +753,17 @@ Visible acceptance:
 
 > A two-column MindPPT slide contains a structured table on one side and a single-series bar chart on the other. Editing table or chart source data updates the visible Excalidraw scene through the existing live-authoring path while stable semantic identity, source ranges, last-good rendering, and Camera behavior remain intact.
 
-### M7.2 — Evidence-Gated Follow-up
+### Deferred Follow-up — Line Chart (Evidence-Gated)
 
-Only after M7.1 is complete and clean should concrete presentation use cases decide whether a line chart belongs in M7.
+Status: deferred
 
-Adding a line chart must reuse the proven semantic/rendering boundary rather than justify a generic chart framework.
+Line chart is not a remaining M7 acceptance item or a v0 blocker. It should return only when a concrete presentation use case requires it.
 
-Deferred from the initial M7 scope:
+If that evidence appears, a line chart must reuse the proven semantic/rendering boundary rather than justify a generic chart framework.
 
+Deferred from the completed M7 scope:
+
+- line chart;
 - radar;
 - theme system and theme APIs;
 - Markdown/GFM tables;

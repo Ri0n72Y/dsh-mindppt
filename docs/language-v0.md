@@ -236,22 +236,27 @@ Slides may exist outside the tree. Unreachable slides produce a warning rather t
 
 ## 8. Soft links
 
-Soft links express cross-branch semantic relationships.
+Soft links are directed cross-branch semantic relationships owned by the core document structure.
 
 ~~~mindppt
 link competitor -.-> summary
 ~~~
 
-They:
+For M8:
 
-- do not change parent ownership;
-- do not participate in primary tree layout;
-- may influence camera behavior when followed;
-- may coexist freely with the primary tree.
+- the source and target must each resolve to an existing slide;
+- the relation has stable deterministic semantic identity and a usable source range;
+- an identical duplicate source -> target relation is invalid;
+- the reverse target -> source relation is a separate valid relation;
+- soft links do not change primary-tree parent ownership;
+- soft links do not participate in primary-tree spatial layout;
+- renderer lowering may show them as a relation visually distinct from primary-tree edges without moving slides.
 
-The dotted-arrow spelling is intentionally Mermaid-like.
+Following a soft link is navigation to its target slide. It reuses the existing Camera slide-focus request and M5 geometry-based choreography; it does not create a soft-link-specific animation family.
 
-## 9. Slide
+Soft links do not establish a generic graph model. The dotted-arrow spelling remains intentionally Mermaid-like.
+
+## 9. Slide## 9. Slide
 
 A slide declaration creates both a presentation page and a mind-map node.
 
@@ -520,7 +525,7 @@ A future dsh-mindppt-mermaid plugin may lower supported Mermaid content to Excal
 
 ## 17. Path
 
-A path defines an optional ordered presentation route through the spatial document.
+A path is named core document structure that defines an ordered presentation route through the spatial document.
 
 ~~~mindppt
 path main {
@@ -544,41 +549,52 @@ path short {
 }
 ~~~
 
-A path:
+For M8:
 
-- does not modify tree structure;
-- may revisit a slide;
-- may follow tree edges, soft links, or arbitrary jumps;
-- is not the canonical document hierarchy.
+- the path name / semantic ID is unique;
+- a path is non-empty;
+- each entry is one ordered slide occurrence and must resolve to an existing slide;
+- repeated slide IDs are valid because occurrences, not unique slide IDs, define route position;
+- multiple paths may coexist;
+- paths have stable deterministic semantic identity and usable source ranges for the declaration and occurrences;
+- a step may follow a primary-tree edge, a soft link, or an arbitrary jump;
+- no adjacency or cycle validation is performed.
+
+A path is playback ordering only. It does not modify primary-tree ownership or world geometry and is not rendered as another topology edge set.
 
 ## 18. Camera semantics
 
-Camera behavior is not authored in detail in v0.
+M8 extends the existing Camera service rather than introducing a route/path service.
 
-The camera plugin consumes:
+Camera continues to own transient semantic navigation state and emit slide-focus requests. The React / Excalidraw host continues to own the existing M5 geometry-based viewport choreography.
 
-- slide world geometry;
-- tree relationships;
-- soft links;
-- selected path;
-- current and target slide;
-- viewport state.
-
-Initial transition families:
+Active path playback minimally tracks:
 
 ~~~text
-parent -> child
-child -> parent
-soft-link / arbitrary jump
+selectedPathId
+currentPathOccurrenceIndex
+currentSlideId
 ~~~
 
-Default choreography can infer zoom-out, travel, and zoom-in from geometry.
+The occurrence index is the authoritative route cursor. Camera must not infer path position from currentSlideId because the same slide may occur more than once in a path.
 
-User-authored camera keyframes are deferred.
+Minimum path playback behavior:
+
+- selecting a path focuses its first occurrence;
+- next advances to the next occurrence when one exists;
+- previous moves to the previous occurrence when one exists;
+- repeated same-slide occurrences remain distinct path steps;
+- focusing any path occurrence reuses the existing Camera focus request and M5 choreography.
+
+Direct focus, parent/child navigation, and following a soft link are non-path navigation. Each exits active path playback context instead of trying to reconcile a cursor.
+
+Compile failure keeps the last-good structure and current Camera/path state. After a successful recompile, active path playback is preserved only when the selected path still exists, the current occurrence index remains in range, and that exact occurrence still resolves to currentSlideId. Otherwise Camera clears the path playback context; ordinary current-slide preservation continues to follow the existing M5 rules.
+
+No cursor-reconciliation framework, route migration system, soft-link-specific transition family, or user-authored camera keyframes is required in M8.
 
 ## 19. Semantic output boundary
 
-The exact TypeScript contract may evolve, but the compiler output keeps high-level semantics.
+The exact TypeScript contract may evolve, but the compiler output keeps high-level document semantics for downstream renderer and Camera behavior.
 
 Conceptually:
 
@@ -592,7 +608,28 @@ interface MindPptStructure {
   diagnostics: Diagnostic[]
   sourceMap: SourceMap
 }
+
+interface SoftLink {
+  id: string
+  fromSlideId: string
+  toSlideId: string
+  sourceRange: SourceRange
+}
+
+interface PresentationPath {
+  id: string
+  occurrences: PresentationPathOccurrence[]
+  sourceRange: SourceRange
+}
+
+interface PresentationPathOccurrence {
+  id: string
+  slideId: string
+  sourceRange: SourceRange
+}
 ~~~
+
+Soft links and paths stay semantic after parsing and reference resolution. Primary-tree structure remains the only input to mind-map placement. The renderer may lower soft links into distinct relation primitives, while paths remain Camera playback data and have no canvas topology rendering.
 
 A slide contains world geometry plus semantic content with slide-local geometry.
 
@@ -620,9 +657,9 @@ chart
 extension
 ~~~
 
-Renderer plugins mechanically lower these semantic nodes into Excalidraw-compatible scene data.
+Renderer plugins mechanically lower these semantic nodes and document relations into Excalidraw-compatible scene data. They do not parse link/path authoring source.
 
-## 20. Stable identity and source mapping
+## 20. Stable identity and source mapping## 20. Stable identity and source mapping
 
 Named declarations naturally provide stable keys:
 
@@ -657,8 +694,14 @@ Examples:
 ERROR tree:
 node "customer" has multiple parents
 
+ERROR link.competitor->summary:
+duplicate identical soft link
+
 ERROR path.main:
 unknown slide "pricing"
+
+ERROR path.short:
+path must contain at least one slide occurrence
 
 WARN slide.market:
 slide is not reachable from the main tree

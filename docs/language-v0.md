@@ -635,7 +635,6 @@ interface MindPptStructure {
   links: SoftLink[]
   paths: PresentationPath[]
   diagnostics: Diagnostic[]
-  sourceMap: SourceMap
 }
 
 interface SoftLink {
@@ -657,6 +656,8 @@ interface PresentationPathOccurrence {
   sourceRange: SourceRange
 }
 ~~~
+
+The v0 contract does not require a standalone `SourceMap` object. Stable semantic IDs and the `SourceRange { start, end }` values embedded on semantic declarations/content are the precise-edit mapping contract.
 
 Soft links and paths stay semantic after parsing and reference resolution. Primary-tree structure remains the only input to mind-map placement. The renderer may lower soft links into distinct relation primitives, while paths remain Camera playback data and have no canvas topology rendering.
 
@@ -710,8 +711,16 @@ Source ranges should exist from the first real parser milestone and later suppor
 
 - diagnostics;
 - code-editor navigation;
-- precise agent patches;
+- guarded precise Agent patches;
 - future refactoring tools.
+
+For M10, `SourceRange.start` and `SourceRange.end` are JavaScript string offsets into the source that produced that semantic structure. They are valid for precise Agent editing only when the inspected structure is current for the inspected source.
+
+Agent authoring edits source only. The v0 patch operation is one contiguous `[start, end)` replacement guarded by the exact expected substring. If `currentSource.slice(start, end)` does not equal the supplied expected text, the patch is stale and must be rejected without mutation or compilation.
+
+Accepted edits flow through the existing `mindpptEditor.setSource()` and compiler path. If an accepted edit creates invalid source, the invalid current source remains visible with current diagnostics while the last-successful semantic structure and last-good presentation remain available. Inspection must expose an explicit state equivalent to `structureCurrent: true | false` so an Agent never applies last-good ranges to invalid current source.
+
+Neither human nor Agent authoring uses raw Excalidraw JSON. Excalidraw remains a rendering projection, and model-facing authoring APIs do not expose direct canvas mutation.
 
 ## 21. Diagnostics
 

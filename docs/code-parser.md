@@ -311,7 +311,7 @@ extension
 
 Tables, charts, and extensions remain semantic until renderer lowering.
 
-## 10. Coordinate model## 10. Coordinate model
+## 10. Coordinate model
 
 The compiler uses two coordinate spaces.
 

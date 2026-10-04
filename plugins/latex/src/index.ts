@@ -4,6 +4,9 @@ import type { ExtensionRenderer } from 'dsh-mindppt-canvas-excalidraw'
 export const name = 'dsh-mindppt-latex'
 export const inject = ['mindpptCanvas']
 
+// Excalidraw 0.18 FONT_FAMILY.Helvetica is the built-in normal font.
+const LATEX_FONT_FAMILY = 2 as const
+
 interface FormulaParts {
   base: string
   superscript?: string
@@ -160,6 +163,7 @@ function textSegment(
     label: {
       text,
       fontSize,
+      fontFamily: LATEX_FONT_FAMILY,
       textAlign: 'center',
       verticalAlign: 'middle',
       strokeColor: '#111827',

@@ -46,8 +46,8 @@ describe('M7.1 Excalidraw lowering', () => {
           'slide:analysis/right/bar-chart:0/bar:1/box',
           'slide:analysis/right/bar-chart:0/bar:2/box',
         ])
-        expect(bars[0]!.height).toBeGreaterThan(bars[1]!.height)
-        expect(bars[1]!.height).toBeGreaterThan(bars[2]!.height)
+        expect(bars[0]?.height ?? 0).toBeGreaterThan(bars[1]?.height ?? 0)
+        expect(bars[1]?.height ?? 0).toBeGreaterThan(bars[2]?.height ?? 0)
         expect(first.find((element) =>
           element.id === 'slide:analysis/right/bar-chart:0/baseline'
         )?.type).toBe('line')

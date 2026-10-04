@@ -82,14 +82,6 @@ slide analysis {
   }
 }
 
-slide summary {
-  layout hero
-
-  # One Summary
-
-  ## One canvas, multiple saved routes.
-}
-
 path main {
   hero
   agenda
@@ -104,3 +96,12 @@ path short {
   problem
   summary
 }
+
+slide summary {
+  layout hero
+
+  # One Summary
+
+  ## One canvas, multiple saved routes.
+}
+

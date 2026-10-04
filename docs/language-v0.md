@@ -256,7 +256,7 @@ Following a soft link is navigation to its target slide. It reuses the existing 
 
 Soft links do not establish a generic graph model. The dotted-arrow spelling remains intentionally Mermaid-like.
 
-## 9. Slide## 9. Slide
+## 9. Slide
 
 A slide declaration creates both a presentation page and a mind-map node.
 
@@ -659,7 +659,7 @@ extension
 
 Renderer plugins mechanically lower these semantic nodes and document relations into Excalidraw-compatible scene data. They do not parse link/path authoring source.
 
-## 20. Stable identity and source mapping## 20. Stable identity and source mapping
+## 20. Stable identity and source mapping
 
 Named declarations naturally provide stable keys:
 

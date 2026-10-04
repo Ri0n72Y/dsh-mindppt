@@ -18,6 +18,9 @@ export function App({ runtime }: AppProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const hasError = snapshot.diagnostics.some((diagnostic) => diagnostic.severity === 'error')
   const hasWarning = snapshot.diagnostics.some((diagnostic) => diagnostic.severity === 'warning')
+  const activePathName = snapshot.camera.pathOptions.find(
+    ({ id }) => id === snapshot.camera.selectedPathId,
+  )?.name
 
   const focusDiagnostic = (diagnostic: MindPptDiagnostic) => {
     const editor = editorRef.current
@@ -99,6 +102,53 @@ export function App({ runtime }: AppProps) {
             ))}
           </select>
 
+          <select
+            aria-label="Presentation path"
+            className="camera-select"
+            value={snapshot.camera.selectedPathId ?? ''}
+            onChange={(event) => {
+              if (event.target.value) runtime.selectPath(event.target.value)
+            }}
+          >
+            <option value="" disabled>Select path…</option>
+            {snapshot.camera.pathOptions.map((path) => (
+              <option key={path.id} value={path.id}>{path.name}</option>
+            ))}
+          </select>
+
+          <span
+            className="camera-path-state"
+            aria-label="Presentation path state"
+          >
+            {activePathName
+              ? 'Path: '
+                + activePathName
+                + ' · '
+                + ((snapshot.camera.currentPathOccurrenceIndex ?? 0) + 1)
+                + '/'
+                + snapshot.camera.currentPathOccurrenceCount
+              : 'Path: —'}
+          </span>
+
+          <div className="camera-child-list">
+            <button
+              type="button"
+              aria-label="Previous path occurrence"
+              disabled={!snapshot.camera.canPathPrevious}
+              onClick={() => runtime.pathPrevious()}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              aria-label="Next path occurrence"
+              disabled={!snapshot.camera.canPathNext}
+              onClick={() => runtime.pathNext()}
+            >
+              Next
+            </button>
+          </div>
+
           <button
             type="button"
             disabled={!snapshot.camera.parentSlideId}
@@ -124,6 +174,24 @@ export function App({ runtime }: AppProps) {
                       onClick={() => runtime.focusChild(slideId)}
                     >
                       {slideId}
+                    </button>
+                  ))
+                : <span className="camera-empty">—</span>}
+            </div>
+          </div>
+
+          <div className="camera-children">
+            <span className="camera-label">Soft links</span>
+            <div className="camera-child-list">
+              {snapshot.camera.outgoingSoftLinks.length
+                ? snapshot.camera.outgoingSoftLinks.map((link) => (
+                    <button
+                      key={link.id}
+                      type="button"
+                      aria-label={'Follow soft link to ' + link.targetSlideId}
+                      onClick={() => runtime.followSoftLink(link.id)}
+                    >
+                      {link.targetSlideId}
                     </button>
                   ))
                 : <span className="camera-empty">—</span>}

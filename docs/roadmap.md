@@ -655,7 +655,7 @@ chart bar {
 }
 ~~~
 
-Exact statement names and optional fields remain an implementation detail until the M7.1 slice requires them.
+M7.1 now fixes only this minimal grammar: `header`, repeated `row`, `labels`, and `values` statements whose array payloads are JSON literals. No option schema is introduced.
 
 ### M7.1 — Table + Single-Series Bar Vertical Slice
 

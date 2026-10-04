@@ -9,6 +9,8 @@ import type {
 
 export { MindPptCompileError }
 export type {
+  BarChartBarNode,
+  BarChartNode,
   ContentNode,
   ImageNode,
   LayoutPreset,
@@ -17,6 +19,9 @@ export type {
   MindPptStructure,
   SlideNode,
   SourceRange,
+  StructuredValue,
+  TableCellNode,
+  TableNode,
   TextNode,
   TreeDirection,
   TreeEdge,

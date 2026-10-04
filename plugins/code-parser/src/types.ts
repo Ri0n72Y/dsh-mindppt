@@ -11,6 +11,7 @@ export interface MindPptDiagnostic {
 
 export type LayoutPreset = 'hero' | 'title-content' | 'two-column'
 export type LayoutSlot = 'left' | 'right'
+export type StructuredValue = string | number
 
 interface ContentNodeBase {
   id: string
@@ -45,7 +46,59 @@ export interface ExtensionNode extends ContentNodeBase {
   raw: string
 }
 
-export type ContentNode = TextNode | ListNode | ImageNode | ExtensionNode
+export interface TableCellNode {
+  id: string
+  value: StructuredValue
+  x: number
+  y: number
+  width: number
+  height: number
+  sourceRange: SourceRange
+}
+
+export interface TableNode extends ContentNodeBase {
+  kind: 'table'
+  header: TableCellNode[]
+  rows: TableCellNode[][]
+}
+
+export interface BarChartBarNode {
+  id: string
+  label: string
+  value: number
+  x: number
+  y: number
+  width: number
+  height: number
+  labelX: number
+  labelY: number
+  labelWidth: number
+  labelHeight: number
+  valueLabelX: number
+  valueLabelY: number
+  valueLabelWidth: number
+  valueLabelHeight: number
+  labelSourceRange: SourceRange
+  valueSourceRange: SourceRange
+}
+
+export interface BarChartNode extends ContentNodeBase {
+  kind: 'bar-chart'
+  plotX: number
+  plotY: number
+  plotWidth: number
+  plotHeight: number
+  baselineY: number
+  bars: BarChartBarNode[]
+}
+
+export type ContentNode =
+  | TextNode
+  | ListNode
+  | ImageNode
+  | ExtensionNode
+  | TableNode
+  | BarChartNode
 
 export interface SlideNode {
   id: string

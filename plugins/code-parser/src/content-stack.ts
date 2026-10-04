@@ -1,8 +1,10 @@
 import type { ParsedContent } from './parsed-types.ts'
+import { layoutBarChart, layoutTable } from './structured-layout.ts'
 import type { ContentNode, LayoutSlot } from './types.ts'
 
 const CONTENT_GAP = 20
 const IMAGE_HEIGHT = 390
+const STRUCTURED_HEIGHT = 390
 
 const BLOCK_HEIGHT = {
   title: 84,
@@ -57,6 +59,10 @@ export function layoutStack(
         type: block.type,
         raw: block.raw,
       })
+    } else if (block.kind === 'table') {
+      nodes.push(layoutTable(block, geometry))
+    } else if (block.kind === 'bar-chart') {
+      nodes.push(layoutBarChart(block, geometry))
     } else {
       nodes.push({
         ...geometry,
@@ -87,6 +93,8 @@ export function createContentCounts(): Record<ParsedContent['kind'], number> {
     list: 0,
     image: 0,
     extension: 0,
+    table: 0,
+    'bar-chart': 0,
   }
 }
 
@@ -104,5 +112,8 @@ export function blockHeight(block: ParsedContent): number {
       return IMAGE_HEIGHT
     case 'extension':
       return BLOCK_HEIGHT.extension
+    case 'table':
+    case 'bar-chart':
+      return STRUCTURED_HEIGHT
   }
 }

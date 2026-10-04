@@ -3,13 +3,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import customerSvg from '../../../examples/assets/customer.svg?raw'
-import source from '../../../examples/m6-layout-presets.mindppt?raw'
+import source from '../../../examples/m7-data-analysis.mindppt?raw'
 import { App } from './App.tsx'
 import { createPlaygroundRuntime } from './runtime.ts'
 import './style.css'
 
 const runtime = await createPlaygroundRuntime(source, {
-  documentPath: 'examples/m6-layout-presets.mindppt',
+  documentPath: 'examples/m7-data-analysis.mindppt',
   files: {
     'examples/assets/customer.svg': {
       mimeType: 'image/svg+xml',

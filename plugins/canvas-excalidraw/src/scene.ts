@@ -6,21 +6,30 @@ import type {
 } from 'dsh-mindppt-code-parser'
 
 import { semanticImageFileId } from './assets.ts'
+import type { ExtensionRenderer } from './extension-renderer.ts'
 import { renderSoftLinkScene } from './soft-link-scene.ts'
 import { renderBarChart, renderTable } from './structured-scene.ts'
 import { renderTreeScene } from './tree-scene.ts'
 
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
-export function renderScene(structure: MindPptStructure): ExcalidrawScene {
+export function renderScene(
+  structure: MindPptStructure,
+  extensionRenderers?: ReadonlyMap<string, ExtensionRenderer>,
+): ExcalidrawScene {
   return [
     ...renderTreeScene(structure),
     ...renderSoftLinkScene(structure),
-    ...structure.slides.flatMap(renderSlide),
+    ...structure.slides.flatMap((slide) =>
+      renderSlide(slide, extensionRenderers),
+    ),
   ]
 }
 
-function renderSlide(slide: SlideNode): ExcalidrawScene {
+function renderSlide(
+  slide: SlideNode,
+  extensionRenderers?: ReadonlyMap<string, ExtensionRenderer>,
+): ExcalidrawScene {
   const surface: ExcalidrawElementSkeleton = {
     type: 'rectangle',
     id: 'slide:' + slide.id + '/surface',
@@ -36,7 +45,7 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
   }
 
   const content = slide.elements.flatMap((element) =>
-    renderContent(slide, element),
+    renderContent(slide, element, extensionRenderers),
   )
 
   const frame: ExcalidrawElementSkeleton = {
@@ -54,6 +63,7 @@ function renderSlide(slide: SlideNode): ExcalidrawScene {
 function renderContent(
   slide: SlideNode,
   element: ContentNode,
+  extensionRenderers?: ReadonlyMap<string, ExtensionRenderer>,
 ): ExcalidrawScene {
   if (element.kind === 'image') {
     return [{
@@ -70,6 +80,17 @@ function renderContent(
   }
 
   if (element.kind === 'extension') {
+    const renderer = extensionRenderers?.get(element.type)
+    if (renderer) {
+      try {
+        const specialized = renderer({ slide, element })
+        if (Array.isArray(specialized) && specialized.length > 0) {
+          return specialized
+        }
+      } catch {
+        // Renderer failure is local to this node; fallback remains valid.
+      }
+    }
     return renderExtensionFallback(slide, element)
   }
 
@@ -107,15 +128,11 @@ function renderExtensionFallback(
   slide: SlideNode,
   element: Extract<ContentNode, { kind: 'extension' }>,
 ): ExcalidrawScene {
-  const x = slide.x + element.x
-  const y = slide.y + element.y
-  const text = contentText(element)
-
   return [{
     type: 'rectangle',
     id: element.id + '/box',
-    x,
-    y,
+    x: slide.x + element.x,
+    y: slide.y + element.y,
     width: element.width,
     height: element.height,
     backgroundColor: '#f8f9fa',
@@ -124,7 +141,7 @@ function renderExtensionFallback(
     fillStyle: 'solid',
     roughness: 0,
     label: {
-      text,
+      text: contentText(element),
       fontSize: contentFontSize(element),
       textAlign: 'left',
       verticalAlign: 'top',

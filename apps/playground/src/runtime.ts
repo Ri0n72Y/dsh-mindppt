@@ -1,37 +1,36 @@
 import { Context } from '@deepseek-ai/cordis'
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { BinaryFiles } from '@excalidraw/excalidraw/types'
-
 import MindPptCameraService, {
   type CameraView,
 } from 'dsh-mindppt-camera'
 import MindPptCanvasService from 'dsh-mindppt-canvas-excalidraw'
 import MindPptEditorService from 'dsh-mindppt-code-editor'
+import MindPptLatexPlugin from 'dsh-mindppt-latex'
 import MindPptParserService, {
   type MindPptDiagnostic,
 } from 'dsh-mindppt-code-parser'
-
 import {
   createCanvasAssetResolver,
   type PlaygroundAssetContext,
   type ResolvedAssets,
 } from './assets.ts'
-
 export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
-
 export interface PlaygroundSnapshot {
   source: string
   diagnostics: readonly MindPptDiagnostic[]
   elements: CompiledElements
   files: BinaryFiles
   camera: CameraView
+  extensionRendererTypes: readonly string[]
 }
-
 export interface PlaygroundRuntime {
   getSnapshot: () => PlaygroundSnapshot
   subscribe: (listener: () => void) => () => void
   setSource: (source: string) => void
   refreshElements: () => void
+  enableLatex: () => Promise<void>
+  disableLatex: () => Promise<void>
   focusSlide: (slideId: string) => void
   focusParent: () => void
   focusChild: (slideId: string) => void
@@ -40,23 +39,19 @@ export interface PlaygroundRuntime {
   pathNext: () => void
   followSoftLink: (linkId: string) => void
 }
-
 export async function createPlaygroundRuntime(
   initialSource: string,
   assetContext?: PlaygroundAssetContext,
 ): Promise<PlaygroundRuntime> {
   const ctx = new Context()
-
   await ctx.plugin(MindPptParserService)
   await ctx.plugin(MindPptCanvasService)
   await ctx.plugin(MindPptEditorService)
   await ctx.plugin(MindPptCameraService)
-
   let editor: MindPptEditorService | undefined
   let parser: MindPptParserService | undefined
   let canvas: MindPptCanvasService | undefined
   let camera: MindPptCameraService | undefined
-
   await ctx.plugin({
     name: 'mindppt-playground-driver',
     inject: [
@@ -72,40 +67,42 @@ export async function createPlaygroundRuntime(
       camera = runtime.mindpptCamera
     },
   })
-
   if (!editor || !parser || !canvas || !camera) {
     throw new Error('MindPPT runtime services were not initialized')
   }
-
   const editorService = editor
   const parserService = parser
   const canvasService = canvas
   const cameraService = camera
-
   const listeners = new Set<() => void>()
   const resolveAssets = createCanvasAssetResolver(assetContext)
   let resolvedAssets: ResolvedAssets | undefined
+  let disposeLatex: (() => Promise<void>) | undefined
   let snapshot: PlaygroundSnapshot = {
     source: '',
     diagnostics: [],
     elements: [],
     files: {},
     camera: cameraService.view,
+    extensionRendererTypes: canvasService.extensionRendererTypes,
   }
-
   const publish = (next: PlaygroundSnapshot) => {
     snapshot = next
     for (const listener of listeners) listener()
   }
-
+  const publishProjection = () => {
+    publish({
+      ...snapshot,
+      elements: compileElements(canvasService, resolvedAssets),
+      extensionRendererTypes: canvasService.extensionRendererTypes,
+    })
+  }
   const setSource = (source: string) => {
     const compiled = editorService.setSource(source)
     const assets = compiled
       ? resolveAssets(canvasService.assetRequests)
       : undefined
-
     if (compiled) resolvedAssets = assets
-
     publish({
       source: editorService.source,
       diagnostics: compiled
@@ -116,18 +113,31 @@ export async function createPlaygroundRuntime(
         : snapshot.elements,
       files: compiled ? (assets?.files ?? {}) : snapshot.files,
       camera: cameraService.view,
+      extensionRendererTypes: canvasService.extensionRendererTypes,
     })
   }
-
   const refreshElements = () => {
     if (!snapshot.elements.length) return
-
     publish({
       ...snapshot,
       elements: compileElements(canvasService, resolvedAssets),
     })
   }
-
+  const enableLatex = async () => {
+    if (disposeLatex) return
+    const fiber = await ctx.plugin(MindPptLatexPlugin)
+    disposeLatex = async () => {
+      await fiber.dispose()
+    }
+    publishProjection()
+  }
+  const disableLatex = async () => {
+    const dispose = disposeLatex
+    if (!dispose) return
+    disposeLatex = undefined
+    await dispose()
+    publishProjection()
+  }
   const applyCameraAction = (action: () => boolean) => {
     if (!action()) return
     publish({
@@ -135,9 +145,7 @@ export async function createPlaygroundRuntime(
       camera: cameraService.view,
     })
   }
-
   setSource(initialSource)
-
   return {
     getSnapshot: () => snapshot,
     subscribe(listener) {
@@ -146,6 +154,8 @@ export async function createPlaygroundRuntime(
     },
     setSource,
     refreshElements,
+    enableLatex,
+    disableLatex,
     focusSlide(slideId) {
       applyCameraAction(() => cameraService.focusSlide(slideId))
     },
@@ -169,17 +179,14 @@ export async function createPlaygroundRuntime(
     },
   }
 }
-
 function compileElements(
   canvasService: MindPptCanvasService,
   assets: ResolvedAssets | undefined,
 ): CompiledElements {
   const scene = canvasService.scene.map((element) => {
     if (element.type !== 'image' || !element.id) return element
-
     const fileId = assets?.elementFileIds[element.id]
     return fileId ? { ...element, fileId } : element
   })
-
   return convertToExcalidrawElements(scene, { regenerateIds: false })
 }

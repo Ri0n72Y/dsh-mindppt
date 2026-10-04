@@ -23,7 +23,6 @@ const SOURCE = [
   '',
 ].join('\n')
 
-
 describe('dsh-mindppt-latex', () => {
   it('renders formula segments as deterministic single-line text', () => {
     const element: ExtensionNode = {

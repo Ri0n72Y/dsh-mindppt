@@ -783,7 +783,7 @@ Broader table/chart features should return only when concrete presentation use c
 
 ## M8 — Soft Links + Presentation Paths
 
-Status: planned
+Status: complete
 
 Purpose: complete the core nonlinear presentation model as one end-to-end vertical slice through the existing source -> semantic structure -> renderer / Camera -> browser delivery path.
 
@@ -802,6 +802,20 @@ two saved routes in Chromium
 ~~~
 
 This is one vertical slice, not separate parser, graph, route, or animation projects.
+
+Delivered by the M8 implementation slice:
+
+- core `link A -.-> B` and named `path` parsing with whole-document resolution;
+- deterministic SoftLink, path, and occurrence identities with source ranges;
+- SoftLink endpoint/self/duplicate validation and path name/empty/reference validation;
+- dashed directed SoftLink lowering from existing slide geometry only;
+- occurrence-index Camera playback with path select / previous / next;
+- outgoing SoftLink follow derived from compiled semantics and reused focus requests;
+- exact-occurrence preserve/clear behavior across successful recompiles;
+- a six-slide branching canonical fixture retaining M6 image/layout and M7 table/chart coverage;
+- Chromium-visible controls for two saved routes and declared SoftLink follow.
+
+No graph, route, navigation, transition, path-registry, or presentation-player framework was added.
 
 Authoring direction remains:
 

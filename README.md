@@ -160,7 +160,7 @@ The standalone playground uses `examples/m9-content-plugin-latex.mindppt`, keeps
 
 M10 is documentation-defined but not implemented.
 
-The DSH Host will own the single existing MindPPT runtime. Host-side `dsh-capability` will expose only the minimum Agent loop: inspect current source/diagnostics/semantic state, apply one expected-text-guarded contiguous source replacement, and provide concise current-language guidance. Client-side `dsh-mindppt-sidebar` will reuse the existing React/Excalidraw authoring behavior through the smallest supported Host/Client bridge; it must not create a second authoring runtime.
+The DSH Host will own the single existing MindPPT runtime. Host-side `dsh-capability` will expose only the minimum Agent loop: inspect current source/diagnostics/semantic state, apply one expected-text-guarded replacement or deletion of an existing non-empty source span, and provide concise current-language guidance. Pure insertion is outside M10 v0. Client-side `dsh-mindppt-sidebar` will reuse the existing React/Excalidraw authoring behavior through the smallest supported Host/Client bridge; it must not create a second authoring runtime.
 
 Precise edits reuse stable semantic IDs plus embedded `SourceRange { start, end }` values. M10 does not introduce a standalone SourceMap abstraction. Inspection must distinguish current source/diagnostics from last-good semantic structure with an explicit state equivalent to `structureCurrent`, so an Agent never applies stale last-good ranges to invalid current source.
 

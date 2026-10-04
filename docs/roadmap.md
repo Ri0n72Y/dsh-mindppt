@@ -1355,7 +1355,7 @@ Do not build a generic CapabilityRegistry, installed-package discovery system, p
 
 ### Guarded source patch contract
 
-M10 v0 supports one contiguous replacement.
+M10 v0 supports one guarded contiguous replacement or deletion targeting one existing non-empty source span. The target range must satisfy `start < end`. `replacement` may be empty, so deletion remains valid. Pure insertion (`start === end`) is outside M10 v0 and remains deferred until a concrete Agent authoring case requires it.
 
 Conceptually:
 
@@ -1370,24 +1370,27 @@ Conceptually:
 
 `[start, end)` uses the same JavaScript string offsets as existing `SourceRange` values.
 
-Before mutation:
+Before any mutation or compile, all of these validations must pass:
 
-~~~text
+~~~ts
+Number.isInteger(start)
+Number.isInteger(end)
+0 <= start
+start < end
+end <= currentSource.length
 currentSource.slice(start, end) === expected
 ~~~
 
-must be true.
+If any validation fails:
 
-If it is false:
-
-- reject the patch as stale source;
+- reject the patch;
 - do not mutate source;
 - do not compile.
 
-If it is true:
+If all validations pass:
 
-- construct the new source;
-- route it through `mindpptEditor.setSource()`;
+- replace exactly `[start, end)` with `replacement`;
+- route the new source through `mindpptEditor.setSource()`;
 - run the existing compile path.
 
 An accepted patch is not automatically rolled back when compilation fails. If the patch creates invalid source:
@@ -1397,7 +1400,7 @@ An accepted patch is not automatically rolled back when compilation fails. If th
 - the last-successful semantic structure remains available;
 - the last-good rendered presentation remains visible.
 
-Do not add multi-range transactions, AST mutation, semantic-node mutation, a diff engine, OT, CRDT, revision service, or refactoring framework.
+Do not broaden deferred insertion into a revision token, source hash protocol, context matcher, multi-range patch, diff engine, transaction layer, OT, CRDT, AST mutation, semantic-node mutation, revision service, or refactoring framework unless a later concrete requirement proves this replacement contract insufficient.
 
 ### Inspection and last-good semantics
 

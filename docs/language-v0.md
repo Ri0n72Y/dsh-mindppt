@@ -716,7 +716,7 @@ Source ranges should exist from the first real parser milestone and later suppor
 
 For M10, `SourceRange.start` and `SourceRange.end` are JavaScript string offsets into the source that produced that semantic structure. They are valid for precise Agent editing only when the inspected structure is current for the inspected source.
 
-Agent authoring edits source only. The v0 patch operation is one contiguous `[start, end)` replacement guarded by the exact expected substring. If `currentSource.slice(start, end)` does not equal the supplied expected text, the patch is stale and must be rejected without mutation or compilation.
+Agent authoring edits source only. The M10 v0 patch operation is a guarded replacement or deletion of one existing non-empty contiguous source span. Before mutation or compilation, `start` and `end` must both be integers and satisfy `0 <= start < end <= currentSource.length`, and `currentSource.slice(start, end)` must exactly equal the supplied expected text. If any validation fails, the patch is rejected without mutation or compilation. `replacement` may be empty, so deletion remains valid. Pure insertion with `start === end` is outside M10 v0 and remains deferred until a concrete Agent authoring case requires it.
 
 Accepted edits flow through the existing `mindpptEditor.setSource()` and compiler path. If an accepted edit creates invalid source, the invalid current source remains visible with current diagnostics while the last-successful semantic structure and last-good presentation remain available. Inspection must expose an explicit state equivalent to `structureCurrent: true | false` so an Agent never applies last-good ranges to invalid current source.
 

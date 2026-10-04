@@ -4,8 +4,6 @@ import type { ExtensionRenderer } from 'dsh-mindppt-canvas-excalidraw'
 export const name = 'dsh-mindppt-latex'
 export const inject = ['mindpptCanvas']
 
-// Excalidraw 0.18 DEFAULT_FONT_FAMILY is FONT_FAMILY.Excalifont.
-const LATEX_FONT_FAMILY = 5 as const
 
 interface FormulaParts {
   base: string
@@ -148,7 +146,6 @@ function textSegment(
     y,
     text,
     fontSize,
-    fontFamily: LATEX_FONT_FAMILY,
     strokeColor: '#111827',
   }
 }

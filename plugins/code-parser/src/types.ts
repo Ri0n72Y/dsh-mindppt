@@ -126,8 +126,30 @@ export interface TreeSpec {
   sourceRange: SourceRange
 }
 
+export interface SoftLink {
+  id: string
+  fromSlideId: string
+  toSlideId: string
+  sourceRange: SourceRange
+}
+
+export interface PresentationPathOccurrence {
+  id: string
+  slideId: string
+  sourceRange: SourceRange
+}
+
+export interface PresentationPath {
+  id: string
+  name: string
+  occurrences: PresentationPathOccurrence[]
+  sourceRange: SourceRange
+}
+
 export interface MindPptStructure {
   version: 0
   slides: SlideNode[]
   tree?: TreeSpec
+  links?: SoftLink[]
+  paths?: PresentationPath[]
 }

@@ -23,10 +23,8 @@ const SOURCE = [
   '',
 ].join('\n')
 
-const EXCALIDRAW_HELVETICA_FONT_FAMILY = 2
-
 describe('dsh-mindppt-latex', () => {
-  it('pins every formula text primitive to Excalidraw Helvetica', () => {
+  it('renders formula segments as deterministic single-line text', () => {
     const element: ExtensionNode = {
       kind: 'extension',
       type: 'latex',
@@ -49,18 +47,45 @@ describe('dsh-mindppt-latex', () => {
     }
 
     const scene = renderLatex({ slide, element })
+    const expectedSegments = [
+      ['base', 'e'],
+      ['superscript', 'iπ'],
+      ['suffix', '+ 1 = 0'],
+    ] as const
 
-    for (const segment of ['base', 'superscript', 'suffix']) {
+    expect(scene.map(({ id }) => id)).toEqual([
+      element.id + '/latex/box',
+      element.id + '/latex/base',
+      element.id + '/latex/superscript',
+      element.id + '/latex/suffix',
+    ])
+
+    for (const [segment, text] of expectedSegments) {
       expect(scene.find(
         ({ id }) => id === element.id + '/latex/' + segment,
       )).toEqual(expect.objectContaining({
-        label: expect.objectContaining({
-          fontFamily: EXCALIDRAW_HELVETICA_FONT_FAMILY,
-        }),
+        type: 'text',
+        text,
       }))
     }
-  })
 
+    const superscripts = scene.filter(
+      ({ id }) => id === element.id + '/latex/superscript',
+    )
+    expect(superscripts).toHaveLength(1)
+    expect(superscripts[0]).toEqual(expect.objectContaining({
+      type: 'text',
+      text: 'iπ',
+    }))
+    expect((superscripts[0] as { text: string }).text).not.toContain('\n')
+
+    const base = scene.find(
+      ({ id }) => id === element.id + '/latex/base',
+    )!
+    expect((superscripts[0] as { y: number }).y).toBeLessThan(
+      (base as { y: number }).y,
+    )
+  })
   it('loads and unloads specialized projection without recompiling', async () => {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
@@ -108,16 +133,16 @@ describe('dsh-mindppt-latex', () => {
     )
 
     expect(base).toEqual(expect.objectContaining({
-      type: 'rectangle',
-      label: expect.objectContaining({ text: 'e' }),
+      type: 'text',
+      text: 'e',
     }))
     expect(superscript).toEqual(expect.objectContaining({
-      type: 'rectangle',
-      label: expect.objectContaining({ text: 'iπ' }),
+      type: 'text',
+      text: 'iπ',
     }))
     expect(suffix).toEqual(expect.objectContaining({
-      type: 'rectangle',
-      label: expect.objectContaining({ text: '+ 1 = 0' }),
+      type: 'text',
+      text: '+ 1 = 0',
     }))
     expect((superscript as { y: number }).y).toBeLessThan(
       (base as { y: number }).y,

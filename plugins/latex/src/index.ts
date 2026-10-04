@@ -4,9 +4,6 @@ import type { ExtensionRenderer } from 'dsh-mindppt-canvas-excalidraw'
 export const name = 'dsh-mindppt-latex'
 export const inject = ['mindpptCanvas']
 
-// Excalidraw 0.18 FONT_FAMILY.Helvetica is the built-in normal font.
-const LATEX_FONT_FAMILY = 2 as const
-
 interface FormulaParts {
   base: string
   superscript?: string
@@ -58,8 +55,6 @@ export const renderLatex: ExtensionRenderer = ({ slide, element }) => {
     formula.base,
     startX,
     baselineY,
-    baseWidth,
-    fontSize * 1.25,
     fontSize,
   ))
 
@@ -71,8 +66,6 @@ export const renderLatex: ExtensionRenderer = ({ slide, element }) => {
       formula.superscript,
       cursorX,
       baselineY - scriptSize * 0.7,
-      scriptWidth,
-      scriptSize * 1.2,
       scriptSize,
     ))
     cursorX += scriptWidth
@@ -84,8 +77,6 @@ export const renderLatex: ExtensionRenderer = ({ slide, element }) => {
       formula.suffix,
       cursorX,
       baselineY,
-      suffixWidth,
-      fontSize * 1.25,
       fontSize,
     ))
   }
@@ -145,28 +136,15 @@ function textSegment(
   text: string,
   x: number,
   y: number,
-  width: number,
-  height: number,
   fontSize: number,
 ): ReturnType<ExtensionRenderer>[number] {
   return {
-    type: 'rectangle',
+    type: 'text',
     id,
     x,
     y,
-    width,
-    height,
-    backgroundColor: 'transparent',
-    strokeColor: 'transparent',
-    fillStyle: 'solid',
-    roughness: 0,
-    label: {
-      text,
-      fontSize,
-      fontFamily: LATEX_FONT_FAMILY,
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      strokeColor: '#111827',
-    },
+    text,
+    fontSize,
+    strokeColor: '#111827',
   }
 }

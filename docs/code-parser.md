@@ -230,7 +230,7 @@ Structured content validation includes:
 - chart labels/series mismatch;
 - asset-resolution warnings.
 
-Missing extension renderers and extension-handler conflicts are runtime capability diagnostics, not parser grammar or semantic-validation errors.
+Missing extension renderers do not make source or semantics invalid; generic fallback remains valid. Duplicate renderer claims and specialized-renderer failures belong to the runtime rendering-capability boundary, not parser grammar or semantic validation.
 
 Validation distinguishes:
 
@@ -549,19 +549,62 @@ No supported standalone parser API outside Cordis is required.
 
 ## 17. Extension capability boundary
 
-code-parser always emits generic ExtensionNode values.
+code-parser always emits generic `ExtensionNode` values. Renderer capability availability must not change parser grammar or compiler semantic output.
 
-A content plugin such as dsh-mindppt-latex may later register runtime capabilities for an extension type, but it must not alter outer grammar.
+For an unchanged source, loading or unloading an extension renderer must leave the same:
 
-Possible extension runtime capabilities include:
+- `ExtensionNode.kind`;
+- extension `type`;
+- raw payload;
+- source range;
+- semantic identity;
+- compiler-owned `x / y / width / height`;
+- containing slide geometry;
+- tree, SoftLink, and PresentationPath semantics.
 
-- semantic transformation;
-- renderer;
-- sizing hint.
+The parser does not register extension renderers and does not inspect the active renderer set while compiling.
 
-If no plugin handles the type, generic fallback remains valid.
+M9 v0 establishes one runtime extension capability only:
 
-If multiple plugins claim one type, runtime capability resolution should report a conflict rather than silently choose a winner.
+~~~text
+extension renderer capability
+~~~
+
+Semantic transformation, sizing hints, and layout hints are not part of the M9 compiler contract. They remain deferred until a concrete extension proves that the existing semantic box is insufficient.
+
+Renderer registration belongs to the runtime canvas/rendering responsibility, scoped to the Cordis runtime and registering fiber. It must not be module-global.
+
+Capability lifecycle is therefore separate from parser lifecycle:
+
+~~~text
+source change
+  -> parser compile
+  -> possibly new last-successful MindPptStructure
+
+renderer capability load/unload
+  -> no parser compile
+  -> reuse current last-successful MindPptStructure
+  -> rebuild rendering projection only
+~~~
+
+A renderer capability change must not:
+
+- create a parser compile revision;
+- change parser diagnostics;
+- mutate source;
+- update the last-good semantic structure;
+- request new compiler geometry;
+- alter Camera semantic state.
+
+If no renderer handles an extension type, the generic fallback remains valid.
+
+If a matching renderer fails for one payload, rendering should fall back to the generic extension representation without invalidating the compiler output.
+
+At most one active renderer may claim an extension type. A duplicate claim is a runtime capability conflict: the rejected registration must not replace, remove, or poison the renderer that is already active.
+
+Capability discovery, when exposed by the runtime, reflects actual active renderer registrations. It is not parser-known extension metadata, source fence discovery, or installed-package discovery.
+
+`dsh-mindppt-latex` is the M9 reference renderer plugin. It consumes the existing `ExtensionNode.raw` and compiler-owned semantic box; it does not add LaTeX grammar or change code-parser output.
 
 ## 18. What code-parser does not own
 

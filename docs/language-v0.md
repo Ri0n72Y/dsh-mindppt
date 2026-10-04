@@ -357,7 +357,7 @@ e^{i\pi} + 1 = 0
 ```
 ~~~~
 
-The core parser preserves an extension node conceptually like:
+The core parser preserves a generic extension node conceptually like:
 
 ~~~ts
 interface ExtensionNode {
@@ -367,26 +367,50 @@ interface ExtensionNode {
 }
 ~~~
 
-Without a matching plugin:
+The outer grammar and semantic node do not change when runtime content capabilities load or unload. The parser always preserves the same extension type, raw payload, source range, semantic identity, and compiler-owned content box.
+
+Without a matching renderer:
 
 ~~~text
 ExtensionNode
   -> generic raw text/code fallback
 ~~~
 
-With a matching plugin:
+With a matching renderer:
 
 ~~~text
-ExtensionNode
-  -> Cordis extension capability
-  -> optional semantic transform
-  -> renderer
-  -> Excalidraw-compatible output
+same ExtensionNode
+  -> active Cordis-scoped renderer capability
+  -> Excalidraw-compatible specialized rendering
 ~~~
 
-Raw content must never be discarded.
+M9 v0 defines renderer capability only. It does not define extension semantic transformation, sizing hints, or layout hints.
 
-A plugin conflict is a runtime capability error. Multiple plugins must not silently compete for the same extension type.
+Raw content must never be discarded. Specialized rendering does not become source truth.
+
+Runtime capability lifecycle is separate from compilation:
+
+~~~text
+plugin load
+  -> renderer registration becomes active
+  -> current last-successful structure is reprojected
+
+plugin unload / fiber dispose
+  -> registration disappears automatically
+  -> current last-successful structure is reprojected through fallback
+~~~
+
+Load/unload does not edit source, create a parser compile revision, alter parser diagnostics, replace the last-good structure, change semantic geometry, or reset Camera state.
+
+Unknown extension types remain valid. No matching renderer simply uses generic fallback.
+
+If a matching renderer fails for one payload, the safe minimum behavior is to fall back to the generic extension rendering rather than blank or fail the presentation.
+
+At most one active renderer may claim one extension type. A duplicate claim is a deterministic runtime capability conflict: the later claim must not become active, the existing renderer remains active, and disposal of the rejected claimant must not remove the existing renderer. There is no priority, override, provider-ranking, fallback-chain, or multi-handler composition contract in v0.
+
+Runtime discovery exposes the extension renderer types that are actually active. It is not derived from fence types present in source, parser-known types, installed packages, or a hard-coded list.
+
+The M9 reference capability is `dsh-mindppt-latex`, which claims only `latex` and must produce visibly specialized formula rendering inside the existing semantic box. A second Mermaid plugin is not required for M9.
 
 ## 12. Layout DSL
 
@@ -691,7 +715,7 @@ Source ranges should exist from the first real parser milestone and later suppor
 
 ## 21. Diagnostics
 
-Diagnostics are surfaced to both humans and agents. Parser/compiler diagnostics cover source and semantic validity; runtime capability diagnostics may additionally report missing or conflicting extension handlers.
+Diagnostics are surfaced to both humans and agents. Parser/compiler diagnostics cover source and semantic validity. Missing extension renderers are not source errors: generic fallback remains valid. Runtime capability diagnostics may report duplicate renderer claims or specialized-renderer failures using existing minimal mechanisms.
 
 Examples:
 

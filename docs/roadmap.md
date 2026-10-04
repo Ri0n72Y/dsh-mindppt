@@ -206,13 +206,12 @@ ExtensionNode
   -> generic raw text/code fallback
 ```
 
-With a matching plugin:
+With a matching renderer:
 
 ```text
-ExtensionNode
-  -> Cordis extension capability
-  -> semantic/render handler
-  -> Excalidraw-compatible output
+same ExtensionNode
+  -> Cordis-scoped renderer capability
+  -> Excalidraw-compatible specialized rendering
 ```
 
 Raw payload must never be discarded.

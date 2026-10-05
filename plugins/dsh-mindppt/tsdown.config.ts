@@ -2,7 +2,7 @@ import { defineConfig } from 'tsdown'
 
 const shared = {
   outDir: 'lib',
-  format: ['esm'] as const,
+  format: ['esm'] as Array<'esm'>,
   target: 'es2024',
   fixedExtension: false,
   dts: true,

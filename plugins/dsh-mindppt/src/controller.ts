@@ -1,38 +1,17 @@
-import type { MindPptDiagnostic, MindPptStructure } from 'dsh-mindppt-code-parser'
-import { applyGuardedPatch, type GuardedPatchInput, type MindPptFileIdentity } from './shared.ts'
+import { semanticProjection, type DocumentInspection } from './inspection.ts'
 import { MindPptDocumentRuntime } from './runtime.ts'
+import {
+  applyGuardedPatch,
+  type GuardedPatchInput,
+  type MindPptFileIdentity,
+} from './shared.ts'
+import type { WorkspaceFilePort } from './workspace-file-port.ts'
 
-export interface WorkspaceFileSnapshot {
-  source: string
-  version: string
-}
-
-export interface WorkspaceFilePort {
-  readText(identity: MindPptFileIdentity, signal?: AbortSignal): Promise<string>
-  readSnapshot(
-    identity: MindPptFileIdentity,
-    signal?: AbortSignal,
-  ): Promise<WorkspaceFileSnapshot>
-  writeText(
-    identity: MindPptFileIdentity,
-    source: string,
-    expectedVersion: string,
-    signal?: AbortSignal,
-  ): Promise<string>
-}
-
-export interface DocumentInspection {
-  file: MindPptFileIdentity
-  source: string
-  diagnostics: readonly MindPptDiagnostic[]
-  structureCurrent: boolean
-  semantic: ReturnType<typeof semanticProjection>
-  tree: MindPptStructure['tree'] | null
-  softLinks: NonNullable<MindPptStructure['links']>
-  presentationPaths: NonNullable<MindPptStructure['paths']>
-  activeExtensionRendererTypes: readonly string[]
-  structureBasis: 'current' | 'last-good' | 'none'
-}
+export type { DocumentInspection } from './inspection.ts'
+export type {
+  WorkspaceFilePort,
+  WorkspaceFileSnapshot,
+} from './workspace-file-port.ts'
 
 interface ActiveDocument {
   identity: MindPptFileIdentity
@@ -189,27 +168,20 @@ export class MindPptWorkspaceController {
 
   private requireCurrent(sessionId: string): ActiveDocument {
     const current = this.active.get(sessionId)
-    if (!current) throw new Error('no selected MindPPT document for this session')
+    if (!current) {
+      throw new Error('no selected MindPPT document for this session')
+    }
     return current
   }
 
-  private assertIdentity(current: ActiveDocument, identity: MindPptFileIdentity): void {
+  private assertIdentity(
+    current: ActiveDocument,
+    identity: MindPptFileIdentity,
+  ): void {
     if (current.identity.path !== identity.path) {
       throw new Error('stale MindPPT document selection')
     }
   }
-}
-
-function semanticProjection(structure: MindPptStructure) {
-  return structure.slides.map(slide => ({
-    id: slide.id,
-    sourceRange: slide.sourceRange,
-    elements: slide.elements.map(element => ({
-      id: element.id,
-      kind: element.kind,
-      sourceRange: element.sourceRange,
-    })),
-  }))
 }
 
 function isStaleWrite(error: unknown): boolean {

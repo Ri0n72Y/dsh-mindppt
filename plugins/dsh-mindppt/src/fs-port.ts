@@ -20,9 +20,9 @@ interface DshFileSystem {
   writeText(
     target: FsTarget,
     source: string,
-    intent?: { kind: 'replaceIfVersion'; version: string },
+    intent: { kind: 'replaceIfVersion'; version: string },
     signal?: AbortSignal,
-  ): Promise<unknown>
+  ): Promise<{ version: string }>
 }
 
 interface Sessions {
@@ -71,16 +71,15 @@ export function workspaceFilePort(
         version: info.version,
       }
     },
-    async writeText(identity, source, signal, expectedVersion) {
+    async writeText(identity, source, expectedVersion, signal) {
       const resolved = await target(identity, signal)
-      await fs.writeText(
+      const outcome = await fs.writeText(
         resolved,
         source,
-        expectedVersion === undefined
-          ? undefined
-          : { kind: 'replaceIfVersion', version: expectedVersion },
+        { kind: 'replaceIfVersion', version: expectedVersion },
         signal,
       )
+      return outcome.version
     },
   }
 }

@@ -54,11 +54,20 @@ export function relatedReader(
   addResource?: (address: string) => void,
 ) {
   return async (source: string, signal: AbortSignal): Promise<RelatedAsset | undefined> => {
+    if (!isDocumentRelativePath(source)) return undefined
     const result = await remote.readBytes(sessionId, source, { baseFile }, signal)
     if (!result.ok || !result.value) return undefined
     addResource?.(sessionFileAddress(sessionId, result.value.absolutePath))
     return { data: result.value.data, mimeType: mimeType(source) }
   }
+}
+
+function isDocumentRelativePath(source: string): boolean {
+  const path = source.replace(/\\/g, '/')
+  return path.length > 0
+    && !path.startsWith('/')
+    && !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(path)
+    && !path.split('/').includes('..')
 }
 
 function sessionFileAddress(sessionId: string, path: string): string {

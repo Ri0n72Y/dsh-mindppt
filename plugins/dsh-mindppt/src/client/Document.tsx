@@ -39,7 +39,7 @@ export function MindPptDocument(props: MindPptDocumentProps) {
   const [identity, setIdentity] = useState<MindPptFileIdentity>()
   const [error, setError] = useState<string>()
   const editor = useRef<HTMLTextAreaElement>(null)
-  const writeTail = useRef(Promise.resolve())
+  const writeTail = useRef<Promise<string>>(Promise.resolve(''))
   useEffect(() => {
     if (!file || content.kind !== 'renderer') return
     const controller = new AbortController()
@@ -68,6 +68,7 @@ export function MindPptDocument(props: MindPptDocumentProps) {
         } else {
           nextRuntime.setSource(read.source)
         }
+        writeTail.current = Promise.resolve(read.version)
         setIdentity(nextIdentity)
         setError(undefined)
         content.loaded(read.version)
@@ -97,6 +98,7 @@ export function MindPptDocument(props: MindPptDocumentProps) {
       error={error}
       editor={editor}
       writeTail={writeTail}
+      reload={content.reload}
       resourceAddress={resourceAddress}
       scrollportRef={scrollportRef}
       onError={setError}
@@ -109,6 +111,7 @@ function AuthoringSurface({
   error,
   editor,
   writeTail,
+  reload,
   resourceAddress,
   scrollportRef,
   onError,
@@ -117,7 +120,8 @@ function AuthoringSurface({
   identity: MindPptFileIdentity | undefined
   error: string | undefined
   editor: RefObject<HTMLTextAreaElement | null>
-  writeTail: RefObject<Promise<void>>
+  writeTail: RefObject<Promise<string>>
+  reload(): void
   resourceAddress: string
   scrollportRef: RefCallback<HTMLElement>
   onError(error: string | undefined): void
@@ -130,10 +134,25 @@ function AuthoringSurface({
   const save = (source: string) => {
     runtime.setSource(source)
     if (!identity) return
-    writeTail.current = writeTail.current
-      .then(() => postDocument({ action: 'write', identity, source }))
-      .then(() => onError(undefined))
-      .catch(cause => { onError(message(cause)) })
+    const write = writeTail.current.then(expectedVersion => {
+      if (!expectedVersion) {
+        throw new Error('MindPPT workspace version unavailable')
+      }
+      return postDocument({
+        action: 'write',
+        identity,
+        source,
+        expectedVersion,
+      })
+    })
+    writeTail.current = write
+    void write.then(
+      () => onError(undefined),
+      cause => {
+        onError(message(cause))
+        reload()
+      },
+    )
   }
   const preview = () => {
     const url = new URL(window.location.href)

@@ -39,6 +39,12 @@ interface ClientContext extends Context {
 }
 
 export const name = 'dsh-mindppt-client'
+export const inject = [
+  'documentPreviews',
+  'slots',
+  'remote',
+  'remote.workspaceFiles',
+]
 
 export function apply(ctx: Context): void {
   const client = ctx as ClientContext

@@ -13,7 +13,12 @@ interface ConnectionFetch {
 type DocumentRequest =
   | { action: 'select'; identity: MindPptFileIdentity }
   | { action: 'clear'; sessionId: string; path?: string }
-  | { action: 'write'; identity: MindPptFileIdentity; source: string }
+  | {
+    action: 'write'
+    identity: MindPptFileIdentity
+    source: string
+    expectedVersion: string
+  }
 
 export function registerDocumentRoute(
   connection: ConnectionFetch,
@@ -35,12 +40,13 @@ export function registerDocumentRoute(
           return json({ ok: true, inspection: controller.inspect(payload.identity.sessionId) })
         }
         if (payload.action === 'write') {
-          const inspection = await controller.replaceSource(
+          const result = await controller.replaceSource(
             payload.identity,
             payload.source,
+            payload.expectedVersion,
             request.signal,
           )
-          return json({ ok: true, inspection })
+          return json({ ok: true, ...result })
         }
         return new Response('Unknown MindPPT action', { status: 400 })
       } catch (error) {

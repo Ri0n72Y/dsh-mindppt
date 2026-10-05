@@ -60,6 +60,55 @@ importers:
         specifier: ^4.1.8
         version: 4.1.11(@types/node@22.20.4)(vite@7.3.6(@types/node@22.20.4))
 
+  plugins/dsh-mindppt:
+    dependencies:
+      '@excalidraw/excalidraw':
+        specifier: 0.18.0
+        version: 0.18.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      dsh-mindppt-camera:
+        specifier: workspace:*
+        version: link:../camera
+      dsh-mindppt-canvas-excalidraw:
+        specifier: workspace:*
+        version: link:../canvas-excalidraw
+      dsh-mindppt-code-editor:
+        specifier: workspace:*
+        version: link:../code-editor
+      dsh-mindppt-code-parser:
+        specifier: workspace:*
+        version: link:../code-parser
+      dsh-mindppt-latex:
+        specifier: workspace:*
+        version: link:../latex
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.4
+        version: 4.0.4
+      '@types/node':
+        specifier: ^22.20.0
+        version: 22.20.4
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.3.0(@types/react@19.3.0)
+      react:
+        specifier: 19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: 19.0.0
+        version: 19.0.0(react@19.0.0)
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.14(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.11(@types/node@22.20.4)(vite@7.3.6(@types/node@22.20.4))
+
   plugins/camera:
     devDependencies:
       '@deepseek-ai/cordis':

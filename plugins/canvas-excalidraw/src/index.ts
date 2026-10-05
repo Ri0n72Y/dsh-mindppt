@@ -12,6 +12,16 @@ import {
 } from './scene.ts'
 
 export type { CanvasAssetRequest, ExcalidrawScene }
+export {
+  CAMERA_TARGET_ZOOM_FACTOR,
+  CAMERA_TRAVEL_DURATION,
+  CAMERA_ZOOM_IN_DURATION,
+  CAMERA_ZOOM_OUT_DURATION,
+  CAMERA_ZOOM_OUT_FACTOR,
+  replaceMountedFiles,
+  runCameraTransition,
+} from './presentation.ts'
+export type { CameraTransitionController, CanvasFocusRequest } from './presentation.ts'
 export type {
   ExtensionNode,
   ExtensionRenderContext,

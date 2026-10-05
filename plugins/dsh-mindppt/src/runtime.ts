@@ -11,7 +11,7 @@ export interface RuntimeView {
   source: string
   diagnostics: readonly MindPptDiagnostic[]
   structureCurrent: boolean
-  structure: MindPptStructure
+  structure: MindPptStructure | undefined
   rendererTypes: readonly string[]
 }
 
@@ -63,9 +63,10 @@ export class MindPptDocumentRuntime {
     return {
       source: this.editor.source,
       diagnostics: [...this.parser.diagnostics],
-      structureCurrent: !this.parser.diagnostics.some(
-        diagnostic => diagnostic.severity === 'error',
-      ),
+      structureCurrent: this.parser.structure !== undefined
+        && !this.parser.diagnostics.some(
+          diagnostic => diagnostic.severity === 'error',
+        ),
       structure: this.parser.structure,
       rendererTypes: this.canvas.extensionRendererTypes,
     }

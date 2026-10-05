@@ -15,7 +15,7 @@ function memoryFile(initial = VALID) {
   return {
     port: {
       async readText() { return source },
-      async writeText(_path: string, next: string) {
+      async writeText(_identity: { sessionId: string; path: string }, next: string) {
         source = next
         writes += 1
       },
@@ -32,7 +32,6 @@ describe('workspace controller', () => {
     const identity = {
       sessionId: 's1',
       path: 'deck.mindppt',
-      absolutePath: '/w/deck.mindppt',
     }
     await controller.select(identity)
     expect(controller.inspect('s1').structureCurrent).toBe(true)
@@ -54,7 +53,6 @@ describe('workspace controller', () => {
     await controller.select({
       sessionId: 's1',
       path: 'deck.mindppt',
-      absolutePath: '/w/deck.mindppt',
     })
     const writes = file.writes()
     const attempts = controller.attempts('s1')
@@ -75,18 +73,15 @@ describe('workspace controller', () => {
     await controller.select({
       sessionId: 's1',
       path: 'a.mindppt',
-      absolutePath: '/w/a.mindppt',
     })
     await controller.select({
       sessionId: 's1',
       path: 'b.mindppt',
-      absolutePath: '/w/b.mindppt',
     })
     expect(controller.inspect('s1').file.path).toBe('b.mindppt')
     await controller.select({
       sessionId: 's1',
       path: 'readme.md',
-      absolutePath: '/w/readme.md',
     })
     expect(() => controller.inspect('s1')).toThrow()
   })

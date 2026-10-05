@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { MindPptWorkspaceController } from '../src/controller.ts'
 
 const VALID = `mindppt
-slide root
+
+slide root {
   # Root
+}
 `
 const INVALID = `mindppt
 slide

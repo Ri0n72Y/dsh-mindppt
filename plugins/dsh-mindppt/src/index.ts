@@ -17,19 +17,21 @@ export type {
 } from './shared.ts'
 
 export const name = 'dsh-mindppt'
-export const inject = ['connection', 'fs', 'tools']
+export const inject = ['connection', 'fs', 'sessions', 'tools']
 
 interface HostContext extends Context {
   connection: {
     fetch: Parameters<typeof registerDocumentRoute>[0]
   }
   fs: Parameters<typeof workspaceFilePort>[0]
+  sessions: Parameters<typeof workspaceFilePort>[1]
   tools: Parameters<typeof registerMindPptTools>[0]
 }
 
 export function apply(ctx: Context): void {
   const host = ctx as HostContext
-  const controller = new MindPptWorkspaceController(workspaceFilePort(host.fs))
+  const files = workspaceFilePort(host.fs, host.sessions)
+  const controller = new MindPptWorkspaceController(files)
   ctx.effect(
     () => registerDocumentRoute(host.connection.fetch, controller),
     'dsh-mindppt: document route',

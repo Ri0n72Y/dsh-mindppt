@@ -14,7 +14,9 @@ describe('MindPPT client dependency boundaries', () => {
     const reads: Array<{ path: string; baseFile?: string }> = []
     const remote: WorkspaceFilesRemote = {
       async readBytes(_sessionId, path, options) {
-        reads.push({ path, baseFile: options.baseFile })
+        reads.push(options.baseFile === undefined
+          ? { path }
+          : { path, baseFile: options.baseFile })
         return {
           ok: true,
           value: {

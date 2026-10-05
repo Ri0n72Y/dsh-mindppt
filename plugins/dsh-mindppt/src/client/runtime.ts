@@ -30,6 +30,7 @@ export class BrowserMindPptRuntime {
   private snapshot: BrowserSnapshot
   private readonly listeners = new Set<() => void>()
   private revision = 0
+  private assetIds: Readonly<Record<string, BinaryFileData['id']>> = {}
 
   private constructor(
     private readonly editor: MindPptEditorService,
@@ -89,7 +90,7 @@ export class BrowserMindPptRuntime {
       source: this.editor.source,
       diagnostics: [...this.parser.diagnostics],
       structureCurrent: compiled,
-      elements: compiled ? this.compileElements({}) : this.snapshot.elements,
+      elements: compiled ? this.resetAssetsAndCompile() : this.snapshot.elements,
       files: compiled ? {} : this.snapshot.files,
       camera: this.cameraService.view,
       rendererTypes: this.canvas.extensionRendererTypes,
@@ -102,7 +103,7 @@ export class BrowserMindPptRuntime {
 
   refreshElements(): void {
     if (!this.snapshot.structureCurrent) return
-    this.publish({ ...this.snapshot, elements: this.compileElements(this.snapshot.files) })
+    this.publish({ ...this.snapshot, elements: this.compileElements() })
   }
 
   focusSlide(id: string) { this.camera(() => this.cameraService.focusSlide(id)) }
@@ -137,24 +138,26 @@ export class BrowserMindPptRuntime {
       for (const elementId of request.elementIds) ids[elementId] = id
     }
     if (revision !== this.revision) return
+    this.assetIds = ids
     this.publish({
       ...this.snapshot,
       diagnostics,
       files,
-      elements: this.compileElements(files, ids),
+      elements: this.compileElements(),
     })
   }
 
-  private compileElements(
-    files: BinaryFiles,
-    ids: Readonly<Record<string, BinaryFileData['id']>> = {},
-  ): CompiledElements {
+  private resetAssetsAndCompile(): CompiledElements {
+    this.assetIds = {}
+    return this.compileElements()
+  }
+
+  private compileElements(): CompiledElements {
     const scene = this.canvas.scene.map(element => {
       if (element.type !== 'image' || !element.id) return element
-      const fileId = ids[element.id]
+      const fileId = this.assetIds[element.id]
       return fileId ? { ...element, fileId } : element
     })
-    void files
     return convertToExcalidrawElements(scene, { regenerateIds: false })
   }
 

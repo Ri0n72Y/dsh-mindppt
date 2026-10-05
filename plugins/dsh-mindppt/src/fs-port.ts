@@ -5,17 +5,22 @@ interface FsTarget {
   displayPath: string
 }
 
+interface FsInfo {
+  version: string
+}
+
 interface DshFileSystem {
   resolve(
     path: string,
     options?: { cwd?: string; signal?: AbortSignal },
   ): Promise<FsTarget>
   contains(root: FsTarget, target: FsTarget): boolean
+  stat(target: FsTarget, signal?: AbortSignal): Promise<FsInfo | undefined>
   readText(target: FsTarget, signal?: AbortSignal): Promise<string>
   writeText(
     target: FsTarget,
     source: string,
-    intent?: unknown,
+    intent?: { kind: 'replaceIfVersion'; version: string },
     signal?: AbortSignal,
   ): Promise<unknown>
 }
@@ -41,12 +46,30 @@ export function workspaceFilePort(
     }
     return resolved
   }
+
   return {
     async readText(identity, signal) {
       return await fs.readText(await target(identity, signal), signal)
     },
-    async writeText(identity, source, signal) {
-      await fs.writeText(await target(identity, signal), source, undefined, signal)
+    async readSnapshot(identity, signal) {
+      const resolved = await target(identity, signal)
+      const info = await fs.stat(resolved, signal)
+      if (!info) throw new Error('selected MindPPT file no longer exists')
+      return {
+        source: await fs.readText(resolved, signal),
+        version: info.version,
+      }
+    },
+    async writeText(identity, source, signal, expectedVersion) {
+      const resolved = await target(identity, signal)
+      await fs.writeText(
+        resolved,
+        source,
+        expectedVersion === undefined
+          ? undefined
+          : { kind: 'replaceIfVersion', version: expectedVersion },
+        signal,
+      )
     },
   }
 }

@@ -2,12 +2,22 @@ import type { MindPptDiagnostic, MindPptStructure } from 'dsh-mindppt-code-parse
 import { applyGuardedPatch, type GuardedPatchInput, type MindPptFileIdentity } from './shared.ts'
 import { MindPptDocumentRuntime } from './runtime.ts'
 
+export interface WorkspaceFileSnapshot {
+  source: string
+  version: string
+}
+
 export interface WorkspaceFilePort {
   readText(identity: MindPptFileIdentity, signal?: AbortSignal): Promise<string>
+  readSnapshot(
+    identity: MindPptFileIdentity,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceFileSnapshot>
   writeText(
     identity: MindPptFileIdentity,
     source: string,
     signal?: AbortSignal,
+    expectedVersion?: string,
   ): Promise<void>
 }
 
@@ -77,10 +87,22 @@ export class MindPptWorkspaceController {
     signal?: AbortSignal,
   ): Promise<{ ok: true; inspection: DocumentInspection } | { ok: false; reason: string }> {
     const current = this.requireCurrent(sessionId)
-    const source = await this.files.readText(current.identity, signal)
-    const patched = applyGuardedPatch(source, input)
+    const snapshot = await this.files.readSnapshot(current.identity, signal)
+    const patched = applyGuardedPatch(snapshot.source, input)
     if (!patched.ok) return patched
-    await this.files.writeText(current.identity, patched.source, signal)
+    try {
+      await this.files.writeText(
+        current.identity,
+        patched.source,
+        signal,
+        snapshot.version,
+      )
+    } catch (error) {
+      if (isStaleWrite(error)) {
+        return { ok: false, reason: 'stale patch: workspace file changed' }
+      }
+      throw error
+    }
     current.runtime.applySource(patched.source)
     return { ok: true, inspection: this.inspect(sessionId) }
   }
@@ -129,4 +151,11 @@ function semanticProjection(structure: MindPptStructure) {
       sourceRange: element.sourceRange,
     })),
   }))
+}
+
+function isStaleWrite(error: unknown): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === 'FS_STALE_VERSION'
 }

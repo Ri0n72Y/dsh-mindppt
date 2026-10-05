@@ -8,7 +8,7 @@ const shared = {
   dts: true,
   deps: {
     dts: {
-      neverBundle: true,
+      neverBundle: true as const,
     },
   },
   tsconfig: 'tsconfig.json',

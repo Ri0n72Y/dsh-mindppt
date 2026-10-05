@@ -47,8 +47,11 @@ export function workspaceFilePort(
     ) {
       throw new Error('MindPPT requires a workspace-relative file path')
     }
-    const root = await fs.resolve(cwd, { signal })
-    const resolved = await fs.resolve(path, { cwd, signal })
+    const root = await fs.resolve(cwd, signal ? { signal } : undefined)
+    const resolved = await fs.resolve(
+      path,
+      signal ? { cwd, signal } : { cwd },
+    )
     if (!fs.contains(root, resolved)) {
       throw new Error('MindPPT file is outside the selected DSH workspace')
     }

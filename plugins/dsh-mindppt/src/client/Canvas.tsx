@@ -18,9 +18,9 @@ export function MindPptCanvas({
 }: {
   elements: CompiledElements
   files: BinaryFiles
-  focusRequest?: CameraFocusRequest
-  onFontMetricsReady?: () => void
-  height?: string | number
+  focusRequest?: CameraFocusRequest | undefined
+  onFontMetricsReady?: (() => void) | undefined
+  height?: string | number | undefined
 }) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
   const transition = useRef<CameraTransitionController | null>(null)

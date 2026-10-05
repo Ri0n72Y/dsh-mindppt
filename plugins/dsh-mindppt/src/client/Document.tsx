@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { MutableRefObject, RefCallback, RefObject } from 'react'
+import type { RefCallback, RefObject } from 'react'
 import type { MindPptFileIdentity } from '../shared.ts'
 import { parseSessionFileAddress } from '../shared.ts'
 import { MindPptCanvas } from './Canvas.tsx'
@@ -114,13 +114,13 @@ function AuthoringSurface({
   onError,
 }: {
   runtime: BrowserMindPptRuntime
-  identity?: MindPptFileIdentity
-  error?: string
+  identity: MindPptFileIdentity | undefined
+  error: string | undefined
   editor: RefObject<HTMLTextAreaElement | null>
-  writeTail: MutableRefObject<Promise<void>>
+  writeTail: RefObject<Promise<void>>
   resourceAddress: string
   scrollportRef: RefCallback<HTMLElement>
-  onError(error?: string): void
+  onError(error: string | undefined): void
 }) {
   const snapshot = useSyncExternalStore(
     runtime.subscribe,

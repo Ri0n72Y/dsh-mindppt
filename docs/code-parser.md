@@ -545,7 +545,7 @@ Exact public names can evolve with implementation.
 
 No supported standalone parser API outside Cordis is required.
 
-Guarded patch application belongs to the authoring/editor boundary. M10 patches the source through the existing editor mutation path and then invokes the existing parser compile path; code-parser does not become an Agent mutation service.
+Guarded patch application belongs to the DSH workspace authoring boundary. M10 writes the selected real workspace `.mindppt` file, then updates the existing editor/parser runtime projection through the same compile path used by human authoring; code-parser does not become a file store or Agent mutation service. On compile failure the file keeps the invalid current source while `code-parser` continues to expose current diagnostics plus its last-successful `MindPptStructure`.
 
 ## 17. Extension capability boundary
 
@@ -622,8 +622,9 @@ code-parser does not own:
 - cursor reconciliation or route migration;
 - DSH prompts and authoring policy;
 - guarded source-patch application;
-- Host/Client bridge ownership;
-- sidebar mounting;
+- DSH Workspace file selection/read/write ownership;
+- Host/Client authoring-route ownership;
+- right-side Document Preview mounting;
 - final PPTX export;
 - extension-specific grammars.
 

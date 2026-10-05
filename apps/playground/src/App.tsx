@@ -94,26 +94,24 @@ export function App({ runtime }: AppProps) {
         </aside>
       )}
 
-      <div className="canvas-stage">
-        {!editorVisible && (
-          <div className="presentation-toolbar">
-            <button
-              type="button"
-              aria-label="Show editor"
-              onClick={() => setEditorVisible(true)}
-            >
-              Show editor
-            </button>
-            <CameraControls camera={snapshot.camera} runtime={runtime} />
-          </div>
-        )}
-        <MindPptCanvas
-          elements={snapshot.elements}
-          files={snapshot.files}
-          focusRequest={snapshot.camera.focusRequest}
-          onFontMetricsReady={runtime.refreshElements}
-        />
-      </div>
+      {!editorVisible && (
+        <div className="presentation-toolbar">
+          <button
+            type="button"
+            aria-label="Show editor"
+            onClick={() => setEditorVisible(true)}
+          >
+            Show editor
+          </button>
+          <CameraControls camera={snapshot.camera} runtime={runtime} />
+        </div>
+      )}
+      <MindPptCanvas
+        elements={snapshot.elements}
+        files={snapshot.files}
+        focusRequest={snapshot.camera.focusRequest}
+        onFontMetricsReady={runtime.refreshElements}
+      />
     </main>
   )
 }

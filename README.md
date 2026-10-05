@@ -179,3 +179,50 @@ Client file reads, change observation, and document-relative local image bytes r
 The right-side preview is static. The Preview button opens a separate DSH page that rereads the same workspace file and runs the existing Excalidraw + Camera + PresentationPath + SoftLink presentation behavior with no editor. The standalone playground remains DSH-independent and now allows its editor panel to be hidden and restored for a presentation-style canvas.
 
 Real DSH acceptance remains pending and is the final M10/v0 architecture proof.
+
+### Quick DSH deploy
+
+The deployment helper is intentionally pinned to DSH `0.2.0-rc.2`. From the repository root:
+
+```sh
+pnpm install
+pnpm dsh:deploy
+```
+
+The default target is the `mindppt` profile. If the profile does not exist, the helper initializes it through the official rc2 Web template, verifies the Web Workspace/Document Preview surface, installs the current local `plugins/dsh-mindppt` checkout through `dsh plugin`, then performs a boot-free config-dump smoke check that the MindPPT Bundle is active. An existing profile is never rebuilt; if it is not Web-backed, deployment fails instead of rewriting DSH profile storage.
+
+Use another profile with the rc2 selector:
+
+```sh
+pnpm dsh:deploy -- --profile review
+```
+
+Additional pnpm arguments for the rc2 plugin operation are forwarded in order:
+
+```sh
+pnpm dsh:deploy -- --profile review --offline
+```
+
+Launch the default profile with the official rc2 profile shorthand:
+
+```sh
+pnpm dsh mindppt
+```
+
+### Real DSH 0.2.0-rc.2 acceptance flow
+
+Run this as one continuous real-machine flow after `pnpm install` and `pnpm dsh:deploy`; it is intentionally not part of CI.
+
+1. Prepare a DSH workspace containing `presentation.mindppt` plus `assets/customer.svg`: copy `examples/m9-content-plugin-latex.mindppt` to `presentation.mindppt` and preserve the existing relative `./assets/customer.svg` relationship. Start `pnpm dsh mindppt`, open that workspace, and select `presentation.mindppt` from the native Workspace sidebar. The right-side panel must show MindPPT, `Current`, the source editor, the static PPT preview, and `Preview`. The projection must contain hero, agenda, problem, customer, analysis, summary, the customer SVG, the table, the bar chart, and specialized Euler-formula rendering.
+
+2. Edit `# Analysis Flow` to `# Analysis Flow — Human Edit` without reloading. The real workspace file and static preview must change while status remains `Current`; switch away and reopen the file and confirm the edit persists. Then ask the Agent: `Inspect the currently selected MindPPT document. Report the selected file, structureCurrent, structureBasis, active renderer types, and source range for: "The M9 slice reuses the existing presentation pipeline." Do not modify anything.` Confirm the selected `.mindppt`, `structureCurrent=true`, `structureBasis=current`, active LaTeX renderer, semantic source ranges, and no raw Excalidraw JSON.
+
+3. Ask the Agent to guarded-replace `The M9 slice reuses the existing presentation pipeline.` with `The M10 workspace slice reuses the existing presentation pipeline.` The workspace file, open source editor, and static preview must all change without a page reload. Then intentionally reuse the old expected text without refreshing the patch basis; the stale patch must be rejected with file and preview unchanged.
+
+4. Re-inspect, then guarded-replace `values [184, 121, 96]` with the invalid `values [184, 121,`. The workspace file must keep the invalid source, diagnostics must appear, the header must show `Last-good preview`, and the static projection must stay on the last-good structure. Inspect again and confirm `structureCurrent=false`, `structureBasis=last-good`, with diagnostics for the current invalid source. Guarded-repair the text back to `values [184, 121, 96]`; diagnostics must clear and the structure must return to current.
+
+5. Click `Preview`. The independent page/new tab must have no source editor and must show the full Excalidraw presentation with Camera controls. Exercise focus hero, hero → agenda, and parent → hero. Select path `main` and navigate hero → agenda → customer → analysis → customer → summary, confirming the repeated customer occurrence and Previous navigation. Focus customer and follow `Link: summary`; directed SoftLink follow must work, with no Back/history expectation. Select `short`, navigate to problem, and confirm `e^(iπ) + 1 = 0` remains specialized with the `iπ` superscript not vertically wrapped. Return to customer and confirm `customer.svg` is visible in full Preview.
+
+6. Finally run `pnpm dev` for the standalone playground with no DSH dependency. Click `Hide editor` and confirm the presentation canvas expands while Camera remains usable; click `Show editor` and confirm the editor returns without losing runtime/Camera state.
+
+If every stage passes, record `M10 real DSH 0.2.0-rc.2 acceptance = passed`; only then may M10 and the MindPPT v0 architecture be marked complete. On failure, record the exact stage, observed versus expected behavior, current main SHA, DSH version/profile, and whether the workspace file actually changed before changing architecture.

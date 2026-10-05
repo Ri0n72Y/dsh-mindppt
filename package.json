@@ -12,6 +12,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "check": "pnpm run typecheck && pnpm run test && pnpm run build",
-    "test:browser": "pnpm --filter dsh-mindppt-playground test:browser"
+    "test:browser": "pnpm --filter dsh-mindppt-playground test:browser",
+    "dsh:deploy": "node scripts/deploy-dsh.mjs"
   }
 }

@@ -39,8 +39,16 @@ export function workspaceFilePort(
   ): Promise<FsTarget> => {
     const cwd = sessions.get(identity.sessionId)?.header.cwd
     if (!cwd) throw new Error('MindPPT requires a live DSH workspace session')
+    const path = identity.path.replace(/\\/g, '/')
+    if (
+      path.startsWith('/')
+      || /^[A-Za-z]:\//.test(path)
+      || path.split('/').includes('..')
+    ) {
+      throw new Error('MindPPT requires a workspace-relative file path')
+    }
     const root = await fs.resolve(cwd, { signal })
-    const resolved = await fs.resolve(identity.path, { cwd, signal })
+    const resolved = await fs.resolve(path, { cwd, signal })
     if (!fs.contains(root, resolved)) {
       throw new Error('MindPPT file is outside the selected DSH workspace')
     }

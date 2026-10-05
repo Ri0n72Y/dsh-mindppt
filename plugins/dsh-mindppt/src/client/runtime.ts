@@ -20,7 +20,7 @@ export interface BrowserSnapshot {
 }
 
 export interface RelatedAsset {
-  data: Uint8Array
+  data: Uint8Array<ArrayBuffer>
   mimeType: BinaryFileData['mimeType']
 }
 
@@ -175,14 +175,14 @@ function assetWarning(request: CanvasAssetRequest): MindPptDiagnostic {
   }
 }
 
-function fileId(source: string, data: Uint8Array): string {
+function fileId(source: string, data: Uint8Array<ArrayBuffer>): string {
   let hash = 2166136261
   for (const char of source) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619)
   for (const byte of data) hash = Math.imul(hash ^ byte, 16777619)
   return (hash >>> 0).toString(16).padStart(8, '0').repeat(5)
 }
 
-function bytesToDataUrl(data: Uint8Array, mimeType: string): Promise<string> {
+function bytesToDataUrl(data: Uint8Array<ArrayBuffer>, mimeType: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onerror = () => reject(reader.error)

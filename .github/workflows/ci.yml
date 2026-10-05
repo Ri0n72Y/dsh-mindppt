@@ -1,35 +1,95 @@
 name: CI
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
+    name: verify
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect validation scope
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "runtime=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed_files="$(git diff --name-only "$base" "$head")"
+          runtime=false
+
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+
+            case "$file" in
+              README.md|docs/*)
+                ;;
+              *)
+                runtime=true
+                break
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
+
+      - name: Documentation-only change
+        if: steps.scope.outputs.runtime == 'false'
+        run: echo "Documentation-only change; runtime and browser validation skipped."
 
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.runtime == 'true'
         with:
           node-version: 24
 
       - name: Enable Corepack
+        if: steps.scope.outputs.runtime == 'true'
         run: corepack enable
 
       - name: Install dependencies
+        if: steps.scope.outputs.runtime == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Remove generated plugin output
+        if: steps.scope.outputs.runtime == 'true'
         run: rm -rf plugins/*/lib
 
       - name: Verify
+        if: steps.scope.outputs.runtime == 'true'
         run: pnpm run check
 
       - name: Install Chromium
+        if: steps.scope.outputs.runtime == 'true'
         run: pnpm --filter dsh-mindppt-playground exec playwright install --with-deps chromium
 
       - name: Browser smoke test
+        if: steps.scope.outputs.runtime == 'true'
         run: pnpm run test:browser

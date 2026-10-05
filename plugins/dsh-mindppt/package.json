@@ -17,8 +17,10 @@
   "dsh": {
     "client": {
       "inject": [
+        "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-api-workspace-files",
-        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview"
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview",
+        "@deepseek-ai/dsh-client-ui-slots"
       ],
       "platform": "web"
     }
@@ -29,29 +31,47 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.4",
     "@excalidraw/excalidraw": "0.18.0",
     "dsh-mindppt-camera": "workspace:*",
     "dsh-mindppt-canvas-excalidraw": "workspace:*",
     "dsh-mindppt-code-editor": "workspace:*",
     "dsh-mindppt-code-parser": "workspace:*",
-    "dsh-mindppt-latex": "workspace:*",
-    "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "dsh-mindppt-latex": "workspace:*"
   },
   "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "react": ">=18.2.0 <20",
+    "react-dom": ">=18.2.0 <20",
+    "@deepseek-ai/dsh-api-remotes": "0.2.0-rc.2",
     "@deepseek-ai/dsh-api-workspace-files": "0.2.0-rc.2",
     "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
     "@deepseek-ai/dsh-client-ui-sidebar-documentpreview": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
     "@deepseek-ai/dsh-fs": "0.2.0-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-api-workspace-files": { "optional": true },
-    "@deepseek-ai/dsh-client-connection": { "optional": true },
-    "@deepseek-ai/dsh-client-ui-sidebar-documentpreview": { "optional": true },
-    "@deepseek-ai/dsh-fs": { "optional": true },
-    "@deepseek-ai/dsh-tools": { "optional": true }
+    "@deepseek-ai/dsh-api-remotes": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-api-workspace-files": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-connection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-sidebar-documentpreview": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-slots": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-fs": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^22.20.0",
@@ -59,6 +79,9 @@
     "@types/react-dom": "^19.0.0",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "@deepseek-ai/cordis": "4.0.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
   }
 }

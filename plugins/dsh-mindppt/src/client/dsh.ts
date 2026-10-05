@@ -50,7 +50,7 @@ export async function resolveIdentity(
   if (!result.ok || !result.value) {
     throw new Error(result.error?.message ?? 'Unable to stat MindPPT file')
   }
-  return { sessionId, path, absolutePath: result.value.absolutePath }
+  return { sessionId, path }
 }
 
 export async function readWholeSource(

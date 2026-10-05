@@ -58,17 +58,25 @@ export async function readWholeSource(
   sessionId: string,
   path: string,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<{ source: string; version: string }> {
   const parts: string[] = []
   let offset = 1
+  let version = ''
   while (true) {
     const result = await remote.read(sessionId, path, { offset }, signal)
     if (!result.ok || !result.value) {
       throw new Error(result.error?.message ?? 'Unable to read MindPPT file')
     }
     const page = result.value
+    if (!version) version = page.version
+    if (page.version !== version) {
+      parts.length = 0
+      offset = 1
+      version = page.version
+      continue
+    }
     parts.push(page.text)
-    if (page.eof) return parts.join('\n')
+    if (page.eof) return { source: parts.join('\n'), version }
     if (page.lines <= 0) throw new Error('MindPPT file read made no progress')
     offset += page.lines
   }
@@ -78,20 +86,21 @@ export function relatedReader(
   remote: WorkspaceFilesRemote,
   sessionId: string,
   baseFile: string,
+  addResource?: (address: string) => void,
 ) {
   return async (source: string, signal: AbortSignal): Promise<RelatedAsset | undefined> => {
-    const result = await remote.readBytes(
-      sessionId,
-      source,
-      { baseFile },
-      signal,
-    )
+    const result = await remote.readBytes(sessionId, source, { baseFile }, signal)
     if (!result.ok || !result.value) return undefined
-    return {
-      data: result.value.data,
-      mimeType: mimeType(source),
-    }
+    addResource?.(sessionFileAddress(sessionId, result.value.absolutePath))
+    return { data: result.value.data, mimeType: mimeType(source) }
   }
+}
+
+function sessionFileAddress(sessionId: string, path: string): string {
+  const encodedPath = path.replace(/\\/g, '/').split('/')
+    .map(segment => encodeURIComponent(segment).replace(/%3A/gi, ':'))
+    .join('/')
+  return 'dsh-resource://file/session/' + encodeURIComponent(sessionId) + '/' + encodedPath
 }
 
 function mimeType(path: string): RelatedAsset['mimeType'] {

@@ -1,15 +1,21 @@
 import { defineConfig } from 'tsdown'
 
-export default defineConfig([
-  {
-    entry: { index: 'src/index.ts' },
-    dts: true,
-    format: 'esm',
-    clean: true,
+export default defineConfig({
+  entry: {
+    index: 'src/index.ts',
+    client: 'src/client/index.tsx',
   },
-  {
-    entry: { client: 'src/client/index.tsx' },
-    dts: true,
-    format: 'esm',
+  outDir: 'lib',
+  format: ['esm'],
+  platform: 'neutral',
+  target: 'es2024',
+  fixedExtension: false,
+  dts: true,
+  clean: true,
+  deps: {
+    dts: {
+      neverBundle: true,
+    },
   },
-])
+  tsconfig: 'tsconfig.json',
+})

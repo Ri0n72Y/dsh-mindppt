@@ -55,7 +55,9 @@ export function MindPptDocument(props: MindPptDocumentProps) {
         )
         if (controller.signal.aborted) return
         await postDocument({ action: 'select', identity: nextIdentity })
-        let nextRuntime = runtime
+        const sameFile = identity?.sessionId === nextIdentity.sessionId
+          && identity.path === nextIdentity.path
+        let nextRuntime = sameFile ? runtime : undefined
         if (!nextRuntime) {
           nextRuntime = await BrowserMindPptRuntime.create(
             read.source,

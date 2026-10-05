@@ -1,6 +1,6 @@
 export const DSH_BASELINE = '0.2.0-rc.2'
 export const MINDPPT_BODY_ID = 'dsh-mindppt/document'
-export const DOCUMENT_ROUTE = '/api/mindppt/document'
+export const DOCUMENT_ROUTE = '/mindppt/document'
 export const DOCUMENT_BROWSER_ROUTE = DOCUMENT_ROUTE.slice(1)
 
 export interface MindPptFileIdentity {

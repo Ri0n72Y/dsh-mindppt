@@ -1,22 +1,33 @@
-import {
-  defineTool,
-  type ToolDefinition,
-  type ToolRunContext,
-} from '@deepseek-ai/dsh-tools'
 import type { MindPptWorkspaceController } from './controller.ts'
+
+interface ToolExecution {
+  signal: AbortSignal
+  agent?: { id: string }
+}
+
+interface ToolDefinition {
+  name: string
+  description: string
+  parameters: object
+  output: {
+    schema: object
+    render(args: unknown, value: unknown): Array<{ type: 'text'; text: string }>
+  }
+  execute(args: unknown, exec: ToolExecution): Promise<unknown>
+}
 
 interface ToolRegistry {
   register(tool: ToolDefinition): () => void
 }
 
 const output = {
-  schema: { type: 'json' as const },
+  schema: {},
   render(_args: unknown, value: unknown) {
     return [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }]
   },
 }
 
-function sessionId(exec: ToolRunContext): string {
+function sessionId(exec: ToolExecution): string {
   if (!exec.agent) throw new Error('MindPPT tools require an active Agent session')
   return String(exec.agent.id)
 }
@@ -26,33 +37,52 @@ export function registerMindPptTools(
   controller: MindPptWorkspaceController,
 ): Array<() => void> {
   return [
-    tools.register(defineTool({
+    tools.register({
       name: 'mindppt_inspect',
       description: 'Inspect the selected .mindppt source and its current or last-good semantic structure.',
-      parameters: {},
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
       output,
       async execute(_args, exec) {
         return controller.inspect(sessionId(exec))
       },
-    })),
-    tools.register(defineTool({
+    }),
+    tools.register({
       name: 'mindppt_patch',
       description: 'Guardedly replace or delete one existing non-empty source span in the selected .mindppt file.',
       parameters: {
-        start: { type: 'integer', required: true },
-        end: { type: 'integer', required: true },
-        expected: { type: 'string', required: true },
-        replacement: { type: 'string', required: true },
+        type: 'object',
+        properties: {
+          start: { type: 'integer' },
+          end: { type: 'integer' },
+          expected: { type: 'string' },
+          replacement: { type: 'string' },
+        },
+        required: ['start', 'end', 'expected', 'replacement'],
+        additionalProperties: false,
       },
       output,
       async execute(args, exec) {
-        return controller.guardedPatch(sessionId(exec), args, exec.signal)
+        const patch = args as {
+          start: number
+          end: number
+          expected: string
+          replacement: string
+        }
+        return controller.guardedPatch(sessionId(exec), patch, exec.signal)
       },
-    })),
-    tools.register(defineTool({
+    }),
+    tools.register({
       name: 'mindppt_guidance',
       description: 'Return concise MindPPT v0 authoring syntax and the active extension renderer types.',
-      parameters: {},
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
       output,
       async execute(_args, exec) {
         const inspect = controller.inspect(sessionId(exec))
@@ -71,6 +101,6 @@ export function registerMindPptTools(
           activeExtensionRendererTypes: inspect.activeExtensionRendererTypes,
         }
       },
-    })),
+    }),
   ]
 }

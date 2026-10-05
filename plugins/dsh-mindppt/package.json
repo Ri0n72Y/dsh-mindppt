@@ -2,17 +2,20 @@
   "name": "dsh-mindppt-dsh",
   "version": "0.1.0",
   "type": "module",
-  "main": "lib/index.js",
-  "types": "lib/types/index.d.ts",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/types/index.d.ts",
+      "development": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
     "./client": {
-      "types": "./lib/types/client/index.d.ts",
+      "development": "./src/client/index.tsx",
+      "types": "./lib/client.d.ts",
       "default": "./lib/client.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "dsh": {
     "client": {
@@ -26,9 +29,12 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown --config tsdown.config.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check": "pnpm run typecheck && pnpm run test && pnpm run build",
+    "prepare": "pnpm run build",
+    "prepublishOnly": "pnpm run check"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "0.18.0",
@@ -83,5 +89,12 @@
     "@deepseek-ai/cordis": "4.0.4",
     "react": "19.0.0",
     "react-dom": "19.0.0"
-  }
+  },
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "files": [
+    "lib"
+  ]
 }

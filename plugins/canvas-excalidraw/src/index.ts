@@ -12,6 +12,8 @@ import {
 } from './scene.ts'
 
 export type { CanvasAssetRequest, ExcalidrawScene }
+export { replaceMountedFiles, runCameraTransition } from './presentation.ts'
+export type { CameraTransitionController, CanvasFocusRequest } from './presentation.ts'
 export type {
   ExtensionNode,
   ExtensionRenderContext,

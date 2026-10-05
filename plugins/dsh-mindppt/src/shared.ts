@@ -6,7 +6,6 @@ export const DOCUMENT_BROWSER_ROUTE = DOCUMENT_ROUTE.slice(1)
 export interface MindPptFileIdentity {
   sessionId: string
   path: string
-  absolutePath: string
 }
 
 export interface GuardedPatchInput {

@@ -20,7 +20,7 @@ interface WorkspaceFileText extends WorkspaceFileStat {
 }
 
 interface WorkspaceFileBytes extends WorkspaceFileStat {
-  data: Uint8Array
+  data: Uint8Array<ArrayBuffer>
   eof: boolean
 }
 

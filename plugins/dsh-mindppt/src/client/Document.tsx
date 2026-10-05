@@ -11,7 +11,6 @@ import {
 } from './dsh.ts'
 import { BrowserMindPptRuntime } from './runtime.ts'
 import { postDocument } from './wire.ts'
-
 interface RendererContent {
   kind: 'renderer'
   revision: number
@@ -19,7 +18,6 @@ interface RendererContent {
   failed(): void
   reload(): void
 }
-
 export interface MindPptDocumentProps {
   resourceAddress: string
   content: RendererContent | { kind: 'text' } | { kind: 'bytes' }
@@ -28,7 +26,6 @@ export interface MindPptDocumentProps {
   scrollportRef: RefCallback<HTMLElement>
   remote: WorkspaceFilesRemote
 }
-
 export function MindPptDocument(props: MindPptDocumentProps) {
   const {
     resourceAddress,
@@ -44,7 +41,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
   const [error, setError] = useState<string>()
   const editor = useRef<HTMLTextAreaElement>(null)
   const writeTail = useRef(Promise.resolve())
-
   useEffect(() => {
     if (!file || content.kind !== 'renderer') return
     const controller = new AbortController()
@@ -81,7 +77,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
     })()
     return () => controller.abort()
   }, [resourceAddress, content.kind === 'renderer' ? content.revision : -1])
-
   useEffect(() => () => {
     if (!file) return
     void postDocument({
@@ -90,11 +85,9 @@ export function MindPptDocument(props: MindPptDocumentProps) {
       path: file.path,
     }).catch(() => {})
   }, [resourceAddress])
-
   if (!file) return <p>MindPPT requires a DSH workspace file.</p>
   if (content.kind !== 'renderer') return <p>Loading MindPPT…</p>
   if (!runtime) return <p>{error ?? 'Loading MindPPT…'}</p>
-
   return (
     <AuthoringSurface
       runtime={runtime}
@@ -108,7 +101,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
     />
   )
 }
-
 function AuthoringSurface({
   runtime,
   identity,
@@ -146,7 +138,6 @@ function AuthoringSurface({
     url.searchParams.set('mindppt-preview', resourceAddress)
     window.open(url, '_blank', 'noopener')
   }
-
   return (
     <section
       ref={scrollportRef}
@@ -197,12 +188,10 @@ function AuthoringSurface({
     </section>
   )
 }
-
 const rootStyle = { display: 'grid', gap: 8, padding: 8, height: '100%', boxSizing: 'border-box' } as const
 const headerStyle = { display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' } as const
 const editorStyle = { width: '100%', minHeight: 180, resize: 'vertical', fontFamily: 'monospace', boxSizing: 'border-box' } as const
 const errorStyle = { padding: 8, background: '#fff4f4' } as const
-
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }

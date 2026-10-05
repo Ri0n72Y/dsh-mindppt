@@ -13,7 +13,7 @@ export interface DocumentInspection {
   diagnostics: readonly MindPptDiagnostic[]
   structureCurrent: boolean
   semantic: ReturnType<typeof semanticProjection>
-  tree: MindPptStructure['tree']
+  tree: MindPptStructure['tree'] | null
   softLinks: NonNullable<MindPptStructure['links']>
   presentationPaths: NonNullable<MindPptStructure['paths']>
   activeExtensionRendererTypes: readonly string[]
@@ -90,7 +90,7 @@ export class MindPptWorkspaceController {
       diagnostics: view.diagnostics,
       structureCurrent: view.structureCurrent,
       semantic: semanticProjection(view.structure),
-      tree: view.structure.tree,
+      tree: view.structure.tree ?? null,
       softLinks: view.structure.links ?? [],
       presentationPaths: view.structure.paths ?? [],
       activeExtensionRendererTypes: view.rendererTypes,

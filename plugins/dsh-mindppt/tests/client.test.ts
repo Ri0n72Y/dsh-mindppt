@@ -4,10 +4,13 @@ import {
   relatedReader,
   type WorkspaceFilesRemote,
 } from '../src/client/dsh.ts'
-import {
-  apply as applyClient,
-  inject as clientInject,
-} from '../src/client/index.tsx'
+
+vi.mock('../src/client/Document.tsx', () => ({
+  MindPptDocument: () => null,
+}))
+vi.mock('../src/client/PreviewPage.tsx', () => ({
+  PreviewPage: () => null,
+}))
 
 describe('MindPPT client dependency boundaries', () => {
   it('rejects escaping related asset paths before privileged Workspace reads', async () => {
@@ -52,6 +55,10 @@ describe('MindPPT client dependency boundaries', () => {
   })
 
   it('waits for Cordis services and disposes client registrations with its fiber', async () => {
+    const {
+      apply: applyClient,
+      inject: clientInject,
+    } = await import('../src/client/index.tsx')
     vi.stubGlobal('window', { location: { href: 'http://localhost/' } })
     const ctx = new Context()
     let previewRegistrations = 0
@@ -95,10 +102,9 @@ describe('MindPPT client dependency boundaries', () => {
       expect(slotRegistrations).toBe(0)
 
       ctx.provide('remote.workspaceFiles' as never, workspaceFiles as never)
-      await Promise.resolve()
+      await fiber.await()
       expect(previewRegistrations).toBe(1)
       expect(slotRegistrations).toBe(1)
-      await fiber.await()
 
       await fiber.dispose()
       expect(previewDisposals).toBe(1)

@@ -12,16 +12,35 @@ slide
 function memoryFile(initial = VALID) {
   let source = initial
   let writes = 0
+  let version = 1
+  let staleNextWrite = false
   return {
     port: {
       async readText() { return source },
-      async writeText(_identity: { sessionId: string; path: string }, next: string) {
+      async readSnapshot() {
+        return { source, version: String(version) }
+      },
+      async writeText(
+        _identity: { sessionId: string; path: string },
+        next: string,
+        _signal?: AbortSignal,
+        expectedVersion?: string,
+      ) {
+        if (staleNextWrite || (
+          expectedVersion !== undefined
+          && expectedVersion !== String(version)
+        )) {
+          staleNextWrite = false
+          throw Object.assign(new Error('stale'), { code: 'FS_STALE_VERSION' })
+        }
         source = next
         writes += 1
+        version += 1
       },
     },
     source: () => source,
     writes: () => writes,
+    staleNextWrite: () => { staleNextWrite = true },
   }
 }
 
@@ -47,7 +66,7 @@ describe('workspace controller', () => {
     expect(controller.inspect('s1').structureCurrent).toBe(true)
   })
 
-  it('rejects stale patches before write or compile', async () => {
+  it('rejects stale expected text before write or compile', async () => {
     const file = memoryFile()
     const controller = new MindPptWorkspaceController(file.port)
     await controller.select({
@@ -63,6 +82,30 @@ describe('workspace controller', () => {
       replacement: 'mind',
     })
     expect(result.ok).toBe(false)
+    expect(file.writes()).toBe(writes)
+    expect(controller.attempts('s1')).toBe(attempts)
+  })
+
+  it('rejects a concurrent workspace change before write or compile', async () => {
+    const file = memoryFile()
+    const controller = new MindPptWorkspaceController(file.port)
+    await controller.select({
+      sessionId: 's1',
+      path: 'deck.mindppt',
+    })
+    const writes = file.writes()
+    const attempts = controller.attempts('s1')
+    file.staleNextWrite()
+    const result = await controller.guardedPatch('s1', {
+      start: 0,
+      end: 7,
+      expected: 'mindppt',
+      replacement: 'mindppt',
+    })
+    expect(result).toEqual({
+      ok: false,
+      reason: 'stale patch: workspace file changed',
+    })
     expect(file.writes()).toBe(writes)
     expect(controller.attempts('s1')).toBe(attempts)
   })

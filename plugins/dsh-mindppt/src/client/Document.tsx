@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { RefCallback } from 'react'
+import type { MutableRefObject, RefCallback, RefObject } from 'react'
 import type { MindPptFileIdentity } from '../shared.ts'
 import { parseSessionFileAddress } from '../shared.ts'
 import { MindPptCanvas } from './Canvas.tsx'
@@ -22,7 +22,7 @@ interface RendererContent {
 
 export interface MindPptDocumentProps {
   resourceAddress: string
-  content: RendererContent | { kind: string }
+  content: RendererContent | { kind: 'text' } | { kind: 'bytes' }
   addResource(address: string): void
   setResources(addresses: readonly string[]): void
   scrollportRef: RefCallback<HTMLElement>
@@ -122,8 +122,8 @@ function AuthoringSurface({
   runtime: BrowserMindPptRuntime
   identity?: MindPptFileIdentity
   error?: string
-  editor: React.RefObject<HTMLTextAreaElement | null>
-  writeTail: React.MutableRefObject<Promise<void>>
+  editor: RefObject<HTMLTextAreaElement | null>
+  writeTail: MutableRefObject<Promise<void>>
   resourceAddress: string
   scrollportRef: RefCallback<HTMLElement>
   onError(error?: string): void

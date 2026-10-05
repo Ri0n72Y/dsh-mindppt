@@ -3,12 +3,16 @@ import { applyGuardedPatch, type GuardedPatchInput, type MindPptFileIdentity } f
 import { MindPptDocumentRuntime } from './runtime.ts'
 
 export interface WorkspaceFilePort {
-  readText(absolutePath: string, signal?: AbortSignal): Promise<string>
-  writeText(absolutePath: string, source: string, signal?: AbortSignal): Promise<void>
+  readText(identity: MindPptFileIdentity, signal?: AbortSignal): Promise<string>
+  writeText(
+    identity: MindPptFileIdentity,
+    source: string,
+    signal?: AbortSignal,
+  ): Promise<void>
 }
 
 export interface DocumentInspection {
-  file: { sessionId: string; path: string }
+  file: MindPptFileIdentity
   source: string
   diagnostics: readonly MindPptDiagnostic[]
   structureCurrent: boolean
@@ -35,9 +39,9 @@ export class MindPptWorkspaceController {
       this.active.delete(identity.sessionId)
       return
     }
-    const source = await this.files.readText(identity.absolutePath, signal)
+    const source = await this.files.readText(identity, signal)
     const previous = this.active.get(identity.sessionId)
-    if (previous?.identity.absolutePath === identity.absolutePath) {
+    if (previous?.identity.path === identity.path) {
       previous.identity = identity
       previous.runtime.applySource(source)
       return
@@ -62,7 +66,7 @@ export class MindPptWorkspaceController {
   ): Promise<DocumentInspection> {
     const current = this.requireCurrent(identity.sessionId)
     this.assertIdentity(current, identity)
-    await this.files.writeText(identity.absolutePath, source, signal)
+    await this.files.writeText(identity, source, signal)
     current.runtime.applySource(source)
     return this.inspect(identity.sessionId)
   }
@@ -73,10 +77,10 @@ export class MindPptWorkspaceController {
     signal?: AbortSignal,
   ): Promise<{ ok: true; inspection: DocumentInspection } | { ok: false; reason: string }> {
     const current = this.requireCurrent(sessionId)
-    const source = await this.files.readText(current.identity.absolutePath, signal)
+    const source = await this.files.readText(current.identity, signal)
     const patched = applyGuardedPatch(source, input)
     if (!patched.ok) return patched
-    await this.files.writeText(current.identity.absolutePath, patched.source, signal)
+    await this.files.writeText(current.identity, patched.source, signal)
     current.runtime.applySource(patched.source)
     return { ok: true, inspection: this.inspect(sessionId) }
   }
@@ -85,7 +89,7 @@ export class MindPptWorkspaceController {
     const current = this.requireCurrent(sessionId)
     const view = current.runtime.view
     return {
-      file: { sessionId, path: current.identity.path },
+      file: current.identity,
       source: view.source,
       diagnostics: view.diagnostics,
       structureCurrent: view.structureCurrent,
@@ -109,10 +113,7 @@ export class MindPptWorkspaceController {
   }
 
   private assertIdentity(current: ActiveDocument, identity: MindPptFileIdentity): void {
-    if (
-      current.identity.path !== identity.path
-      || current.identity.absolutePath !== identity.absolutePath
-    ) {
+    if (current.identity.path !== identity.path) {
       throw new Error('stale MindPPT document selection')
     }
   }

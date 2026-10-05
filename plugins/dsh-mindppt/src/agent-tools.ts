@@ -89,14 +89,15 @@ export function registerMindPptTools(
         return {
           syntax: [
             'mindppt',
-            'tree: directed slide hierarchy',
-            'slide <id>: Markdown content',
-            'link <from> -> <to>',
-            'path <name>: ordered slide occurrences',
-            'layouts: hero | title-content | two-column',
-            'local image: Markdown image with a relative path',
-            'structured: table and chart bar',
-            'extension fence: fenced block whose info string is the renderer type',
+            'tree LR { parent --> child }',
+            'slide <id> { Markdown content }',
+            'link <from> -.-> <to>',
+            'path <name> { slideId ... }',
+            'layout hero | title-content | two-column',
+            'local image: ![alt](./relative/path.png)',
+            'table { header [...] row [...] }',
+            'chart bar { labels [...] values [...] }',
+            'extension: fenced block whose info string is the renderer type',
           ],
           activeExtensionRendererTypes: inspect.activeExtensionRendererTypes,
         }

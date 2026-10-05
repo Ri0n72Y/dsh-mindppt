@@ -1,30 +1,36 @@
 import { defineConfig } from 'tsdown'
 
-const shared = {
-  outDir: 'lib',
-  format: ['esm'] as Array<'esm'>,
-  target: 'es2024',
-  fixedExtension: false,
-  dts: true,
-  deps: {
-    dts: {
-      neverBundle: true as const,
-    },
-  },
-  tsconfig: 'tsconfig.json',
-}
-
 export default defineConfig([
   {
-    ...shared,
     entry: { index: 'src/index.ts' },
+    outDir: 'lib',
+    format: ['esm'],
     platform: 'node',
+    target: 'es2024',
+    fixedExtension: false,
+    dts: true,
     clean: true,
+    deps: {
+      dts: {
+        neverBundle: true,
+      },
+    },
+    tsconfig: 'tsconfig.json',
   },
   {
-    ...shared,
     entry: { client: 'src/client/index.tsx' },
+    outDir: 'lib',
+    format: ['esm'],
     platform: 'browser',
+    target: 'es2024',
+    fixedExtension: false,
+    dts: true,
     clean: false,
+    deps: {
+      dts: {
+        neverBundle: true,
+      },
+    },
+    tsconfig: 'tsconfig.json',
   },
 ])

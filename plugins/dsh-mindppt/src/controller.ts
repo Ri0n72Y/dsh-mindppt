@@ -31,7 +31,7 @@ export interface DocumentInspection {
   softLinks: NonNullable<MindPptStructure['links']>
   presentationPaths: NonNullable<MindPptStructure['paths']>
   activeExtensionRendererTypes: readonly string[]
-  structureBasis: 'current' | 'last-good'
+  structureBasis: 'current' | 'last-good' | 'none'
 }
 
 interface ActiveDocument {
@@ -120,7 +120,9 @@ export class MindPptWorkspaceController {
       softLinks: view.structure?.links ?? [],
       presentationPaths: view.structure?.paths ?? [],
       activeExtensionRendererTypes: view.rendererTypes,
-      structureBasis: view.structureCurrent ? 'current' : 'last-good',
+      structureBasis: view.structureCurrent
+        ? 'current'
+        : view.structure ? 'last-good' : 'none',
     }
   }
 

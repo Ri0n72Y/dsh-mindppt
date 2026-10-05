@@ -6,7 +6,6 @@ import { MindPptCanvas } from './Canvas.tsx'
 import {
   readWholeSource,
   relatedReader,
-  resolveIdentity,
   type WorkspaceFilesRemote,
 } from './dsh.ts'
 import { BrowserMindPptRuntime } from './runtime.ts'
@@ -47,12 +46,13 @@ export function MindPptDocument(props: MindPptDocumentProps) {
     setResources([])
     void (async () => {
       try {
-        const nextIdentity = await resolveIdentity(
-          remote, file.sessionId, file.path, controller.signal,
-        )
         const read = await readWholeSource(
           remote, file.sessionId, file.path, controller.signal,
         )
+        const nextIdentity = {
+          sessionId: file.sessionId,
+          path: file.path,
+        }
         if (controller.signal.aborted) return
         await postDocument({ action: 'select', identity: nextIdentity })
         const sameFile = identity?.sessionId === nextIdentity.sessionId

@@ -933,6 +933,13 @@ The language is sufficient for v0 when one project can express and render:
 - camera traversal;
 - live source editing with diagnostics and last-good rendering;
 - stable semantic IDs and usable source ranges;
-- DSH/Agent source editing without raw Excalidraw JSON.
+- DSH native Workspace / Agent source editing against the same real `.mindppt` file without raw Excalidraw JSON.
 
 Implementation order and delivery milestones are defined in docs/roadmap.md.
+
+
+### M10 workspace authoring note
+
+DSH integration does not add a second language document model. The selected native Workspace `.mindppt` file is persistent truth; human and Agent mutations both change that file. Runtime parser/canvas state is a projection and may retain last-good semantics while the current file is temporarily invalid.
+
+Agent v0 mutation is deliberately source-level and guarded: one existing non-empty `[start, end)` span can be replaced or deleted only when its current text exactly equals `expected`. Pure insertion, AST editing, semantic-node mutation, multi-range edits, revision/hash protocols, OT, and CRDT remain outside Language v0.

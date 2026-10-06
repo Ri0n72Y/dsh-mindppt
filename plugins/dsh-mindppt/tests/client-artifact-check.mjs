@@ -22,24 +22,3 @@ assert.doesNotMatch(
   /process\.env\.NODE_ENV|import\.meta\.env/,
   'client artifact must not retain build-environment probes',
 )
-
-const allowed = new Set([
-  'react',
-  'react/jsx-runtime',
-  'react-dom',
-  'react-dom/client',
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-client-store',
-  '@deepseek-ai/dsh-client-ui-slots',
-  '@deepseek-ai/dsh-client-ui-primitives',
-  '@deepseek-ai/dsh-client-ui-dockkit',
-])
-const required = [...source.matchAll(/require\(["']([^"']+)["']\)/g)]
-  .map(match => match[1])
-const unexpected = [...new Set(required.filter(name => !allowed.has(name)))]
-assert.deepEqual(
-  unexpected,
-  [],
-  'client artifact contains unresolved non-platform modules: '
-    + unexpected.join(', '),
-)

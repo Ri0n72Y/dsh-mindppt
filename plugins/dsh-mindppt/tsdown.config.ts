@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, extname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'tsdown'
+import { defineConfig, type TsdownPlugin } from 'tsdown'
 
 const CLIENT_ID = 'dsh-mindppt-dsh'
 const CLIENT_EXTERNALS = new Set([
@@ -59,6 +59,29 @@ function clientIntro(): string {
   ].join('\n')
 }
 
+function clientExternalGuard(): TsdownPlugin {
+  return {
+    name: 'mindppt-client-external-guard',
+    generateBundle(_options, bundle) {
+      const unexpected = new Set<string>()
+      for (const output of Object.values(bundle)) {
+        if (output.type !== 'chunk') continue
+        for (const specifier of [...output.imports, ...output.dynamicImports]) {
+          if (!(specifier in bundle) && !CLIENT_EXTERNALS.has(specifier)) {
+            unexpected.add(specifier)
+          }
+        }
+      }
+      if (unexpected.size > 0) {
+        throw new Error(
+          'MindPPT client contains unresolved non-platform modules: '
+            + [...unexpected].sort().join(', '),
+        )
+      }
+    },
+  }
+}
+
 export default defineConfig([
   {
     entry: { index: 'src/index.ts' },
@@ -108,6 +131,7 @@ export default defineConfig([
         ],
       },
     },
+    plugins: [clientExternalGuard()],
     tsconfig: 'tsconfig.json',
     outputOptions: {
       entryFileNames: 'client.js',

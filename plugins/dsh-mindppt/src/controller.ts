@@ -7,7 +7,7 @@ import {
   type GuardedPatchInput,
   type MindPptFileIdentity,
 } from './shared.ts'
-import type { WorkspaceFilePort } from './workspace-file-port.ts'
+import { WorkspacePreCommitRejected, type WorkspaceFilePort } from './workspace-file-port.ts'
 export type { DocumentInspection } from './inspection.ts'
 export type { WorkspaceFilePort, WorkspaceFileSnapshot } from './workspace-file-port.ts'
 interface ActiveDocument {
@@ -92,7 +92,6 @@ export class MindPptWorkspaceController {
     ) this.active.delete(sessionId)
     this.selections.finish(sessionId, generation)
   }
-
   async replaceSource(
     identity: MindPptFileIdentity,
     source: string,
@@ -100,6 +99,7 @@ export class MindPptWorkspaceController {
     signal?: AbortSignal,
   ): Promise<{ inspection: DocumentInspection; version: string }> {
     return await this.writes.run(identity.sessionId, async () => {
+      const generation = this.selections.generation(identity.sessionId)
       const current = this.requireStableCurrent(identity.sessionId)
       this.assertIdentity(current, identity)
       if (!expectedVersion) {
@@ -107,12 +107,14 @@ export class MindPptWorkspaceController {
       }
       const version = await this.files.writeText(
         identity, source, expectedVersion, signal,
+        () => !this.selections.has(identity.sessionId)
+          && this.selections.generation(identity.sessionId) === generation
+          && this.active.get(identity.sessionId) === current,
       )
       current.runtime.applySource(source)
       return { inspection: documentInspection(current.identity, current.runtime.view), version }
     })
   }
-
   async guardedPatch(
     sessionId: string,
     input: GuardedPatchInput,
@@ -136,8 +138,12 @@ export class MindPptWorkspaceController {
       try {
         await this.files.writeText(
           current.identity, patched.source, snapshot.version, signal,
+          () => !this.selections.has(sessionId)
+            && this.selections.generation(sessionId) === generation
+            && this.active.get(sessionId) === current,
         )
       } catch (error) {
+        if (error instanceof WorkspacePreCommitRejected) return selectionChanged()
         if (isStaleWrite(error)) {
           return { ok: false, reason: 'stale patch: workspace file changed' }
         }
@@ -147,16 +153,13 @@ export class MindPptWorkspaceController {
       return { ok: true, inspection: documentInspection(current.identity, current.runtime.view) }
     })
   }
-
   inspect(sessionId: string): DocumentInspection {
     const current = this.requireStableCurrent(sessionId)
     return documentInspection(current.identity, current.runtime.view)
   }
-
   attempts(sessionId: string): number {
     return this.requireCurrent(sessionId).runtime.attempts
   }
-
   private isCurrentSelect(
     identity: MindPptFileIdentity,
     generation: number,
@@ -166,20 +169,17 @@ export class MindPptWorkspaceController {
       identity.sessionId, generation, identity.path, selectionId,
     )
   }
-
   private requireCurrent(sessionId: string): ActiveDocument {
     const current = this.active.get(sessionId)
     if (!current) throw new Error('no selected MindPPT document for this session')
     return current
   }
-
   private requireStableCurrent(sessionId: string): ActiveDocument {
     if (this.selections.has(sessionId)) {
       throw new Error('stale MindPPT document selection')
     }
     return this.requireCurrent(sessionId)
   }
-
   private assertIdentity(current: ActiveDocument, identity: MindPptFileIdentity): void {
     if (current.identity.path !== identity.path) {
       throw new Error('stale MindPPT document selection')

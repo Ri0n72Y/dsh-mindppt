@@ -1,5 +1,7 @@
 import type { MindPptFileIdentity } from './shared.ts'
 
+export class WorkspacePreCommitRejected extends Error {}
+
 export interface WorkspaceFileSnapshot {
   source: string
   version: string
@@ -16,5 +18,6 @@ export interface WorkspaceFilePort {
     source: string,
     expectedVersion: string,
     signal?: AbortSignal,
+    preCommit?: () => boolean,
   ): Promise<string>
 }

@@ -1,5 +1,8 @@
 import type { MindPptFileIdentity } from './shared.ts'
-import type { WorkspaceFilePort } from './workspace-file-port.ts'
+import {
+  WorkspacePreCommitRejected,
+  type WorkspaceFilePort,
+} from './workspace-file-port.ts'
 
 interface FsTarget {
   displayPath: string
@@ -74,14 +77,16 @@ export function workspaceFilePort(
         version: info.version,
       }
     },
-    async writeText(identity, source, expectedVersion, signal) {
+    async writeText(identity, source, expectedVersion, signal, preCommit) {
       const resolved = await target(identity, signal)
-      const outcome = await fs.writeText(
+      if (preCommit?.() === false) throw new WorkspacePreCommitRejected()
+      const pendingWrite = fs.writeText(
         resolved,
         source,
         { kind: 'replaceIfVersion', version: expectedVersion },
         signal,
       )
+      const outcome = await pendingWrite
       observe(resolved, outcome.version)
       return outcome.version
     },

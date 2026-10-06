@@ -3,6 +3,7 @@ import {
   MindPptWorkspaceController,
   type WorkspaceFilePort,
 } from '../src/controller.ts'
+import { workspaceFilePort } from '../src/fs-port.ts'
 
 const A = 'mindppt\n\nslide root {\n  # Root\n}\n'
 const B = 'mindppt\n\nslide b {\n  # B\n}\n'
@@ -105,6 +106,88 @@ describe('workspace controller selection races', () => {
     await selecting
     expect(controller.inspect('s1').file.path).toBe('b.mindppt')
     expect(sources.get('a.mindppt')).toBe(A)
+  })
+
+  it('blocks an obsolete Agent patch at the provider commit boundary', async () => {
+    const writeResolveStarted = Promise.withResolvers<void>()
+    const releaseWriteResolve = Promise.withResolvers<void>()
+    const releaseBRead = Promise.withResolvers<void>()
+    const persisted = new Map([
+      ['/workspace/a.mindppt', A],
+      ['/workspace/b.mindppt', B],
+    ])
+    const versions = new Map([
+      ['/workspace/a.mindppt', '1'],
+      ['/workspace/b.mindppt', '1'],
+    ])
+    let aResolveCount = 0
+    let providerWrites = 0
+    let observed = 0
+    const fs = {
+      async resolve(path: string, options?: { cwd?: string }) {
+        if (path === 'a.mindppt' && ++aResolveCount === 3) {
+          writeResolveStarted.resolve()
+          await releaseWriteResolve.promise
+        }
+        return { displayPath: options?.cwd ? options.cwd + '/' + path : path }
+      },
+      contains() { return true },
+      async stat(target: { displayPath: string }) {
+        const version = versions.get(target.displayPath)
+        return version ? { version } : undefined
+      },
+      async readText(target: { displayPath: string }) {
+        if (target.displayPath === '/workspace/b.mindppt') {
+          await releaseBRead.promise
+        }
+        return persisted.get(target.displayPath) ?? ''
+      },
+      async writeText(target: { displayPath: string }, source: string) {
+        providerWrites += 1
+        persisted.set(target.displayPath, source)
+        versions.set(target.displayPath, '2')
+        return { version: '2' }
+      },
+    }
+    const sessions = {
+      get() { return { header: { cwd: '/workspace' } } },
+    }
+    const controller = new MindPptWorkspaceController(
+      workspaceFilePort(fs, sessions, () => { observed += 1 }),
+    )
+    await controller.select(
+      { sessionId: 's1', path: 'a.mindppt' },
+      undefined,
+      'tab-a',
+    )
+    const attemptsBefore = controller.attempts('s1')
+
+    const patching = controller.guardedPatch('s1', {
+      start: A.indexOf('Root'),
+      end: A.indexOf('Root') + 4,
+      expected: 'Root',
+      replacement: 'Agent',
+    })
+    await writeResolveStarted.promise
+    const selecting = controller.select(
+      { sessionId: 's1', path: 'b.mindppt' },
+      undefined,
+      'tab-b',
+    )
+
+    releaseWriteResolve.resolve()
+    await expect(patching).resolves.toEqual({
+      ok: false,
+      reason: 'stale patch: MindPPT selection changed',
+    })
+    expect(providerWrites).toBe(0)
+    expect(observed).toBe(0)
+    expect(persisted.get('/workspace/a.mindppt')).toBe(A)
+    expect(controller.attempts('s1')).toBe(attemptsBefore)
+
+    releaseBRead.resolve()
+    await selecting
+    expect(controller.inspect('s1').file.path).toBe('b.mindppt')
   })
 
   it('drops the previous document if the new active selection fails', async () => {

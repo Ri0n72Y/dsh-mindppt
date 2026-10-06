@@ -145,14 +145,16 @@ describe('MindPPT client write barrier', () => {
 
 describe('MindPPT client selection queue', () => {
   it('preserves selection request order within one session', async () => {
-    const release = Promise.withResolvers<void>()
+    const firstStarted = Promise.withResolvers<void>()
+    const releaseFirst = Promise.withResolvers<void>()
     const order: string[] = []
     const first = queueClientSelection(
       's-selection-order',
       Promise.resolve(),
       async () => {
         order.push('first')
-        await release.promise
+        firstStarted.resolve()
+        await releaseFirst.promise
       },
     )
     const second = queueClientSelection(
@@ -161,9 +163,9 @@ describe('MindPPT client selection queue', () => {
       async () => { order.push('second') },
     )
 
-    await Promise.resolve()
+    await firstStarted.promise
     expect(order).toEqual(['first'])
-    release.resolve()
+    releaseFirst.resolve()
     await Promise.all([first, second])
     expect(order).toEqual(['first', 'second'])
   })

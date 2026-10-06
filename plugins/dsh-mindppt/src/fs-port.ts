@@ -1,5 +1,5 @@
-import type { WorkspaceFilePort } from './controller.ts'
 import type { MindPptFileIdentity } from './shared.ts'
+import type { WorkspaceFilePort } from './workspace-file-port.ts'
 
 interface FsTarget {
   displayPath: string
@@ -29,9 +29,12 @@ interface Sessions {
   get(id: string): { header: { cwd?: string } } | undefined
 }
 
+type ObserveFile = (target: FsTarget, version: string) => void
+
 export function workspaceFilePort(
   fs: DshFileSystem,
   sessions: Sessions,
+  observe: ObserveFile = () => {},
 ): WorkspaceFilePort {
   const target = async (
     identity: MindPptFileIdentity,
@@ -79,6 +82,7 @@ export function workspaceFilePort(
         { kind: 'replaceIfVersion', version: expectedVersion },
         signal,
       )
+      observe(resolved, outcome.version)
       return outcome.version
     },
   }

@@ -28,9 +28,25 @@ interface HostContext extends Context {
   tools: Parameters<typeof registerMindPptTools>[0]
 }
 
+interface FileObservationContext {
+  emit(
+    event: 'fs/observed',
+    target: unknown,
+    observation: { kind: 'present'; version: string },
+    actor: undefined,
+  ): void
+}
+
 export function apply(ctx: Context): void {
   const host = ctx as HostContext
-  const files = workspaceFilePort(host.fs, host.sessions)
+  const observed = ctx as unknown as FileObservationContext
+  const files = workspaceFilePort(
+    host.fs,
+    host.sessions,
+    (target, version) => {
+      observed.emit('fs/observed', target, { kind: 'present', version }, undefined)
+    },
+  )
   const controller = new MindPptWorkspaceController(files)
   ctx.effect(
     () => registerDocumentRoute(host.connection.fetch, controller),

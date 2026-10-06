@@ -2,16 +2,25 @@ import { useSyncExternalStore } from 'react'
 import type { RefCallback, RefObject } from 'react'
 import type { MindPptFileIdentity } from '../shared.ts'
 import { MindPptCanvas } from './Canvas.tsx'
+import { trackClientWrite } from './client-write-queue.ts'
 import { BrowserMindPptRuntime } from './runtime.ts'
 import { postDocument } from './wire.ts'
+
+interface Cell<T> {
+  current: T
+}
 
 interface AuthoringSurfaceProps {
   runtime: BrowserMindPptRuntime
   identity: MindPptFileIdentity | undefined
   error: string | undefined
   editor: RefObject<HTMLTextAreaElement | null>
-  writeTail: RefObject<Promise<string>>
+  writeTail: Cell<Promise<string>>
+  selectionTail: Cell<Promise<void>>
+  pendingWrites: Cell<number>
+  editRevision: Cell<number>
   reload(): void
+  onSaved(version: string): void
   resourceAddress: string
   scrollportRef: RefCallback<HTMLElement>
   onError(error: string | undefined): void
@@ -23,7 +32,11 @@ export function AuthoringSurface({
   error,
   editor,
   writeTail,
+  selectionTail,
+  pendingWrites,
+  editRevision,
   reload,
+  onSaved,
   resourceAddress,
   scrollportRef,
   onError,
@@ -36,11 +49,15 @@ export function AuthoringSurface({
   const save = (source: string) => {
     runtime.setSource(source)
     if (!identity) return
-    const write = writeTail.current.then(expectedVersion => {
+    editRevision.current += 1
+    pendingWrites.current += 1
+    const selection = selectionTail.current
+    const write = writeTail.current.then(async expectedVersion => {
+      await selection
       if (!expectedVersion) {
         throw new Error('MindPPT workspace version unavailable')
       }
-      return postDocument({
+      return await postDocument({
         action: 'write',
         identity,
         source,
@@ -48,9 +65,15 @@ export function AuthoringSurface({
       })
     })
     writeTail.current = write
+    trackClientWrite(identity.sessionId, write)
     void write.then(
-      () => onError(undefined),
+      version => {
+        pendingWrites.current -= 1
+        onSaved(version)
+        onError(undefined)
+      },
       cause => {
+        pendingWrites.current -= 1
         onError(cause instanceof Error ? cause.message : String(cause))
         reload()
       },

@@ -1,4 +1,3 @@
-import '@excalidraw/excalidraw/index.css'
 import type { Context } from '@deepseek-ai/cordis'
 import { createRoot } from 'react-dom/client'
 import type { ReactNode } from 'react'
@@ -6,11 +5,12 @@ import { MINDPPT_BODY_ID } from '../shared.ts'
 import {
   MindPptDocument,
   type MindPptDocumentProps,
+  type SidebarRightFace,
 } from './Document.tsx'
 import { PreviewPage } from './PreviewPage.tsx'
 import type { WorkspaceFilesRemote } from './dsh.ts'
 
-type SlotProps = Omit<MindPptDocumentProps, 'remote'>
+type SlotProps = Omit<MindPptDocumentProps, 'remote' | 'sidebarRight'>
 
 interface ClientContext extends Context {
   documentPreviews: {
@@ -36,6 +36,7 @@ interface ClientContext extends Context {
   remote: {
     workspaceFiles: WorkspaceFilesRemote
   }
+  sidebarRight: SidebarRightFace
 }
 
 export const name = 'dsh-mindppt-client'
@@ -44,6 +45,7 @@ export const inject = [
   'slots',
   'remote',
   'remote.workspaceFiles',
+  'sidebarRight',
 ]
 
 export function apply(ctx: Context): void {
@@ -68,6 +70,7 @@ export function apply(ctx: Context): void {
           <MindPptDocument
             {...props}
             remote={client.remote.workspaceFiles}
+            sidebarRight={client.sidebarRight}
           />
         ),
       ),

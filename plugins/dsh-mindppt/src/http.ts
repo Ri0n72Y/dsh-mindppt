@@ -11,8 +11,8 @@ interface ConnectionFetch {
 }
 
 type DocumentRequest =
-  | { action: 'select'; identity: MindPptFileIdentity }
-  | { action: 'clear'; sessionId: string; path?: string }
+  | { action: 'select'; identity: MindPptFileIdentity; selectionId: string }
+  | { action: 'clear'; sessionId: string; path?: string; selectionId?: string }
   | {
     action: 'write'
     identity: MindPptFileIdentity
@@ -32,12 +32,23 @@ export function registerDocumentRoute(
       try {
         const payload = await request.json() as DocumentRequest
         if (payload.action === 'clear') {
-          controller.clear(payload.sessionId, payload.path)
+          await controller.clear(
+            payload.sessionId,
+            payload.path,
+            payload.selectionId,
+          )
           return json({ ok: true })
         }
         if (payload.action === 'select') {
-          await controller.select(payload.identity, request.signal)
-          return json({ ok: true, inspection: controller.inspect(payload.identity.sessionId) })
+          await controller.select(
+            payload.identity,
+            request.signal,
+            payload.selectionId,
+          )
+          return json({
+            ok: true,
+            inspection: controller.inspect(payload.identity.sessionId),
+          })
         }
         if (payload.action === 'write') {
           const result = await controller.replaceSource(

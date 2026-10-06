@@ -59,6 +59,28 @@ function clientIntro(): string {
   ].join('\n')
 }
 
+const MERMAID_STUB_ID = '\0mindppt-view-only-mermaid'
+
+function viewOnlyExcalidrawGuard(): TsdownPlugin {
+  return {
+    name: 'mindppt-view-only-excalidraw',
+    resolveId(source: string) {
+      if (source === '@excalidraw/mermaid-to-excalidraw') {
+        return MERMAID_STUB_ID
+      }
+      return null
+    },
+    load(id: string) {
+      if (id !== MERMAID_STUB_ID) return null
+      return [
+        'export async function parseMermaidToExcalidraw() {',
+        '  throw new Error("Mermaid import is unavailable in MindPPT view-only canvas")',
+        '}',
+      ].join('\n')
+    },
+  }
+}
+
 function clientExternalGuard(): TsdownPlugin {
   return {
     name: 'mindppt-client-external-guard',
@@ -131,7 +153,7 @@ export default defineConfig([
         ],
       },
     },
-    plugins: [clientExternalGuard()],
+    plugins: [viewOnlyExcalidrawGuard(), clientExternalGuard()],
     tsconfig: 'tsconfig.json',
     outputOptions: {
       entryFileNames: 'client.js',

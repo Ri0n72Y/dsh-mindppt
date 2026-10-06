@@ -8,7 +8,6 @@ const PACKAGE_SPEC = './plugins/dsh-mindppt'
 const WEB_ROWS = ['connection', 'workspace-files', 'ui-sidebar-documentpreview']
 const MINDPPT_ROW = 'mindppt'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const PNPM = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 
 export function buildDeployArgs(userArgs) {
   let profile
@@ -45,8 +44,22 @@ export function buildDeployArgs(userArgs) {
   }
 }
 
-function runDsh(args, spawn, stdio = 'inherit') {
-  const result = spawn(PNPM, ['dsh', ...args], {
+export function resolvePnpmRunner(
+  env = process.env,
+  platform = process.platform,
+  nodeExecPath = process.execPath,
+) {
+  if (env.npm_execpath) {
+    return { command: nodeExecPath, args: [env.npm_execpath] }
+  }
+  if (platform === 'win32') {
+    throw new Error('pnpm executable path unavailable; run through pnpm dsh:deploy')
+  }
+  return { command: 'pnpm', args: [] }
+}
+
+function runDsh(args, spawn, runner, stdio = 'inherit') {
+  const result = spawn(runner.command, [...runner.args, 'dsh', ...args], {
     cwd: ROOT,
     stdio,
     encoding: 'utf8',
@@ -68,16 +81,16 @@ function hasRows(source, rows) {
   return rows.every(row => source.includes(`id: ${row}`))
 }
 
-function dumpProfile(profile, spawn, fromWeb = false) {
+function dumpProfile(profile, spawn, runner, fromWeb = false) {
   return runDsh([
     '--profile', profile,
     ...(fromWeb ? ['--from-default-profile', 'web'] : []),
     '--dump-default-config',
-  ], spawn, 'pipe')
+  ], spawn, runner, 'pipe')
 }
 
-function ensureWebProfile(profile, spawn) {
-  const existing = dumpProfile(profile, spawn)
+function ensureWebProfile(profile, spawn, runner) {
+  const existing = dumpProfile(profile, spawn, runner)
   if (exitCode(existing) === 0) {
     if (hasRows(existing.stdout ?? '', WEB_ROWS)) return 0
     process.stderr.write(
@@ -86,7 +99,7 @@ function ensureWebProfile(profile, spawn) {
     return 1
   }
 
-  const created = dumpProfile(profile, spawn, true)
+  const created = dumpProfile(profile, spawn, runner, true)
   if (exitCode(created) !== 0) {
     replayFailure(existing)
     replayFailure(created)
@@ -99,8 +112,12 @@ function ensureWebProfile(profile, spawn) {
   return 1
 }
 
-export function main(userArgs, spawn = spawnSync) {
-  const version = runDsh(['--version'], spawn, 'pipe')
+export function main(
+  userArgs,
+  spawn = spawnSync,
+  runner = resolvePnpmRunner(),
+) {
+  const version = runDsh(['--version'], spawn, runner, 'pipe')
   if (exitCode(version) !== 0) {
     replayFailure(version)
     return exitCode(version)
@@ -114,13 +131,13 @@ export function main(userArgs, spawn = spawnSync) {
   }
 
   const deployment = buildDeployArgs(userArgs)
-  const profileStatus = ensureWebProfile(deployment.profile, spawn)
+  const profileStatus = ensureWebProfile(deployment.profile, spawn, runner)
   if (profileStatus !== 0) return profileStatus
 
-  const installed = runDsh(deployment.args, spawn)
+  const installed = runDsh(deployment.args, spawn, runner)
   if (exitCode(installed) !== 0) return exitCode(installed)
 
-  const smoke = dumpProfile(deployment.profile, spawn)
+  const smoke = dumpProfile(deployment.profile, spawn, runner)
   if (exitCode(smoke) !== 0) {
     replayFailure(smoke)
     return exitCode(smoke)

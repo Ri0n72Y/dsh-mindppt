@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { buildDeployArgs, main } from '../../../scripts/deploy-dsh.mjs'
+import {
+  buildDeployArgs,
+  main,
+  resolvePnpmRunner,
+} from '../../../scripts/deploy-dsh.mjs'
 
 const webDump = `
 - id: connection
@@ -8,6 +12,7 @@ const webDump = `
 `
 
 const activeDump = `${webDump}- id: mindppt\n`
+const runner = { command: 'pnpm', args: [] }
 
 function result(status, stdout = '', stderr = '') {
   return { status, stdout, stderr, error: undefined }
@@ -41,6 +46,17 @@ describe('DSH deploy argument construction', () => {
       ],
     })
   })
+
+  it('uses the active pnpm JS entry on Windows without a cmd shim', () => {
+    expect(resolvePnpmRunner(
+      { npm_execpath: 'C:\\pnpm\\pnpm.cjs' },
+      'win32',
+      'C:\\node\\node.exe',
+    )).toEqual({
+      command: 'C:\\node\\node.exe',
+      args: ['C:\\pnpm\\pnpm.cjs'],
+    })
+  })
 })
 
 describe('DSH deploy process flow', () => {
@@ -52,7 +68,7 @@ describe('DSH deploy process flow', () => {
       .mockReturnValueOnce(result(0))
       .mockReturnValueOnce(result(0, activeDump))
 
-    expect(main([], spawn)).toBe(0)
+    expect(main([], spawn, runner)).toBe(0)
     expect(spawn.mock.calls[2]?.[1]).toEqual([
       'dsh', '--profile', 'mindppt', '--from-default-profile', 'web',
       '--dump-default-config',
@@ -65,6 +81,6 @@ describe('DSH deploy process flow', () => {
       .mockReturnValueOnce(result(0, webDump))
       .mockReturnValueOnce(result(23))
 
-    expect(main([], spawn)).toBe(23)
+    expect(main([], spawn, runner)).toBe(23)
   })
 })

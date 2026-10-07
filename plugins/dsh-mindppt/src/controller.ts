@@ -1,187 +1,194 @@
-import { semanticProjection, type DocumentInspection } from './inspection.ts'
+import { documentInspection, type DocumentInspection } from './inspection.ts'
 import { MindPptDocumentRuntime } from './runtime.ts'
+import { SelectionTracker } from './selection-state.ts'
+import { SessionWriteQueue } from './session-write-queue.ts'
 import {
   applyGuardedPatch,
   type GuardedPatchInput,
   type MindPptFileIdentity,
 } from './shared.ts'
-import type { WorkspaceFilePort } from './workspace-file-port.ts'
-
+import { WorkspacePreCommitRejected, type WorkspaceFilePort } from './workspace-file-port.ts'
 export type { DocumentInspection } from './inspection.ts'
-export type {
-  WorkspaceFilePort,
-  WorkspaceFileSnapshot,
-} from './workspace-file-port.ts'
-
+export type { WorkspaceFilePort, WorkspaceFileSnapshot } from './workspace-file-port.ts'
 interface ActiveDocument {
   identity: MindPptFileIdentity
   runtime: MindPptDocumentRuntime
+  selectionId: string
 }
-
-interface PendingSelection {
-  generation: number
-  path: string
-}
-
 export class MindPptWorkspaceController {
   private readonly active = new Map<string, ActiveDocument>()
-  private readonly selectionGeneration = new Map<string, number>()
-  private readonly pendingSelection = new Map<string, PendingSelection>()
-
+  private readonly selections = new SelectionTracker()
+  private readonly writes = new SessionWriteQueue()
   constructor(private readonly files: WorkspaceFilePort) {}
-
-  async select(identity: MindPptFileIdentity, signal?: AbortSignal): Promise<void> {
-    const generation = this.nextSelection(identity.sessionId)
+  async select(
+    identity: MindPptFileIdentity,
+    signal?: AbortSignal,
+    selectionId = identity.path,
+  ): Promise<void> {
+    const sessionId = identity.sessionId
+    const generation = this.selections.begin(
+      sessionId, identity.path, selectionId, false,
+    )
     if (!identity.path.toLowerCase().endsWith('.mindppt')) {
-      this.pendingSelection.delete(identity.sessionId)
-      this.active.delete(identity.sessionId)
+      this.selections.finish(sessionId, generation)
+      this.active.delete(sessionId)
       return
     }
-    this.pendingSelection.set(identity.sessionId, {
-      generation,
-      path: identity.path,
-    })
-    const source = await this.files.readText(identity, signal)
-    if (!this.isLatestSelection(identity, generation)) return
-    const previous = this.active.get(identity.sessionId)
-    if (previous?.identity.path === identity.path) {
-      previous.identity = identity
-      previous.runtime.applySource(source)
-      this.finishSelection(identity.sessionId, generation)
-      return
+    try {
+      const pendingWrite = this.writes.pending(sessionId)
+      if (pendingWrite) await pendingWrite
+      signal?.throwIfAborted()
+      if (!this.isCurrentSelect(identity, generation, selectionId)) return
+      const source = await this.files.readText(identity, signal)
+      if (!this.isCurrentSelect(identity, generation, selectionId)) return
+      const previous = this.active.get(sessionId)
+      if (previous?.identity.path === identity.path) {
+        previous.identity = identity
+        previous.selectionId = selectionId
+        previous.runtime.applySource(source)
+      } else {
+        const runtime = await MindPptDocumentRuntime.create(source)
+        if (!this.isCurrentSelect(identity, generation, selectionId)) return
+        this.active.set(sessionId, { identity, runtime, selectionId })
+      }
+      this.selections.finish(sessionId, generation)
+    } catch (error) {
+      if (this.selections.get(sessionId)?.generation === generation) this.active.delete(sessionId)
+      this.selections.finish(sessionId, generation)
+      throw error
     }
-    const runtime = await MindPptDocumentRuntime.create(source)
-    if (!this.isLatestSelection(identity, generation)) return
-    this.active.set(identity.sessionId, { identity, runtime })
-    this.finishSelection(identity.sessionId, generation)
   }
-
-  clear(sessionId: string, path?: string): void {
+  async clear(sessionId: string, path?: string, selectionId?: string): Promise<void> {
     const current = this.active.get(sessionId)
-    const pending = this.pendingSelection.get(sessionId)
+    const pending = this.selections.get(sessionId)
+    if (
+      pending
+      && selectionId !== undefined
+      && pending.selectionId !== selectionId
+    ) return
     const clearsCurrent = current !== undefined
       && (path === undefined || current.identity.path === path)
+      && (selectionId === undefined || current.selectionId === selectionId)
     const clearsPending = pending !== undefined
       && (path === undefined || pending.path === path)
+      && (selectionId === undefined || pending.selectionId === selectionId)
     if (!clearsCurrent && !clearsPending) return
-    if (clearsPending) {
-      this.nextSelection(sessionId)
-      this.pendingSelection.delete(sessionId)
-    }
-    if (clearsCurrent) this.active.delete(sessionId)
-  }
 
+    const generation = this.selections.begin(
+      sessionId,
+      path ?? current?.identity.path ?? pending?.path ?? '',
+      selectionId ?? current?.selectionId ?? pending?.selectionId ?? '',
+      true,
+    )
+    const pendingWrite = this.writes.pending(sessionId)
+    if (pendingWrite) await pendingWrite
+    const change = this.selections.get(sessionId)
+    if (change?.generation !== generation || !change.clear) return
+    const latest = this.active.get(sessionId)
+    if (
+      latest
+      && (path === undefined || latest.identity.path === path)
+      && (selectionId === undefined || latest.selectionId === selectionId)
+    ) this.active.delete(sessionId)
+    this.selections.finish(sessionId, generation)
+  }
   async replaceSource(
     identity: MindPptFileIdentity,
     source: string,
     expectedVersion: string,
     signal?: AbortSignal,
   ): Promise<{ inspection: DocumentInspection; version: string }> {
-    const current = this.requireCurrent(identity.sessionId)
-    this.assertIdentity(current, identity)
-    if (!expectedVersion) {
-      throw new Error('MindPPT write requires a workspace file version')
-    }
-    const version = await this.files.writeText(
-      identity,
-      source,
-      expectedVersion,
-      signal,
-    )
-    current.runtime.applySource(source)
-    return {
-      inspection: this.inspect(identity.sessionId),
-      version,
-    }
+    return await this.writes.run(identity.sessionId, async () => {
+      const generation = this.selections.generation(identity.sessionId)
+      const current = this.requireStableCurrent(identity.sessionId)
+      this.assertIdentity(current, identity)
+      if (!expectedVersion) {
+        throw new Error('MindPPT write requires a workspace file version')
+      }
+      const version = await this.files.writeText(
+        identity, source, expectedVersion, signal,
+        () => !this.selections.has(identity.sessionId)
+          && this.selections.generation(identity.sessionId) === generation
+          && this.active.get(identity.sessionId) === current,
+      )
+      current.runtime.applySource(source)
+      return { inspection: documentInspection(current.identity, current.runtime.view), version }
+    })
   }
-
   async guardedPatch(
     sessionId: string,
     input: GuardedPatchInput,
     signal?: AbortSignal,
   ): Promise<{ ok: true; inspection: DocumentInspection } | { ok: false; reason: string }> {
-    const current = this.requireCurrent(sessionId)
-    const snapshot = await this.files.readSnapshot(current.identity, signal)
-    const patched = applyGuardedPatch(snapshot.source, input)
-    if (!patched.ok) return patched
-    try {
-      await this.files.writeText(
-        current.identity,
-        patched.source,
-        snapshot.version,
-        signal,
-      )
-    } catch (error) {
-      if (isStaleWrite(error)) {
-        return { ok: false, reason: 'stale patch: workspace file changed' }
+    return await this.writes.run(sessionId, async () => {
+      if (this.selections.has(sessionId)) return selectionChanged()
+      const generation = this.selections.generation(sessionId)
+      const current = this.requireCurrent(sessionId)
+      const snapshot = await this.files.readSnapshot(current.identity, signal)
+      if (
+        this.selections.has(sessionId)
+        || this.selections.generation(sessionId) !== generation
+      ) return selectionChanged()
+      const patched = applyGuardedPatch(snapshot.source, input)
+      if (!patched.ok) return patched
+      if (
+        this.selections.has(sessionId)
+        || this.selections.generation(sessionId) !== generation
+      ) return selectionChanged()
+      try {
+        await this.files.writeText(
+          current.identity, patched.source, snapshot.version, signal,
+          () => !this.selections.has(sessionId)
+            && this.selections.generation(sessionId) === generation
+            && this.active.get(sessionId) === current,
+        )
+      } catch (error) {
+        if (error instanceof WorkspacePreCommitRejected) return selectionChanged()
+        if (isStaleWrite(error)) {
+          return { ok: false, reason: 'stale patch: workspace file changed' }
+        }
+        throw error
       }
-      throw error
-    }
-    current.runtime.applySource(patched.source)
-    return { ok: true, inspection: this.inspect(sessionId) }
+      current.runtime.applySource(patched.source)
+      return { ok: true, inspection: documentInspection(current.identity, current.runtime.view) }
+    })
   }
-
   inspect(sessionId: string): DocumentInspection {
-    const current = this.requireCurrent(sessionId)
-    const view = current.runtime.view
-    return {
-      file: current.identity,
-      source: view.source,
-      diagnostics: view.diagnostics,
-      structureCurrent: view.structureCurrent,
-      semantic: view.structure ? semanticProjection(view.structure) : [],
-      tree: view.structure?.tree ?? null,
-      softLinks: view.structure?.links ?? [],
-      presentationPaths: view.structure?.paths ?? [],
-      activeExtensionRendererTypes: view.rendererTypes,
-      structureBasis: view.structureCurrent
-        ? 'current'
-        : view.structure ? 'last-good' : 'none',
-    }
+    const current = this.requireStableCurrent(sessionId)
+    return documentInspection(current.identity, current.runtime.view)
   }
-
   attempts(sessionId: string): number {
     return this.requireCurrent(sessionId).runtime.attempts
   }
-
-  private nextSelection(sessionId: string): number {
-    const generation = (this.selectionGeneration.get(sessionId) ?? 0) + 1
-    this.selectionGeneration.set(sessionId, generation)
-    return generation
-  }
-
-  private isLatestSelection(
+  private isCurrentSelect(
     identity: MindPptFileIdentity,
     generation: number,
+    selectionId: string,
   ): boolean {
-    const pending = this.pendingSelection.get(identity.sessionId)
-    return this.selectionGeneration.get(identity.sessionId) === generation
-      && pending?.generation === generation
-      && pending.path === identity.path
+    return this.selections.isCurrentSelect(
+      identity.sessionId, generation, identity.path, selectionId,
+    )
   }
-
-  private finishSelection(sessionId: string, generation: number): void {
-    if (this.pendingSelection.get(sessionId)?.generation === generation) {
-      this.pendingSelection.delete(sessionId)
-    }
-  }
-
   private requireCurrent(sessionId: string): ActiveDocument {
     const current = this.active.get(sessionId)
-    if (!current) {
-      throw new Error('no selected MindPPT document for this session')
-    }
+    if (!current) throw new Error('no selected MindPPT document for this session')
     return current
   }
-
-  private assertIdentity(
-    current: ActiveDocument,
-    identity: MindPptFileIdentity,
-  ): void {
+  private requireStableCurrent(sessionId: string): ActiveDocument {
+    if (this.selections.has(sessionId)) {
+      throw new Error('stale MindPPT document selection')
+    }
+    return this.requireCurrent(sessionId)
+  }
+  private assertIdentity(current: ActiveDocument, identity: MindPptFileIdentity): void {
     if (current.identity.path !== identity.path) {
       throw new Error('stale MindPPT document selection')
     }
   }
+}
+
+function selectionChanged() {
+  return { ok: false as const, reason: 'stale patch: MindPPT selection changed' }
 }
 
 function isStaleWrite(error: unknown): boolean {

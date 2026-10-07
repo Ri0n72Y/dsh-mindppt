@@ -8,8 +8,8 @@ type WriteDocumentRequest = {
 }
 
 export type DocumentWireRequest =
-  | { action: 'select'; identity: MindPptFileIdentity }
-  | { action: 'clear'; sessionId: string; path?: string }
+  | { action: 'select'; identity: MindPptFileIdentity; selectionId: string }
+  | { action: 'clear'; sessionId: string; path?: string; selectionId?: string }
   | WriteDocumentRequest
 
 export function postDocument(payload: WriteDocumentRequest): Promise<string>

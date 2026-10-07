@@ -4,6 +4,11 @@ import {
   relatedReader,
   type WorkspaceFilesRemote,
 } from '../src/client/dsh.ts'
+import {
+  queueClientSelection,
+  trackClientWrite,
+  waitForClientWrites,
+} from '../src/client/client-write-queue.ts'
 
 vi.mock('../src/client/Document.tsx', () => ({
   MindPptDocument: () => null,
@@ -54,7 +59,7 @@ describe('MindPPT client dependency boundaries', () => {
     ])
   })
 
-  it('waits for Cordis services and disposes client registrations with its fiber', async () => {
+  it('waits for DSH client services and disposes registrations with its fiber', async () => {
     const {
       apply: applyClient,
       inject: clientInject,
@@ -77,9 +82,6 @@ describe('MindPPT client dependency boundaries', () => {
         inject: [...clientInject],
         apply: applyClient,
       })
-      expect(previewRegistrations).toBe(0)
-      expect(slotRegistrations).toBe(0)
-
       ctx.provide('documentPreviews' as never, {
         register() {
           previewRegistrations += 1
@@ -97,11 +99,14 @@ describe('MindPPT client dependency boundaries', () => {
         },
       } as never)
       ctx.provide('remote' as never, { workspaceFiles } as never)
+      ctx.provide('remote.workspaceFiles' as never, workspaceFiles as never)
       await Promise.resolve()
       expect(previewRegistrations).toBe(0)
       expect(slotRegistrations).toBe(0)
 
-      ctx.provide('remote.workspaceFiles' as never, workspaceFiles as never)
+      ctx.provide('sidebarRight' as never, {
+        active() { return undefined },
+      } as never)
       await fiber.await()
       expect(previewRegistrations).toBe(1)
       expect(slotRegistrations).toBe(1)
@@ -113,5 +118,55 @@ describe('MindPPT client dependency boundaries', () => {
       await ctx.fiber.dispose()
       vi.unstubAllGlobals()
     }
+  })
+})
+
+
+describe('MindPPT client write barrier', () => {
+  it('waits for the queued write snapshot without absorbing later writes', async () => {
+    const first = Promise.withResolvers<void>()
+    const second = Promise.withResolvers<void>()
+    trackClientWrite('s-write-barrier', first.promise)
+    const waiting = waitForClientWrites('s-write-barrier')
+    trackClientWrite('s-write-barrier', second.promise)
+
+    let settled = false
+    void waiting.then(() => { settled = true })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    first.resolve()
+    await waiting
+    expect(settled).toBe(true)
+    second.resolve()
+  })
+})
+
+
+describe('MindPPT client selection queue', () => {
+  it('preserves selection request order within one session', async () => {
+    const firstStarted = Promise.withResolvers<void>()
+    const releaseFirst = Promise.withResolvers<void>()
+    const order: string[] = []
+    const first = queueClientSelection(
+      's-selection-order',
+      Promise.resolve(),
+      async () => {
+        order.push('first')
+        firstStarted.resolve()
+        await releaseFirst.promise
+      },
+    )
+    const second = queueClientSelection(
+      's-selection-order',
+      Promise.resolve(),
+      async () => { order.push('second') },
+    )
+
+    await firstStarted.promise
+    expect(order).toEqual(['first'])
+    releaseFirst.resolve()
+    await Promise.all([first, second])
+    expect(order).toEqual(['first', 'second'])
   })
 })

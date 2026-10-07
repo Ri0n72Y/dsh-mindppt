@@ -185,7 +185,7 @@ describe('workspace controller', () => {
     const c = Promise.withResolvers<string>()
     reads.set('c.mindppt', c)
     const selectC = controller.select({ sessionId: 's1', path: 'c.mindppt' })
-    controller.clear('s1', 'c.mindppt')
+    await controller.clear('s1', 'c.mindppt')
     c.resolve(VALID.replace('root', 'c'))
     await selectC
     expect(controller.inspect('s1').file.path).toBe('b.mindppt')

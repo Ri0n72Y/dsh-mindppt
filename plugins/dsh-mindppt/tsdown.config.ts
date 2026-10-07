@@ -3,7 +3,7 @@ import { dirname, extname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type TsdownPlugin } from 'tsdown'
 
-const CLIENT_ID = 'dsh-mindppt-dsh'
+const CLIENT_ID = 'dsh-mindppt-plugin'
 const CLIENT_EXTERNALS = new Set([
   'react',
   'react/jsx-runtime',

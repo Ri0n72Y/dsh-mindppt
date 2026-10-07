@@ -1255,9 +1255,9 @@ The gate exposed only focused post-M9 rendering defects, which were fixed and re
 
 ## M10 — DSH Workspace MindPPT Authoring + Preview
 
-Status: implementation complete; automated acceptance pending PR CI; real DSH 0.2.0-rc.2 acceptance pending
+Status: implementation complete; automated acceptance pending PR CI; real compatible-DSH acceptance pending
 
-Purpose: prove MindPPT v0 inside the official DeepSeek Harness 0.2.0-rc.2 product model without creating a second workspace or document system.
+Purpose: prove MindPPT v0 inside the official DeepSeek Harness product model without creating a second workspace or document system. The minimum supported runtime is `>=0.2.0-rc.2`; development and automated tests remain pinned to `0.2.0-rc.2` as the deterministic baseline. The currently observed real-machine runtime is `0.2.1-alpha.1`, but real acceptance is still pending.
 
 M10 uses the DSH native Workspace as the file browser. The selected workspace `.mindppt` file is the persistent source of truth:
 
@@ -1344,7 +1344,7 @@ The playground source panel now supports Hide editor / Show editor. Hidden mode 
 
 Automated coverage includes guarded replacement/deletion validation, rejection-without-write/compile, file switching, invalid-source last-good retention and repair, and the standalone collapsed presentation flow. Existing M0-M9 regression suites remain part of the normal CI gate.
 
-M10 must not be marked complete until the post-merge real-machine gate passes against official DSH 0.2.0-rc.2:
+M10 must not be marked complete until the post-merge real-machine gate passes against the compatible DSH version actually installed on the test machine:
 
 1. select the canonical `.mindppt` from native Workspace;
 2. verify right-side source + static preview;

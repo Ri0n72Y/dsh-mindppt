@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 const source = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 assert.match(
   source,
-  /window\.__ModuleLoader__\.load\(\{\s*id:\s*["']dsh-mindppt-dsh["']/,
+  /window\.__ModuleLoader__\.load\(\{\s*id:\s*["']dsh-mindppt-plugin["']/,
   'client artifact must register through the DSH lazy module loader',
 )
 assert.match(

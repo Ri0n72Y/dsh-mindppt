@@ -33,7 +33,7 @@ Current standalone runtime:
 - `canvas-excalidraw` — subscribes to compiled structures and lowers them to Excalidraw elements.
 - `camera` — controls presentation navigation and viewport transitions.
 
-M10 adds one optional DSH integration package, `plugins/dsh-mindppt`. It binds the accepted MindPPT runtime to the official DSH 0.2.0-rc.2 native Workspace, Agent tools, right-side Document Preview surface, and independent full Preview page. The package has Host/Client entry files only because the rc2 runtime separates those realms.
+M10 adds one optional DSH integration package, `dsh-mindppt-plugin` in `plugins/dsh-mindppt`. Its minimum supported DSH runtime is `>=0.2.0-rc.2`; development and automated tests remain pinned to `0.2.0-rc.2` as the deterministic compatibility baseline. The package binds the accepted MindPPT runtime to the native Workspace, Agent tools, right-side Document Preview surface, and independent full Preview page. The Host/Client split follows the DSH product architecture established by that baseline.
 
 The standalone web host runs the existing Cordis plugins without requiring DSH.
 
@@ -155,7 +155,7 @@ The standalone playground uses `examples/m9-content-plugin-latex.mindppt`, keeps
 
 ## M10 implementation: DSH Workspace authoring + Preview
 
-M10 implementation is present, with PR CI and the post-merge real-machine DSH 0.2.0-rc.2 gate still required before the milestone is marked complete.
+M10 implementation is present, with PR CI and the post-merge real-machine DSH acceptance gate still required before the milestone is marked complete. Runtime compatibility is declared as `>=0.2.0-rc.2`; `0.2.0-rc.2` remains the deterministic development baseline, while real acceptance must use whichever compatible DSH version is actually installed on the test machine.
 
 The persistent source of truth is the real `.mindppt` file selected from the native DSH Workspace. MindPPT does not add a file tree, document manager, tabs, database, or second workspace model. The right-side authoring surface is registered as an rc2 Document Preview renderer for `.mindppt`.
 

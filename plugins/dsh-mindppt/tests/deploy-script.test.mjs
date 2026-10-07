@@ -60,6 +60,14 @@ describe('DSH deploy argument construction', () => {
 })
 
 describe('DSH deploy process flow', () => {
+  it('propagates a failing version command', () => {
+    const spawn = vi.fn()
+      .mockReturnValueOnce(result(19, '', 'version failed\\n'))
+
+    expect(main([], spawn, runner)).toBe(19)
+    expect(spawn).toHaveBeenCalledTimes(1)
+  })
+
   it('creates a missing profile from the official web template', () => {
     const spawn = vi.fn()
       .mockReturnValueOnce(result(0, '0.2.0-rc.2\n'))
@@ -73,6 +81,18 @@ describe('DSH deploy process flow', () => {
       'dsh', '--profile', 'mindppt', '--from-default-profile', 'web',
       '--dump-default-config',
     ])
+  })
+
+  it('accepts a newer compatible DSH version without a wrapper exemption', () => {
+    const spawn = vi.fn()
+      .mockReturnValueOnce(result(0, '0.2.1-alpha.1\\n'))
+      .mockReturnValueOnce(result(0, webDump))
+      .mockReturnValueOnce(result(0))
+      .mockReturnValueOnce(result(0, activeDump))
+
+    expect(main([], spawn, runner)).toBe(0)
+    const args = spawn.mock.calls.flatMap(call => call[1])
+    expect(args).not.toContain('allow-version')
   })
 
   it('propagates the plugin command exit code', () => {

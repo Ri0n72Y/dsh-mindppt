@@ -3,7 +3,6 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const DEFAULT_PROFILE = 'mindppt'
-const DSH_VERSION = '0.2.0-rc.2'
 const PACKAGE_SPEC = './plugins/dsh-mindppt'
 const WEB_ROWS = ['connection', 'workspace-files', 'ui-sidebar-documentpreview']
 const MINDPPT_ROW = 'mindppt'
@@ -94,7 +93,7 @@ function ensureWebProfile(profile, spawn, runner) {
   if (exitCode(existing) === 0) {
     if (hasRows(existing.stdout ?? '', WEB_ROWS)) return 0
     process.stderr.write(
-      `dsh: profile ${JSON.stringify(profile)} is not Web-backed; MindPPT requires the rc2 Web profile surface\n`,
+      `dsh: profile ${JSON.stringify(profile)} is not Web-backed; MindPPT requires the Web profile surface\n`,
     )
     return 1
   }
@@ -107,7 +106,7 @@ function ensureWebProfile(profile, spawn, runner) {
   }
   if (hasRows(created.stdout ?? '', WEB_ROWS)) return 0
   process.stderr.write(
-    `dsh: profile ${JSON.stringify(profile)} was created without the required rc2 Web surface\n`,
+    `dsh: profile ${JSON.stringify(profile)} was created without the required Web surface\n`,
   )
   return 1
 }
@@ -122,14 +121,6 @@ export function main(
     replayFailure(version)
     return exitCode(version)
   }
-  const actualVersion = (version.stdout ?? '').trim()
-  if (actualVersion !== DSH_VERSION) {
-    process.stderr.write(
-      `dsh: expected ${DSH_VERSION}, received ${actualVersion || 'unknown version'}\n`,
-    )
-    return 1
-  }
-
   const deployment = buildDeployArgs(userArgs)
   const profileStatus = ensureWebProfile(deployment.profile, spawn, runner)
   if (profileStatus !== 0) return profileStatus

@@ -1,14 +1,13 @@
 import { useSyncExternalStore } from 'react'
 import type { RefCallback, RefObject } from 'react'
 import type { MindPptFileIdentity } from '../shared.ts'
-import { MindPptCanvas } from './Canvas.tsx'
-import { trackClientWrite } from './client-write-queue.ts'
-import { BrowserMindPptRuntime } from './runtime.ts'
-import { postDocument } from './wire.ts'
+import { MindPptPanorama } from './Canvas.tsx'
+import { queueDocumentSourceWrite } from './document-write.ts'
+import { SourceEditor } from './SourceEditor.tsx'
+import type { BrowserMindPptRuntime } from './runtime.ts'
+import type { DocumentView } from './view-state.ts'
 
-interface Cell<T> {
-  current: T
-}
+interface Cell<T> { current: T }
 
 interface AuthoringSurfaceProps {
   runtime: BrowserMindPptRuntime
@@ -21,25 +20,14 @@ interface AuthoringSurfaceProps {
   editRevision: Cell<number>
   reload(): void
   onSaved(version: string): void
-  resourceAddress: string
   scrollportRef: RefCallback<HTMLElement>
   onError(error: string | undefined): void
+  view: DocumentView
 }
 
 export function AuthoringSurface({
-  runtime,
-  identity,
-  error,
-  editor,
-  writeTail,
-  selectionTail,
-  pendingWrites,
-  editRevision,
-  reload,
-  onSaved,
-  resourceAddress,
-  scrollportRef,
-  onError,
+  runtime, identity, error, editor, writeTail, selectionTail,
+  pendingWrites, editRevision, reload, onSaved, scrollportRef, onError, view,
 }: AuthoringSurfaceProps) {
   const snapshot = useSyncExternalStore(
     runtime.subscribe,
@@ -51,21 +39,12 @@ export function AuthoringSurface({
     if (!identity) return
     editRevision.current += 1
     pendingWrites.current += 1
-    const selection = selectionTail.current
-    const write = writeTail.current.then(async expectedVersion => {
-      await selection
-      if (!expectedVersion) {
-        throw new Error('MindPPT workspace version unavailable')
-      }
-      return await postDocument({
-        action: 'write',
-        identity,
-        source,
-        expectedVersion,
-      })
+    const write = queueDocumentSourceWrite({
+      identity,
+      source,
+      writeTail,
+      selection: selectionTail.current,
     })
-    writeTail.current = write
-    trackClientWrite(identity.sessionId, write)
     void write.then(
       version => {
         pendingWrites.current -= 1
@@ -79,80 +58,51 @@ export function AuthoringSurface({
       },
     )
   }
-  const preview = () => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('mindppt-preview', resourceAddress)
-    window.open(url, '_blank', 'noopener')
+
+  if (view === 'panorama') {
+    return (
+      <section
+        ref={scrollportRef}
+        style={panoramaRootStyle}
+        aria-label="MindPPT panorama panel"
+      >
+        <MindPptPanorama
+          elements={snapshot.elements}
+          files={snapshot.files}
+          onFontMetricsReady={runtime.refreshElements}
+        />
+      </section>
+    )
   }
+
   return (
     <section
       ref={scrollportRef}
-      style={rootStyle}
+      style={codeRootStyle}
       aria-label="MindPPT authoring panel"
     >
-      <header style={headerStyle}>
-        <strong>MindPPT</strong>
-        <span>{snapshot.structureCurrent ? 'Current' : 'Last-good preview'}</span>
-        <button type="button" disabled={!identity} onClick={preview}>Preview</button>
-      </header>
-      <textarea
-        ref={editor}
-        aria-label="MindPPT source editor"
-        spellCheck={false}
-        value={snapshot.source}
-        onChange={event => save(event.target.value)}
-        style={editorStyle}
+      <SourceEditor
+        source={snapshot.source}
+        diagnostics={snapshot.diagnostics}
+        error={error}
+        editor={editor}
+        onChange={save}
       />
-      {error && <div role="alert" style={errorStyle}>{error}</div>}
-      <div aria-live="polite" style={{ display: 'grid', gap: 4 }}>
-        {snapshot.diagnostics.map((diagnostic, index) => (
-          <button
-            key={index}
-            type="button"
-            style={{ textAlign: 'left' }}
-            onClick={() => {
-              editor.current?.focus()
-              if (diagnostic.sourceRange) {
-                editor.current?.setSelectionRange(
-                  diagnostic.sourceRange.start,
-                  diagnostic.sourceRange.end,
-                )
-              }
-            }}
-          >
-            {diagnostic.severity}: {diagnostic.message}
-          </button>
-        ))}
-      </div>
-      <div style={{ minHeight: 320, height: '45vh' }}>
-        <MindPptCanvas
-          elements={snapshot.elements}
-          files={snapshot.files}
-          onFontMetricsReady={() => runtime.refreshElements()}
-        />
-      </div>
     </section>
   )
 }
 
-const rootStyle = {
-  display: 'grid',
+const codeRootStyle = {
+  display: 'flex',
+  flexDirection: 'column',
   gap: 8,
   padding: 8,
   height: '100%',
+  minHeight: 0,
   boxSizing: 'border-box',
 } as const
-const headerStyle = {
-  display: 'flex',
-  gap: 8,
-  alignItems: 'center',
-  justifyContent: 'space-between',
+
+const panoramaRootStyle = {
+  height: '100%',
+  minHeight: 0,
 } as const
-const editorStyle = {
-  width: '100%',
-  minHeight: 180,
-  resize: 'vertical',
-  fontFamily: 'monospace',
-  boxSizing: 'border-box',
-} as const
-const errorStyle = { padding: 8, background: '#fff4f4' } as const

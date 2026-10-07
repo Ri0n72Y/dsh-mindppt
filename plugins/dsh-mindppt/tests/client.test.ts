@@ -70,6 +70,7 @@ describe('MindPPT client dependency boundaries', () => {
     let previewDisposals = 0
     let slotRegistrations = 0
     let slotDisposals = 0
+    const slotNames: string[] = []
     const workspaceFiles: WorkspaceFilesRemote = {
       async readBytes() {
         return { ok: false, error: { message: 'unused' } }
@@ -93,7 +94,8 @@ describe('MindPPT client dependency boundaries', () => {
           const dispose = setup()
           return () => dispose()
         },
-        register() {
+        register(definition: { name: string }) {
+          slotNames.push(definition.name)
           slotRegistrations += 1
           return () => { slotDisposals += 1 }
         },
@@ -109,11 +111,15 @@ describe('MindPPT client dependency boundaries', () => {
       } as never)
       await fiber.await()
       expect(previewRegistrations).toBe(1)
-      expect(slotRegistrations).toBe(1)
+      expect(slotRegistrations).toBe(2)
+      expect(slotNames).toEqual([
+        'sidebar.right.tab.document',
+        'sidebar.right.tab.document.action',
+      ])
 
       await fiber.dispose()
       expect(previewDisposals).toBe(1)
-      expect(slotDisposals).toBe(1)
+      expect(slotDisposals).toBe(2)
     } finally {
       await ctx.fiber.dispose()
       vi.unstubAllGlobals()

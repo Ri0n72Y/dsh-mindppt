@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { createRef } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
@@ -109,6 +110,18 @@ describe('MindPPT document UI contract', () => {
     const url = new URL(previewPageUrl('https://dsh.local/app?x=1', address))
     expect(url.searchParams.get('x')).toBe('1')
     expect(url.searchParams.get('mindppt-preview')).toBe(address)
+  })
+
+  it('keeps Preview on side outside Agent selection ownership', () => {
+    const source = readFileSync(
+      new URL('../src/client/PreviewPage.tsx', import.meta.url),
+      'utf8',
+    )
+    expect(source).toContain('readWholeSource')
+    expect(source).not.toContain('queueClientSelection')
+    expect(source).not.toContain('postDocument')
+    expect(source).not.toContain("action: 'select'")
+    expect(source).not.toContain("action: 'clear'")
   })
 
   it('new-tab workbench keeps editor, Camera, Path and SoftLink controls', () => {

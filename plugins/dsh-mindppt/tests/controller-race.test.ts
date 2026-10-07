@@ -108,6 +108,49 @@ describe('workspace controller selection races', () => {
     expect(sources.get('a.mindppt')).toBe(A)
   })
 
+  it('does not apply a Human write to an obsolete runtime during selection', async () => {
+    const bRead = Promise.withResolvers<string>()
+    let aSource = A
+    let aVersion = '1'
+    const port: WorkspaceFilePort = {
+      async readText(identity) {
+        return identity.path === 'b.mindppt' ? await bRead.promise : aSource
+      },
+      async readSnapshot() {
+        return { source: aSource, version: aVersion }
+      },
+      async writeText(identity, source, expectedVersion) {
+        if (identity.path !== 'a.mindppt' || expectedVersion !== aVersion) {
+          throw Object.assign(new Error('stale'), { code: 'FS_STALE_VERSION' })
+        }
+        aSource = source
+        aVersion = '2'
+        return aVersion
+      },
+    }
+    const controller = new MindPptWorkspaceController(port)
+    const a = { sessionId: 's1', path: 'a.mindppt' }
+    await controller.select(a, undefined, 'tab-a')
+    const attempts = controller.attempts('s1')
+    const selecting = controller.select(
+      { sessionId: 's1', path: 'b.mindppt' },
+      undefined,
+      'tab-b',
+    )
+
+    const sideSource = A.replace('Root', 'Side')
+    await expect(controller.writeWorkspaceSource(
+      a, sideSource, '1',
+    )).resolves.toEqual({ version: '2' })
+    expect(aSource).toBe(sideSource)
+    expect(controller.attempts('s1')).toBe(attempts)
+
+    bRead.resolve(B)
+    await selecting
+    expect(controller.inspect('s1').file.path).toBe('b.mindppt')
+    expect(controller.inspect('s1').source).toBe(B)
+  })
+
   it('blocks an obsolete Agent patch at the provider commit boundary', async () => {
     const writeResolveStarted = Promise.withResolvers<void>()
     const releaseWriteResolve = Promise.withResolvers<void>()

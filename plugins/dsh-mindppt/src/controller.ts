@@ -92,27 +92,27 @@ export class MindPptWorkspaceController {
     ) this.active.delete(sessionId)
     this.selections.finish(sessionId, generation)
   }
-  async replaceSource(
+  async writeWorkspaceSource(
     identity: MindPptFileIdentity,
     source: string,
     expectedVersion: string,
     signal?: AbortSignal,
-  ): Promise<{ inspection: DocumentInspection; version: string }> {
+  ): Promise<{ version: string }> {
     return await this.writes.run(identity.sessionId, async () => {
-      const generation = this.selections.generation(identity.sessionId)
-      const current = this.requireStableCurrent(identity.sessionId)
-      this.assertIdentity(current, identity)
       if (!expectedVersion) {
         throw new Error('MindPPT write requires a workspace file version')
       }
       const version = await this.files.writeText(
         identity, source, expectedVersion, signal,
-        () => !this.selections.has(identity.sessionId)
-          && this.selections.generation(identity.sessionId) === generation
-          && this.active.get(identity.sessionId) === current,
       )
-      current.runtime.applySource(source)
-      return { inspection: documentInspection(current.identity, current.runtime.view), version }
+      const current = this.active.get(identity.sessionId)
+      if (
+        !this.selections.has(identity.sessionId)
+        && current?.identity.path === identity.path
+      ) {
+        current.runtime.applySource(source)
+      }
+      return { version }
     })
   }
   async guardedPatch(
@@ -179,11 +179,6 @@ export class MindPptWorkspaceController {
       throw new Error('stale MindPPT document selection')
     }
     return this.requireCurrent(sessionId)
-  }
-  private assertIdentity(current: ActiveDocument, identity: MindPptFileIdentity): void {
-    if (current.identity.path !== identity.path) {
-      throw new Error('stale MindPPT document selection')
-    }
   }
 }
 

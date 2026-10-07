@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { parseSessionFileAddress } from '../shared.ts'
-import { queueClientSelection, waitForClientWrites } from './client-write-queue.ts'
 import { readWholeSource, relatedReader, type WorkspaceFilesRemote } from './dsh.ts'
 import { InteractiveWorkbench, type WorkbenchSession } from './InteractiveWorkbench.tsx'
 import { BrowserMindPptRuntime } from './runtime.ts'
-import { postDocument } from './wire.ts'
 
 export function PreviewPage({ resourceAddress, remote }: {
   resourceAddress: string
@@ -13,20 +11,13 @@ export function PreviewPage({ resourceAddress, remote }: {
   const file = parseSessionFileAddress(resourceAddress)
   const [session, setSession] = useState<WorkbenchSession>()
   const [error, setError] = useState<string>()
-  const selectionId = useRef('mindppt-preview:' + crypto.randomUUID())
 
   useEffect(() => {
     if (!file) return
     const controller = new AbortController()
     const identity = { sessionId: file.sessionId, path: file.path }
-    const selected = queueClientSelection(
-      file.sessionId,
-      waitForClientWrites(file.sessionId),
-      () => postDocument({ action: 'select', identity, selectionId: selectionId.current }),
-    )
     void (async () => {
       try {
-        await selected
         const read = await readWholeSource(remote, file.sessionId, file.path, controller.signal)
         const runtime = await BrowserMindPptRuntime.create(
           read.source,
@@ -40,20 +31,7 @@ export function PreviewPage({ resourceAddress, remote }: {
         if (!controller.signal.aborted) setError(message(cause))
       }
     })()
-    return () => {
-      controller.abort()
-      const barrier = waitForClientWrites(file.sessionId)
-      void queueClientSelection(
-        file.sessionId,
-        barrier,
-        () => postDocument({
-          action: 'clear',
-          sessionId: file.sessionId,
-          path: file.path,
-          selectionId: selectionId.current,
-        }),
-      ).catch(() => {})
-    }
+    return () => controller.abort()
   }, [resourceAddress])
 
   if (!file) return <PreviewError text="Invalid MindPPT workspace address" />

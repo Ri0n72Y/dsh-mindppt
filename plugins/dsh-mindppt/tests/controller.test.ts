@@ -62,14 +62,14 @@ describe('workspace controller', () => {
     await controller.select(identity)
     expect(controller.inspect('s1').structureCurrent).toBe(true)
 
-    await controller.replaceSource(identity, INVALID, file.version())
+    await controller.writeWorkspaceSource(identity, INVALID, file.version())
     const invalid = controller.inspect('s1')
     expect(invalid.structureCurrent).toBe(false)
     expect(invalid.structureBasis).toBe('last-good')
     expect(invalid.semantic[0]?.id).toBe('root')
     expect(file.source()).toBe(INVALID)
 
-    await controller.replaceSource(identity, VALID, file.version())
+    await controller.writeWorkspaceSource(identity, VALID, file.version())
     expect(controller.inspect('s1').structureCurrent).toBe(true)
   })
 
@@ -138,7 +138,7 @@ describe('workspace controller', () => {
     expect(result.ok).toBe(true)
     expect(file.source()).toBe(agentSource)
 
-    await expect(controller.replaceSource(
+    await expect(controller.writeWorkspaceSource(
       identity,
       VALID.replace('Root', 'Human'),
       humanVersion,
@@ -146,6 +146,55 @@ describe('workspace controller', () => {
 
     expect(file.source()).toBe(agentSource)
     expect(controller.inspect('s1').source).toBe(agentSource)
+  })
+
+  it('writes an explicit Human file without changing Agent selection', async () => {
+    const a = { sessionId: 's1', path: 'a.mindppt' }
+    const b = { sessionId: 's1', path: 'b.mindppt' }
+    const sideSource = VALID.replace('Root', 'Side')
+    const bSource = VALID.replace('root', 'b').replace('Root', 'B')
+    const sources = new Map([
+      [a.path, VALID],
+      [b.path, bSource],
+    ])
+    const versions = new Map([
+      [a.path, '1'],
+      [b.path, '1'],
+    ])
+    const port: WorkspaceFilePort = {
+      async readText(identity) {
+        return sources.get(identity.path) ?? ''
+      },
+      async readSnapshot(identity) {
+        return {
+          source: sources.get(identity.path) ?? '',
+          version: versions.get(identity.path) ?? '',
+        }
+      },
+      async writeText(identity, source, expectedVersion) {
+        const version = versions.get(identity.path)
+        if (version !== expectedVersion) {
+          throw Object.assign(new Error('stale'), { code: 'FS_STALE_VERSION' })
+        }
+        const nextVersion = String(Number(version) + 1)
+        sources.set(identity.path, source)
+        versions.set(identity.path, nextVersion)
+        return nextVersion
+      },
+    }
+    const controller = new MindPptWorkspaceController(port)
+    await controller.select(a, undefined, 'tab-a')
+    await controller.select(b, undefined, 'tab-b')
+    const attempts = controller.attempts('s1')
+
+    await expect(controller.writeWorkspaceSource(
+      a, sideSource, '1',
+    )).resolves.toEqual({ version: '2' })
+
+    expect(sources.get(a.path)).toBe(sideSource)
+    expect(controller.inspect('s1').file).toEqual(b)
+    expect(controller.inspect('s1').source).toBe(bSource)
+    expect(controller.attempts('s1')).toBe(attempts)
   })
 
   it('keeps only the latest overlapping selection and clear cancels a pending one', async () => {

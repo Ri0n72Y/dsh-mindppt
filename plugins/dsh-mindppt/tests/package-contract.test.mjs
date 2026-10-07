@@ -17,7 +17,7 @@ describe('DSH package compatibility contract', () => {
 
   it('mounts the renamed package exactly once on the stable mindppt row', async () => {
     const patch = await readFile(patchUrl, 'utf8')
-    const packageRows = patch.match(/name:\\s*dsh-mindppt-plugin\\b/g) ?? []
+    const packageRows = patch.match(/name:\s*dsh-mindppt-plugin\b/g) ?? []
 
     expect(patch).toContain('id: mindppt')
     expect(packageRows).toHaveLength(1)

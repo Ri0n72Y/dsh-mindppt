@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { FontMetricRefreshBinding } from '../src/client/font-metrics.ts'
 import { BrowserMindPptRuntime } from '../src/client/runtime.ts'
@@ -60,6 +61,18 @@ describe('MindPPT canvas refresh behavior', () => {
     expect(remove).toHaveBeenCalledTimes(1)
     expect(published).toHaveBeenCalledTimes(2)
     unsubscribe()
+  })
+
+  it('compiles the shipped runnable market example and the bundled skill example', async () => {
+    for (const path of [
+      '../../../examples/market-overview.mindppt',
+      '../assets/mindppt-authoring/examples/authoring-demo.mindppt',
+    ]) {
+      const source = readFileSync(new URL(path, import.meta.url), 'utf8')
+      const runtime = await BrowserMindPptRuntime.create(source)
+      expect(runtime.getSnapshot().structureCurrent, path).toBe(true)
+      expect(runtime.getSnapshot().elements.length, path).toBeGreaterThan(0)
+    }
   })
 
   it('fits complete panorama scene to viewport', () => {

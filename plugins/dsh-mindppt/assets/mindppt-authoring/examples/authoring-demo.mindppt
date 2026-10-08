@@ -1,0 +1,39 @@
+mindppt
+
+tree LR {
+  intro --> analysis
+}
+
+slide intro {
+  layout hero
+
+  # Market Overview
+
+  ## Runnable MindPPT v0 example
+}
+
+slide analysis {
+  layout two-column
+
+  # Channel Performance
+
+  left {
+    table {
+      header ["Channel", "Orders"]
+      row ["Direct", 184]
+      row ["Partner", 121]
+    }
+  }
+
+  right {
+    chart bar {
+      labels ["Direct", "Partner"]
+      values [184, 121]
+    }
+  }
+}
+
+path main {
+  intro
+  analysis
+}

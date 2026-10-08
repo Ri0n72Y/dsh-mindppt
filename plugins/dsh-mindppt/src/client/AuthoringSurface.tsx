@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import type { RefCallback } from 'react'
 import { MindPptPanorama } from './Canvas.tsx'
+import { PreviewStatus } from './PreviewStatus.tsx'
 import { SourceText } from './SourceText.tsx'
 import type { BrowserMindPptRuntime } from './runtime.ts'
 import type { DocumentView } from './view-state.ts'
@@ -29,6 +30,7 @@ export function AuthoringSurface({ runtime, error, scrollportRef, view }: {
           files={snapshot.files}
           onFontMetricsReady={runtime.refreshElements}
         />
+        <PreviewStatus snapshot={snapshot} />
       </section>
     )
   }
@@ -59,6 +61,7 @@ const codeRootStyle = {
 } as const
 
 const panoramaRootStyle = {
+  position: 'relative',
   height: '100%',
   minHeight: 0,
 } as const

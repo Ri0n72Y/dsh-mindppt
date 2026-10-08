@@ -3,6 +3,7 @@ import { MindPptWorkspaceController } from './controller.ts'
 import { workspaceFilePort } from './fs-port.ts'
 import { registerDocumentRoute } from './http.ts'
 import { registerMindPptTools } from './agent-tools.ts'
+import { registerMindPptSkill } from './skill-provider.ts'
 
 export { MindPptWorkspaceController } from './controller.ts'
 export { applyGuardedPatch, DSH_BASELINE } from './shared.ts'
@@ -17,7 +18,7 @@ export type {
 } from './shared.ts'
 
 export const name = 'dsh-mindppt'
-export const inject = ['connection', 'fs', 'sessions', 'tools']
+export const inject = ['connection', 'fs', 'sessions', 'tools', 'skills']
 
 interface HostContext extends Context {
   connection: {
@@ -26,6 +27,7 @@ interface HostContext extends Context {
   fs: Parameters<typeof workspaceFilePort>[0]
   sessions: Parameters<typeof workspaceFilePort>[1]
   tools: Parameters<typeof registerMindPptTools>[0]
+  skills: Parameters<typeof registerMindPptSkill>[0]
 }
 
 interface FileObservationContext {
@@ -48,6 +50,7 @@ export function apply(ctx: Context): void {
     },
   )
   const controller = new MindPptWorkspaceController(files)
+  registerMindPptSkill(host.skills)
   ctx.effect(
     () => registerDocumentRoute(host.connection.fetch, controller),
     'dsh-mindppt: document route',

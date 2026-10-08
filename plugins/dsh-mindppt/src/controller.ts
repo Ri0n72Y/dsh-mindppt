@@ -98,6 +98,9 @@ export class MindPptWorkspaceController {
     expectedVersion: string,
     signal?: AbortSignal,
   ): Promise<{ version: string }> {
+    if (!identity.path.toLowerCase().endsWith('.mindppt')) {
+      throw new Error('MindPPT Human write requires a .mindppt workspace file')
+    }
     return await this.writes.run(identity.sessionId, async () => {
       if (!expectedVersion) {
         throw new Error('MindPPT write requires a workspace file version')

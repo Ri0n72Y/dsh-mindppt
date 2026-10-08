@@ -148,6 +148,41 @@ describe('workspace controller', () => {
     expect(controller.inspect('s1').source).toBe(agentSource)
   })
 
+  it('rejects non-MindPPT Human targets before provider writes', async () => {
+    const file = memoryFile()
+    const controller = new MindPptWorkspaceController(file.port)
+    const active = { sessionId: 's1', path: 'presentation.mindppt' }
+    await controller.select(active, undefined, 'tab-main')
+    const before = controller.inspect('s1')
+    const attempts = controller.attempts('s1')
+
+    for (const path of ['notes.md', 'config.json', 'source.ts', 'presentation.mindppt.md']) {
+      await expect(controller.writeWorkspaceSource(
+        { sessionId: 's1', path }, INVALID, file.version(),
+      )).rejects.toThrow('MindPPT Human write requires a .mindppt workspace file')
+    }
+
+    expect(file.writes()).toBe(0)
+    expect(file.source()).toBe(VALID)
+    expect(controller.inspect('s1')).toEqual(before)
+    expect(controller.attempts('s1')).toBe(attempts)
+  })
+
+  it('accepts a case-insensitive .mindppt Human CAS target', async () => {
+    const file = memoryFile()
+    const controller = new MindPptWorkspaceController(file.port)
+    const identity = { sessionId: 's1', path: 'presentation.MINDPPT' }
+    await controller.select(identity, undefined, 'tab-main')
+    const source = VALID.replace('Root', 'Human')
+
+    await expect(controller.writeWorkspaceSource(
+      identity, source, file.version(),
+    )).resolves.toEqual({ version: '2' })
+    expect(file.writes()).toBe(1)
+    expect(file.source()).toBe(source)
+    expect(controller.inspect('s1').source).toBe(source)
+  })
+
   it('writes an explicit Human file without changing Agent selection', async () => {
     const a = { sessionId: 's1', path: 'a.mindppt' }
     const b = { sessionId: 's1', path: 'b.mindppt' }

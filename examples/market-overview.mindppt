@@ -1,10 +1,5 @@
 mindppt
 
-deck {
-  size 16:9
-  theme "business"
-}
-
 tree LR {
   intro --> market
   market --> size
@@ -23,7 +18,7 @@ slide intro {
 
   ## 2026 opportunity review
 
-  ![Outdoor](./assets/outdoor.jpg)
+  ![Customer workshop](./assets/customer.svg)
 }
 
 slide market {
@@ -38,10 +33,9 @@ slide market {
   }
 
   right {
-    chart growth {
-      type bar
+    chart bar {
       labels ["2024", "2025", "2026"]
-      series "Market" [100, 116, 137]
+      values [100, 116, 137]
     }
   }
 }
@@ -49,11 +43,9 @@ slide market {
 slide size {
   # Market expansion is visible across segments
 
-  chart trend {
-    type line
+  chart bar {
     labels ["Q1", "Q2", "Q3", "Q4"]
-    series "Entry" [18, 22, 24, 27]
-    series "Premium" [11, 17, 23, 31]
+    values [11, 17, 23, 31]
   }
 }
 
@@ -61,7 +53,7 @@ slide customer {
   layout two-column
 
   left {
-    ![Customer](./assets/customer.png)
+    ![Customer](./assets/customer.svg)
   }
 
   right {
@@ -76,8 +68,8 @@ slide customer {
 slide competitor {
   # Competitive positioning
 
-  table comparison {
-    columns ["Segment", "Typical position", "Opportunity"]
+  table {
+    header ["Segment", "Typical position", "Opportunity"]
     row ["Entry", "Price-led", "Low"]
     row ["Mid", "Feature-led", "Medium"]
     row ["Premium", "Comfort-led", "High"]
@@ -87,11 +79,9 @@ slide competitor {
 slide product {
   # Position around comfort and clarity
 
-  ```mermaid
-  flowchart LR
-    Need[Customer need] --> Product[Product proposition]
-    Product --> Proof[Proof points]
-  ```
+  - Customer need: more comfort
+  - Product proposition: practical outdoor design
+  - Proof points: clear feature explanations
 }
 
 slide summary {

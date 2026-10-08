@@ -99,14 +99,16 @@ function CanvasView({ elements, files, setApi }: {
   setApi(api: ExcalidrawImperativeAPI): void
 }) {
   return (
-    <Excalidraw
+    <div className="mindppt-view-only" style={{ height: '100%' }}>
+      {/* Excalidraw 0.18 always renders footer Help; scope hiding to MindPPT view-only. */}
+      <style>{'.mindppt-view-only .layer-ui__wrapper__footer-right { display: none; }'}</style>
+      <Excalidraw
       excalidrawAPI={setApi}
       initialData={{
         elements,
         files,
         scrollToContent: true,
         appState: {
-          zenModeEnabled: true,
           frameRendering: {
             enabled: true,
             clip: false,
@@ -116,7 +118,18 @@ function CanvasView({ elements, files, setApi }: {
         },
       }}
       viewModeEnabled
-    />
+      zenModeEnabled={true}
+      UIOptions={{ canvasActions: {
+        clearCanvas: false,
+        changeViewBackgroundColor: false,
+        loadScene: false,
+        saveToActiveFile: false,
+        export: false,
+        saveAsImage: false,
+        toggleTheme: false,
+      } }}
+      />
+    </div>
   )
 }
 

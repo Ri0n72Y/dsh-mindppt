@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { AuthoringSurface } from '../src/client/AuthoringSurface.tsx'
 import { InteractiveWorkbench } from '../src/client/InteractiveWorkbench.tsx'
 import { PreviewAction, previewPageUrl } from '../src/client/PreviewAction.tsx'
+import { PreviewStatus } from '../src/client/PreviewStatus.tsx'
 import { createDocumentViewCell, documentViewCell } from '../src/client/view-state.ts'
 
 vi.mock('../src/client/Canvas.tsx', () => ({
@@ -95,6 +96,41 @@ describe('MindPPT document UI contract', () => {
     expect(panorama).toContain('data-panorama="true"')
     expect(panorama).toContain('data-elements="2"')
     expect(panorama).toContain('data-focus="false"')
+  })
+
+  it('announces invalid-first and stale-last-good previews with source location', () => {
+    const source = 'mindppt\n\ndeck {\n}\n'
+    const failed = {
+      ...runtime().getSnapshot(), source, structureCurrent: false,
+      elements: [], diagnostics: [{
+        severity: 'error',
+        message: 'Unexpected document statement: text',
+        sourceRange: { start: 9, end: 15 },
+      }],
+    }
+    const first = renderToStaticMarkup(<PreviewStatus snapshot={failed as never} />)
+    expect(first).toContain('Compile failed')
+    expect(first).toContain('line 3:1')
+    expect(first).toContain('Open Code')
+
+    const stale = renderToStaticMarkup(
+      <PreviewStatus snapshot={{ ...failed, elements: [{ id: 'old' }] } as never} />,
+    )
+    expect(stale).toContain('Last-good preview')
+    expect(stale).toContain('previous successful scene')
+    expect(renderToStaticMarkup(
+      <PreviewStatus snapshot={{ ...failed, structureCurrent: true } as never} />,
+    )).toBe('')
+  })
+
+  it('uses controlled view-only Excalidraw without blocking panorama pointers', () => {
+    const canvas = readFileSync(
+      new URL('../src/client/Canvas.tsx', import.meta.url), 'utf8',
+    )
+    expect(canvas).toContain('viewModeEnabled')
+    expect(canvas).toContain('zenModeEnabled={true}')
+    expect(canvas).toContain('.mindppt-view-only .layer-ui__wrapper__footer-right')
+    expect(canvas).not.toContain("pointerEvents: 'none'")
   })
 
   it('builds Preview on side URL without changing workspace address', () => {

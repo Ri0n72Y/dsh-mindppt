@@ -178,6 +178,10 @@ Client file reads, change observation, and document-relative local image bytes r
 
 The right-side Code view is read-only; humans edit the same workspace file through an external editor, and the Agent continues to use guarded patches. The in-tab Panorama Preview fits the complete scene and supports pan/zoom without element editing. Preview on side opens a separate DSH page that uses the existing Excalidraw + Camera + PresentationPath + SoftLink presentation behavior. Its Code panel is read-only, collapsible and closed by default, leaving the presentation canvas full-width. Show Code and Navigation are stacked at the upper-right; expanding Navigation exposes vertically arranged Camera, Path, and SoftLink controls. The DSH plugin compiles directly through `mindpptParser` without loading the standalone `code-editor` service. The standalone playground remains DSH-independent and now allows its editor panel to be hidden and restored for a presentation-style canvas.
 
+M10 acceptance follow-up: Both Preview surfaces retain view-only Excalidraw and show compile-failure or last-good source diagnostics, including source line:column. The bundled `mindppt-authoring` Skill ships under `plugins/dsh-mindppt/assets` and registers through the Host `skills` service. Agents should use ordinary DSH workspace read/edit/write rather than numeric-offset `mindppt_patch`; existing MindPPT tools are retained for compatibility. Skill loading is only proven in a real model session when a DSH preset has `dsh-tool-skill` active.
+
+After rebuilding and redeploying, verify in a **different workspace** that the model catalog advertises `mindppt-authoring` and `skill({name:'mindppt-authoring'})` loads its body and relative references from the installed plugin. Also check preview creation/edit/paste/keyboard attempts after Zen cannot modify elements. Do not conflate this with automated CI or Windows sandbox ACL troubleshooting.
+
 Real DSH acceptance remains pending and is the final M10/v0 architecture proof.
 
 ### Quick DSH deploy

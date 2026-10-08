@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 
 const source = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 assert.match(
@@ -22,3 +22,15 @@ assert.doesNotMatch(
   /process\.env\.NODE_ENV|import\.meta\.env/,
   'client artifact must not retain build-environment probes',
 )
+
+for (const name of [
+  'SKILL.md',
+  'references/v0-grammar.md',
+  'examples/authoring-demo.mindppt',
+]) {
+  assert.equal(
+    existsSync(new URL('../assets/mindppt-authoring/' + name, import.meta.url)),
+    true,
+    'MindPPT bundled skill asset missing: ' + name,
+  )
+}

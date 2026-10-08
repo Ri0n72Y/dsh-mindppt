@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore } from 'react'
 import type { MindPptFileIdentity } from '../shared.ts'
 import { MindPptCanvas } from './Canvas.tsx'
 import { PresentationControls } from './Controls.tsx'
+import { PreviewStatus } from './PreviewStatus.tsx'
 import type { BrowserMindPptRuntime } from './runtime.ts'
 import { SourceText } from './SourceText.tsx'
 
@@ -34,6 +35,7 @@ export function InteractiveWorkbench({ session }: { session: WorkbenchSession })
           focusRequest={snapshot.camera.focusRequest}
           onFontMetricsReady={runtime.refreshElements}
         />
+        <PreviewStatus snapshot={snapshot} />
         <div style={toolbarStyle} aria-label="MindPPT preview tools">
           <button
             type="button"

@@ -71,9 +71,6 @@ importers:
       dsh-mindppt-canvas-excalidraw:
         specifier: workspace:*
         version: link:../canvas-excalidraw
-      dsh-mindppt-code-editor:
-        specifier: workspace:*
-        version: link:../code-editor
       dsh-mindppt-code-parser:
         specifier: workspace:*
         version: link:../code-parser

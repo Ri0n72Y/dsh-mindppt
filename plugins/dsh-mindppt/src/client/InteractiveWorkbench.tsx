@@ -34,18 +34,22 @@ export function InteractiveWorkbench({ session }: { session: WorkbenchSession })
           focusRequest={snapshot.camera.focusRequest}
           onFontMetricsReady={runtime.refreshElements}
         />
-        <button
-          type="button"
-          style={codeToggleStyle}
-          aria-expanded={showCode}
-          onClick={() => setShowCode(value => !value)}
-        >
-          {showCode ? 'Hide Code' : 'Show Code'}
-        </button>
-        <details style={navigationStyle}>
-          <summary>Navigation</summary>
-          <PresentationControls runtime={runtime} snapshot={snapshot} />
-        </details>
+        <div style={toolbarStyle} aria-label="MindPPT preview tools">
+          <button
+            type="button"
+            style={toolStyle}
+            aria-expanded={showCode}
+            onClick={() => setShowCode(value => !value)}
+          >
+            {showCode ? 'Hide Code' : 'Show Code'}
+          </button>
+          <details style={navigationStyle}>
+            <summary style={toolStyle}>Navigation</summary>
+            <div style={navigationPanelStyle}>
+              <PresentationControls runtime={runtime} snapshot={snapshot} />
+            </div>
+          </details>
+        </div>
       </section>
       {showCode && (
         <aside style={sourcePanelStyle} aria-label="MindPPT code panel">
@@ -58,26 +62,49 @@ export function InteractiveWorkbench({ session }: { session: WorkbenchSession })
 
 const workbenchStyle = {
   position: 'fixed', inset: 0, zIndex: 2147483647,
-  display: 'grid', margin: 0, background: '#fff',
+  display: 'grid', margin: 0,
+  background: 'var(--dsw-alias-bg-layer-1, #fff)',
 } as const
 
 const stageStyle = {
   position: 'relative', minWidth: 0, minHeight: 0,
 } as const
 
-const codeToggleStyle = {
+const toolbarStyle = {
   position: 'absolute', top: 12, right: 12, zIndex: 10,
-  padding: 8, background: '#fff', border: '1px solid #ddd',
+  display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6,
+  fontFamily: 'var(--dsw-font-family, inherit)',
+  fontSize: 'var(--dsh-content-font-size-secondary, 13px)',
+  color: 'var(--dsw-alias-label-primary, #222)',
 } as const
 
-const navigationStyle = {
-  position: 'absolute', bottom: 12, left: 12, zIndex: 10,
-  maxWidth: 'calc(100% - 24px)', maxHeight: '50%',
-  overflow: 'auto', padding: 8,
-  background: '#fff', border: '1px solid #ddd',
+const toolStyle = {
+  display: 'block', boxSizing: 'border-box', width: '100%',
+  padding: '6px 12px', minHeight: 30,
+  border: '0.5px solid var(--dsw-alias-border-l2, #ddd)',
+  borderRadius: 'var(--dsw-radius-md, 8px)',
+  color: 'inherit', background: 'var(--dsw-alias-bg-layer-1, #fff)',
+  font: 'inherit', textAlign: 'center', cursor: 'pointer',
+  boxShadow: '0 2px 8px #00000012',
+} as const
+
+const navigationStyle = { position: 'relative' } as const
+
+const navigationPanelStyle = {
+  position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+  width: 'min(260px, calc(100vw - 24px))',
+  maxHeight: 'calc(100vh - 120px)', overflowY: 'auto',
+  padding: 8, boxSizing: 'border-box',
+  border: '0.5px solid var(--dsw-alias-border-l3, #ddd)',
+  borderRadius: 'var(--dsw-radius-lg, 12px)',
+  background: 'var(--dsw-alias-bg-layer-1, #fff)',
+  boxShadow: '0 8px 24px #0000001a, 0 2px 5px #00000009',
 } as const
 
 const sourcePanelStyle = {
   display: 'flex', flexDirection: 'column', minHeight: 0,
-  gap: 8, padding: 8, borderLeft: '1px solid #ddd', overflow: 'auto',
+  gap: 8, padding: 8, overflow: 'auto',
+  borderLeft: '0.5px solid var(--dsw-alias-border-l3, #ddd)',
+  color: 'var(--dsw-alias-label-primary, #222)',
+  background: 'var(--dsw-alias-bg-layer-1, #fff)',
 } as const

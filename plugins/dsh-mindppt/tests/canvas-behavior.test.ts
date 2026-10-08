@@ -3,6 +3,11 @@ import { FontMetricRefreshBinding } from '../src/client/font-metrics.ts'
 import { BrowserMindPptRuntime } from '../src/client/runtime.ts'
 import { fitWholeScene } from '../src/client/panorama-fit.ts'
 
+// Only Excalidraw's browser-dependent conversion is stubbed; the runtime and font binding stay real.
+vi.mock('@excalidraw/excalidraw', () => ({
+  convertToExcalidrawElements: (scene: unknown[]) => scene,
+}))
+
 describe('MindPPT canvas refresh behavior', () => {
   it('keeps the runtime receiver across font-ready refresh publication', async () => {
     const runtime = await BrowserMindPptRuntime.create(

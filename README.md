@@ -165,7 +165,7 @@ The delivered flow is:
 native Workspace .mindppt
   -> complete source read
   -> MindPPT runtime projection
-  -> right-side source + diagnostics + static Excalidraw preview
+  -> right-side read-only Code view or interactive Panorama Preview
   -> same workspace file for human writes and Agent guarded patches
   -> independent full Preview page
 ~~~
@@ -176,7 +176,7 @@ Compile failure intentionally leaves the invalid source in the workspace file wh
 
 Client file reads, change observation, and document-relative local image bytes reuse DSH rc2 `workspaceFiles`. Actual writes use the narrow DSH Connection route and Host `ctx.fs`; no generic RPC or file-watcher framework is added.
 
-The right-side preview is static. The Preview button opens a separate DSH page that rereads the same workspace file and runs the existing Excalidraw + Camera + PresentationPath + SoftLink presentation behavior with no editor. The standalone playground remains DSH-independent and now allows its editor panel to be hidden and restored for a presentation-style canvas.
+The right-side Code view is read-only; humans edit the same workspace file through an external editor, and the Agent continues to use guarded patches. The in-tab Panorama Preview fits the complete scene and supports pan/zoom without element editing. Preview on side opens a separate DSH page that uses the existing Excalidraw + Camera + PresentationPath + SoftLink presentation behavior. Its Code panel is read-only, collapsible and closed by default, leaving the presentation canvas full-width. Show Code and Navigation are stacked at the upper-right; expanding Navigation exposes vertically arranged Camera, Path, and SoftLink controls. The DSH plugin compiles directly through `mindpptParser` without loading the standalone `code-editor` service. The standalone playground remains DSH-independent and now allows its editor panel to be hidden and restored for a presentation-style canvas.
 
 Real DSH acceptance remains pending and is the final M10/v0 architecture proof.
 
@@ -213,11 +213,11 @@ pnpm dsh mindppt
 
 Run this as one continuous real-machine flow after `pnpm install` and `pnpm dsh:deploy`; it is intentionally not part of CI.
 
-1. Prepare a DSH workspace containing `presentation.mindppt` plus `assets/customer.svg`: copy `examples/m9-content-plugin-latex.mindppt` to `presentation.mindppt` and preserve the existing relative `./assets/customer.svg` relationship. Start `pnpm dsh mindppt`, open that workspace, and select `presentation.mindppt` from the native Workspace sidebar. The right-side panel must show MindPPT, `Current`, the source editor, the static PPT preview, and `Preview`. The projection must contain hero, agenda, problem, customer, analysis, summary, the customer SVG, the table, the bar chart, and specialized Euler-formula rendering.
+1. Prepare a DSH workspace containing `presentation.mindppt` plus `assets/customer.svg`: copy `examples/m9-content-plugin-latex.mindppt` to `presentation.mindppt` and preserve the existing relative `./assets/customer.svg` relationship. Start `pnpm dsh mindppt`, open that workspace, and select `presentation.mindppt` from the native Workspace sidebar. The right-side panel must show MindPPT, `Current`, read-only Code, and a `Preview` toggle. Switching to Panorama must show the complete scene with pan/zoom. Opening Preview on side must default to a full-width presentation with a collapsed Code panel. The projection must contain hero, agenda, problem, customer, analysis, summary, the customer SVG, the table, the bar chart, and specialized Euler-formula rendering.
 
-2. Edit `# Analysis Flow` to `# Analysis Flow — Human Edit` without reloading. The real workspace file and static preview must change while status remains `Current`; switch away and reopen the file and confirm the edit persists. Then ask the Agent: `Inspect the currently selected MindPPT document. Report the selected file, structureCurrent, structureBasis, active renderer types, and source range for: "The M9 slice reuses the existing presentation pipeline." Do not modify anything.` Confirm the selected `.mindppt`, `structureCurrent=true`, `structureBasis=current`, active LaTeX renderer, semantic source ranges, and no raw Excalidraw JSON.
+2. Edit `# Analysis Flow` to `# Analysis Flow — Human Edit` in an external workspace editor without reloading the DSH page. The real workspace file and read-only Code/Preview projection must change while status remains `Current`; switch away and reopen the file and confirm the edit persists. Then ask the Agent: `Inspect the currently selected MindPPT document. Report the selected file, structureCurrent, structureBasis, active renderer types, and source range for: "The M9 slice reuses the existing presentation pipeline." Do not modify anything.` Confirm the selected `.mindppt`, `structureCurrent=true`, `structureBasis=current`, active LaTeX renderer, semantic source ranges, and no raw Excalidraw JSON.
 
-3. Ask the Agent to guarded-replace `The M9 slice reuses the existing presentation pipeline.` with `The M10 workspace slice reuses the existing presentation pipeline.` The workspace file, open source editor, and static preview must all change without a page reload. Then intentionally reuse the old expected text without refreshing the patch basis; the stale patch must be rejected with file and preview unchanged.
+3. Ask the Agent to guarded-replace `The M9 slice reuses the existing presentation pipeline.` with `The M10 workspace slice reuses the existing presentation pipeline.` The workspace file, read-only Code view, and Panorama Preview must all change without a page reload. Then intentionally reuse the old expected text without refreshing the patch basis; the stale patch must be rejected with file and preview unchanged.
 
 4. Re-inspect, then guarded-replace `values [184, 121, 96]` with the invalid `values [184, 121,`. The workspace file must keep the invalid source, diagnostics must appear, the header must show `Last-good preview`, and the static projection must stay on the last-good structure. Inspect again and confirm `structureCurrent=false`, `structureBasis=last-good`, with diagnostics for the current invalid source. Guarded-repair the text back to `values [184, 121, 96]`; diagnostics must clear and the structure must return to current.
 

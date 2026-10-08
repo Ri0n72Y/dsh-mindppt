@@ -24,7 +24,7 @@ export function PreviewPage({ resourceAddress, remote }: {
           relatedReader(remote, file.sessionId, file.path),
         )
         if (!controller.signal.aborted) {
-          setSession({ identity, runtime, version: read.version })
+          setSession({ identity, runtime })
           setError(undefined)
         }
       } catch (cause) {
@@ -41,7 +41,6 @@ export function PreviewPage({ resourceAddress, remote }: {
     <InteractiveWorkbench
       key={session.identity.sessionId + ':' + session.identity.path}
       session={session}
-      remote={remote}
     />
   )
 }

@@ -86,7 +86,7 @@ export function MindPptPanorama({
     <div
       ref={host}
       aria-label="MindPPT panorama"
-      style={{ minWidth: 0, minHeight: 0, height, pointerEvents: 'none' }}
+      style={{ minWidth: 0, minHeight: 0, height }}
     >
       <CanvasView elements={elements} files={files} setApi={setApi} />
     </div>

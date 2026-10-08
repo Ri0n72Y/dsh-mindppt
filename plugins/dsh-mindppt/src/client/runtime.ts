@@ -3,9 +3,8 @@ import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { BinaryFileData, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
 import MindPptCameraService, { type CameraView } from 'dsh-mindppt-camera'
 import MindPptCanvasService, { type CanvasAssetRequest } from 'dsh-mindppt-canvas-excalidraw'
-import MindPptEditorService from 'dsh-mindppt-code-editor'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
-import MindPptParserService, { type MindPptDiagnostic } from 'dsh-mindppt-code-parser'
+import MindPptParserService, { MindPptCompileError, type MindPptDiagnostic } from 'dsh-mindppt-code-parser'
 
 export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
 
@@ -33,7 +32,6 @@ export class BrowserMindPptRuntime {
   private assetIds: Readonly<Record<string, BinaryFileData['id']>> = {}
 
   private constructor(
-    private readonly editor: MindPptEditorService,
     private readonly parser: MindPptParserService,
     private readonly canvas: MindPptCanvasService,
     private readonly cameraService: MindPptCameraService,
@@ -54,16 +52,14 @@ export class BrowserMindPptRuntime {
     const ctx = new Context()
     await ctx.plugin(MindPptParserService)
     await ctx.plugin(MindPptCanvasService)
-    await ctx.plugin(MindPptEditorService)
     await ctx.plugin(MindPptCameraService)
     await ctx.plugin(MindPptLatexPlugin)
-    let services: [MindPptEditorService, MindPptParserService, MindPptCanvasService, MindPptCameraService] | undefined
+    let services: [MindPptParserService, MindPptCanvasService, MindPptCameraService] | undefined
     await ctx.plugin({
       name: 'dsh-mindppt-browser-capture',
-      inject: ['mindpptEditor', 'mindpptParser', 'mindpptCanvas', 'mindpptCamera'],
+      inject: ['mindpptParser', 'mindpptCanvas', 'mindpptCamera'],
       apply(runtime: Context) {
         services = [
-          runtime.mindpptEditor,
           runtime.mindpptParser,
           runtime.mindpptCanvas,
           runtime.mindpptCamera,
@@ -84,10 +80,16 @@ export class BrowserMindPptRuntime {
 
   setSource(source: string): boolean {
     const currentRevision = ++this.revision
-    const compiled = this.editor.setSource(source)
+    let compiled = true
+    try {
+      this.parser.compile(source)
+    } catch (error) {
+      if (!(error instanceof MindPptCompileError)) throw error
+      compiled = false
+    }
     this.publish({
       ...this.snapshot,
-      source: this.editor.source,
+      source: this.parser.source,
       diagnostics: [...this.parser.diagnostics],
       structureCurrent: compiled,
       elements: compiled ? this.resetAssetsAndCompile() : this.snapshot.elements,

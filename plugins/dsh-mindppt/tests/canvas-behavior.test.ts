@@ -9,6 +9,19 @@ vi.mock('@excalidraw/excalidraw', () => ({
 }))
 
 describe('MindPPT canvas refresh behavior', () => {
+  it('compiles directly via parser and preserves last-good on invalid source', async () => {
+    const runtime = await BrowserMindPptRuntime.create(
+      'mindppt\nslide root {\n  # Root\n}\n',
+    )
+    const previous = runtime.getSnapshot().elements
+    expect(runtime.setSource('mindppt\nslide\n')).toBe(false)
+    expect(runtime.getSnapshot().source).toBe('mindppt\nslide\n')
+    expect(runtime.getSnapshot().structureCurrent).toBe(false)
+    expect(runtime.getSnapshot().elements).toBe(previous)
+    expect(runtime.getSnapshot().diagnostics[0]?.severity).toBe('error')
+  })
+
+
   it('keeps the runtime receiver across font-ready refresh publication', async () => {
     const runtime = await BrowserMindPptRuntime.create(
       'mindppt\n\nslide root {\n  # Root\n}\n',

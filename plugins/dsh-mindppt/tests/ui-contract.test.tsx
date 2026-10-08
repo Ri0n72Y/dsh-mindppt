@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs'
-import { createRef } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthoringSurface } from '../src/client/AuthoringSurface.tsx'
@@ -49,17 +48,8 @@ function surface(view: 'code' | 'panorama') {
   return renderToStaticMarkup(
     <AuthoringSurface
       runtime={runtime() as never}
-      identity={undefined}
       error={undefined}
-      editor={createRef<HTMLTextAreaElement>()}
-      writeTail={{ current: Promise.resolve('v1') }}
-      selectionTail={{ current: Promise.resolve() }}
-      pendingWrites={{ current: 0 }}
-      editRevision={{ current: 0 }}
-      reload={() => {}}
-      onSaved={() => {}}
       scrollportRef={() => {}}
-      onError={() => {}}
       view={view}
     />,
   )
@@ -94,12 +84,14 @@ describe('MindPPT document UI contract', () => {
     expect(renderToStaticMarkup(<PreviewAction {...props} />)).toContain('Code')
   })
 
-  it('Code mounts only the editor; Panorama mounts full scene without Camera input', () => {
+  it('Code shows read-only source; Panorama mounts full scene without Camera input', () => {
     const code = surface('code')
-    expect(code).toContain('aria-label="MindPPT source editor"')
+    expect(code).toContain('aria-label="MindPPT source text"')
+    expect(code).toContain('<pre')
+    expect(code).not.toContain('<textarea')
     expect(code).not.toContain('data-panorama="true"')
     const panorama = surface('panorama')
-    expect(panorama).not.toContain('aria-label="MindPPT source editor"')
+    expect(panorama).not.toContain('aria-label="MindPPT source text"')
     expect(panorama).toContain('data-panorama="true"')
     expect(panorama).toContain('data-elements="2"')
     expect(panorama).toContain('data-focus="false"')
@@ -124,19 +116,25 @@ describe('MindPPT document UI contract', () => {
     expect(source).not.toContain("action: 'clear'")
   })
 
-  it('new-tab workbench keeps editor, Camera, Path and SoftLink controls', () => {
+  it('new-tab preview defaults to full-width canvas and collapsed Code', () => {
     const model = runtime()
     const html = renderToStaticMarkup(
       <InteractiveWorkbench
         session={{
           identity: { sessionId: 's', path: 'deck.mindppt' },
           runtime: model as never,
-          version: 'v1',
         }}
-        remote={{ readBytes: vi.fn() } as never}
       />,
     )
-    expect(html).toContain('aria-label="MindPPT source editor"')
+    expect(html).toContain('Show Code')
+    expect(html).toContain('aria-expanded="false"')
+    expect(html).not.toContain('<aside')
+    expect(html).not.toContain('aria-label="MindPPT source text"')
+    expect(html).toContain('<details')
+    expect(html).toContain('Navigation')
+    expect(html).toContain('top:12px;right:12px')
+    expect(html).toContain('flex-direction:column')
+    expect(html).toContain('--dsw-alias-bg-layer-1')
     expect(html).toContain('aria-label="Presentation path"')
     expect(html).toContain('Previous')
     expect(html).toContain('Next')

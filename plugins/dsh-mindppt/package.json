@@ -45,7 +45,6 @@
     "@excalidraw/excalidraw": "0.18.0",
     "dsh-mindppt-camera": "workspace:*",
     "dsh-mindppt-canvas-excalidraw": "workspace:*",
-    "dsh-mindppt-code-editor": "workspace:*",
     "dsh-mindppt-code-parser": "workspace:*",
     "dsh-mindppt-latex": "workspace:*"
   },

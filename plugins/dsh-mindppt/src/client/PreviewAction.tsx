@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import {
+  Button, IconChevronDownOutlineRegular, Menu,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import { nextDocumentView, useDocumentView } from './view-state.ts'
 
 export interface PreviewActionProps {
@@ -17,77 +20,73 @@ export function previewPageUrl(base: string, resourceAddress: string): string {
   return url.toString()
 }
 
-export function PreviewAction({
-  content,
-  useTabInfo,
-}: PreviewActionProps) {
+export function PreviewAction({ content, useTabInfo }: PreviewActionProps) {
   const { tab } = useTabInfo()
-  const [view, setView] = useDocumentView(
-    tab.signal,
-    tab.navigation.address,
-  )
+  const [view, setView] = useDocumentView(tab.signal, tab.navigation.address)
   const [open, setOpen] = useState(false)
   if (content.kind !== 'renderer') return null
 
   return (
-    <div
-      style={rootStyle}
-      onBlur={event => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setOpen(false)
-        }
+    <Menu
+      open={open}
+      autoFocus
+      portal
+      compact
+      align="end"
+      onClose={() => setOpen(false)}
+      items={[{ id: 'side', label: 'Preview on side' }]}
+      onSelect={() => {
+        setOpen(false)
+        window.open(
+          previewPageUrl(window.location.href, tab.navigation.address),
+          '_blank',
+          'noopener',
+        )
       }}
-    >
-      <button
-        type="button"
-        onClick={() => setView(nextDocumentView(view))}
-      >
-        {view === 'code' ? 'Preview' : 'Code'}
-      </button>
-      <button
-        type="button"
-        aria-label="MindPPT preview options"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(value => !value)}
-      >
-        ▾
-      </button>
-      {open && (
-        <div role="menu" style={menuStyle}>
-          <button
-            type="button"
-            role="menuitem"
+      anchor={(
+        <span role="group" aria-label="MindPPT view controls" style={splitStyle}>
+          <Button
+            variant="ghost"
+            size="sm"
+            style={mainStyle}
             onClick={() => {
               setOpen(false)
-              window.open(
-                previewPageUrl(window.location.href, tab.navigation.address),
-                '_blank',
-                'noopener',
-              )
+              setView(nextDocumentView(view))
             }}
           >
-            Preview on side
-          </button>
-        </div>
+            {view === 'code' ? 'Preview' : 'Code'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            style={chevronStyle}
+            aria-label="MindPPT preview options"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            onClick={() => setOpen(value => !value)}
+          >
+            <IconChevronDownOutlineRegular size={12} />
+          </Button>
+        </span>
       )}
-    </div>
+    />
   )
 }
 
-const rootStyle = {
-  position: 'relative',
-  display: 'inline-flex',
-  alignItems: 'stretch',
+const splitStyle = {
+  display: 'inline-flex', alignItems: 'stretch', boxSizing: 'border-box',
+  height: 28, overflow: 'hidden',
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-sm)',
+  fontFamily: 'var(--dsw-font-family)',
 } as const
 
-const menuStyle = {
-  position: 'absolute',
-  zIndex: 10,
-  top: 'calc(100% + 4px)',
-  right: 0,
-  padding: 4,
-  border: '1px solid #ddd',
-  background: '#fff',
-  whiteSpace: 'nowrap',
+const mainStyle = {
+  height: '100%', borderRadius: 0, padding: '0 8px',
+} as const
+
+const chevronStyle = {
+  height: '100%', minWidth: 26, padding: '0 6px', borderRadius: 0,
+  borderLeft: '0.5px solid var(--dsw-alias-border-l3)',
+  color: 'var(--dsw-alias-label-secondary)',
 } as const

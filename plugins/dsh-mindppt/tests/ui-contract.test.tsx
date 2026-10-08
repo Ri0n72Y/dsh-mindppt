@@ -80,7 +80,12 @@ describe('MindPPT document UI contract', () => {
       content: { kind: 'renderer' as const },
       useTabInfo: () => ({ tab: { signal, navigation: { address } } }),
     }
-    expect(renderToStaticMarkup(<PreviewAction {...props} />)).toContain('Preview')
+    const preview = renderToStaticMarkup(<PreviewAction {...props} />)
+    expect(preview).toContain('Preview')
+    expect(preview).toContain('MindPPT view controls')
+    expect(preview).toContain('aria-haspopup="menu"')
+    expect(preview).toContain('aria-expanded="false"')
+    expect(preview).toContain('var(--dsw-alias-border-l3)')
     documentViewCell(signal, address).set('panorama')
     expect(renderToStaticMarkup(<PreviewAction {...props} />)).toContain('Code')
   })

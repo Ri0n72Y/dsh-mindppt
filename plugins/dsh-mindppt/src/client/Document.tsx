@@ -3,16 +3,10 @@ import type { RefCallback } from 'react'
 import type { MindPptFileIdentity } from '../shared.ts'
 import { parseSessionFileAddress } from '../shared.ts'
 import { AuthoringSurface } from './AuthoringSurface.tsx'
-import {
-  queueClientSelection,
-  waitForClientWrites,
-} from './client-write-queue.ts'
-import {
-  readWholeSource,
-  relatedReader,
-  type WorkspaceFilesRemote,
-} from './dsh.ts'
+import { queueClientSelection, waitForClientWrites } from './client-write-queue.ts'
+import { readWholeSource, relatedReader, type WorkspaceFilesRemote } from './dsh.ts'
 import { BrowserMindPptRuntime } from './runtime.ts'
+import { useDocumentView } from './view-state.ts'
 import { postDocument } from './wire.ts'
 
 interface RendererContent {
@@ -22,16 +16,8 @@ interface RendererContent {
   failed(): void
   reload(): void
 }
-interface TabInfo {
-  tab: {
-    id: string
-    signal: AbortSignal
-  }
-}
-
-export interface SidebarRightFace {
-  active(): { id: string } | undefined
-}
+interface TabInfo { tab: { id: string; signal: AbortSignal } }
+export interface SidebarRightFace { active(): { id: string } | undefined }
 export interface MindPptDocumentProps {
   resourceAddress: string
   content: RendererContent | { kind: 'text' } | { kind: 'bytes' }
@@ -48,6 +34,7 @@ export function MindPptDocument(props: MindPptDocumentProps) {
     useTabInfo, remote, sidebarRight,
   } = props
   const { tab } = useTabInfo()
+  const [view] = useDocumentView(tab.signal, resourceAddress)
   const file = parseSessionFileAddress(resourceAddress)
   const activeTabId = sidebarRight.active()?.id
   const [runtime, setRuntime] = useState<BrowserMindPptRuntime>()
@@ -58,7 +45,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
   const selectionTail = useRef<Promise<void>>(Promise.resolve())
   const pendingWrites = useRef(0)
   const editRevision = useRef(0)
-
   useEffect(() => {
     if (!file || content.kind !== 'renderer') return
     const controller = new AbortController()
@@ -100,7 +86,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
     })()
     return () => controller.abort()
   }, [resourceAddress, content.kind === 'renderer' ? content.revision : -1])
-
   useEffect(() => {
     if (!identity) return
     const pendingWrites = waitForClientWrites(identity.sessionId)
@@ -108,16 +93,10 @@ export function MindPptDocument(props: MindPptDocumentProps) {
       identity.sessionId,
       pendingWrites,
       () => activeTabId === tab.id
-        ? postDocument({
-            action: 'select',
-            identity,
-            selectionId: tab.id,
-          })
+        ? postDocument({ action: 'select', identity, selectionId: tab.id })
         : postDocument({
-            action: 'clear',
-            sessionId: identity.sessionId,
-            path: identity.path,
-            selectionId: tab.id,
+            action: 'clear', sessionId: identity.sessionId,
+            path: identity.path, selectionId: tab.id,
           }),
     )
     selectionTail.current = request
@@ -125,7 +104,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
       if (activeTabId === tab.id) setError(message(cause))
     })
   }, [activeTabId, identity?.sessionId, identity?.path, tab.id])
-
   useEffect(() => () => {
     if (!file) return
     const pendingWrites = waitForClientWrites(file.sessionId)
@@ -133,18 +111,14 @@ export function MindPptDocument(props: MindPptDocumentProps) {
       file.sessionId,
       pendingWrites,
       () => postDocument({
-        action: 'clear',
-        sessionId: file.sessionId,
-        path: file.path,
-        selectionId: tab.id,
+        action: 'clear', sessionId: file.sessionId,
+        path: file.path, selectionId: tab.id,
       }),
     ).catch(() => {})
   }, [resourceAddress, tab.id])
-
   if (!file) return <p>MindPPT requires a DSH workspace file.</p>
   if (content.kind !== 'renderer') return <p>Loading MindPPT…</p>
   if (!runtime) return <p>{error ?? 'Loading MindPPT…'}</p>
-
   return (
     <AuthoringSurface
       runtime={runtime}
@@ -157,15 +131,13 @@ export function MindPptDocument(props: MindPptDocumentProps) {
       editRevision={editRevision}
       reload={content.reload}
       onSaved={content.loaded}
-      resourceAddress={resourceAddress}
       scrollportRef={scrollportRef}
       onError={setError}
+      view={view}
     />
   )
 }
-interface Cell<T> {
-  current: T
-}
+interface Cell<T> { current: T }
 async function readStable(
   remote: WorkspaceFilesRemote,
   sessionId: string,
@@ -187,13 +159,10 @@ async function readStable(
     const revision = editRevision.current
     const read = await readWholeSource(remote, sessionId, path, signal)
     if (signal.aborted) return undefined
-    if (pendingWrites.current === 0 && editRevision.current === revision) {
-      return read
-    }
+    if (pendingWrites.current === 0 && editRevision.current === revision) return read
   }
   return undefined
 }
-
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }

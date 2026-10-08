@@ -101,7 +101,7 @@ export class BrowserMindPptRuntime {
     return compiled
   }
 
-  refreshElements(): void {
+  refreshElements = (): void => {
     if (!this.snapshot.structureCurrent) return
     this.publish({ ...this.snapshot, elements: this.compileElements() })
   }

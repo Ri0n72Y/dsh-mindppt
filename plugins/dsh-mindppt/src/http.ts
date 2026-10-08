@@ -51,7 +51,7 @@ export function registerDocumentRoute(
           })
         }
         if (payload.action === 'write') {
-          const result = await controller.replaceSource(
+          const result = await controller.writeWorkspaceSource(
             payload.identity,
             payload.source,
             payload.expectedVersion,

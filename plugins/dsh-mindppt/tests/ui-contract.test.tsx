@@ -7,6 +7,8 @@ import { PreviewAction, previewPageUrl } from '../src/client/PreviewAction.tsx'
 import { PreviewStatus } from '../src/client/PreviewStatus.tsx'
 import { createDocumentViewCell, documentViewCell } from '../src/client/view-state.ts'
 
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => import('./dsh-ui-primitives.mock.tsx'))
+
 vi.mock('../src/client/Canvas.tsx', () => ({
   MindPptPanorama: (props: { elements: unknown[] }) => (
     <div

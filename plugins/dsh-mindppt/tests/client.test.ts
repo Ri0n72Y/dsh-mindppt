@@ -10,6 +10,8 @@ import {
   waitForClientWrites,
 } from '../src/client/client-write-queue.ts'
 
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => import('./dsh-ui-primitives.mock.tsx'))
+
 vi.mock('../src/client/Document.tsx', () => ({
   MindPptDocument: () => null,
 }))

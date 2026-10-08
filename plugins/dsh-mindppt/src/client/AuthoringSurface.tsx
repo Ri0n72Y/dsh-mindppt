@@ -1,63 +1,21 @@
 import { useSyncExternalStore } from 'react'
-import type { RefCallback, RefObject } from 'react'
-import type { MindPptFileIdentity } from '../shared.ts'
+import type { RefCallback } from 'react'
 import { MindPptPanorama } from './Canvas.tsx'
-import { queueDocumentSourceWrite } from './document-write.ts'
-import { SourceEditor } from './SourceEditor.tsx'
+import { SourceText } from './SourceText.tsx'
 import type { BrowserMindPptRuntime } from './runtime.ts'
 import type { DocumentView } from './view-state.ts'
 
-interface Cell<T> { current: T }
-
-interface AuthoringSurfaceProps {
+export function AuthoringSurface({ runtime, error, scrollportRef, view }: {
   runtime: BrowserMindPptRuntime
-  identity: MindPptFileIdentity | undefined
   error: string | undefined
-  editor: RefObject<HTMLTextAreaElement | null>
-  writeTail: Cell<Promise<string>>
-  selectionTail: Cell<Promise<void>>
-  pendingWrites: Cell<number>
-  editRevision: Cell<number>
-  reload(): void
-  onSaved(version: string): void
   scrollportRef: RefCallback<HTMLElement>
-  onError(error: string | undefined): void
   view: DocumentView
-}
-
-export function AuthoringSurface({
-  runtime, identity, error, editor, writeTail, selectionTail,
-  pendingWrites, editRevision, reload, onSaved, scrollportRef, onError, view,
-}: AuthoringSurfaceProps) {
+}) {
   const snapshot = useSyncExternalStore(
     runtime.subscribe,
     runtime.getSnapshot,
     runtime.getSnapshot,
   )
-  const save = (source: string) => {
-    runtime.setSource(source)
-    if (!identity) return
-    editRevision.current += 1
-    pendingWrites.current += 1
-    const write = queueDocumentSourceWrite({
-      identity,
-      source,
-      writeTail,
-      selection: selectionTail.current,
-    })
-    void write.then(
-      version => {
-        pendingWrites.current -= 1
-        onSaved(version)
-        onError(undefined)
-      },
-      cause => {
-        pendingWrites.current -= 1
-        onError(cause instanceof Error ? cause.message : String(cause))
-        reload()
-      },
-    )
-  }
 
   if (view === 'panorama') {
     return (
@@ -79,14 +37,12 @@ export function AuthoringSurface({
     <section
       ref={scrollportRef}
       style={codeRootStyle}
-      aria-label="MindPPT authoring panel"
+      aria-label="MindPPT code panel"
     >
-      <SourceEditor
+      <SourceText
         source={snapshot.source}
         diagnostics={snapshot.diagnostics}
         error={error}
-        editor={editor}
-        onChange={save}
       />
     </section>
   )

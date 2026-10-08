@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { RefCallback } from 'react'
 import type { MindPptFileIdentity } from '../shared.ts'
 import { parseSessionFileAddress } from '../shared.ts'
@@ -40,11 +40,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
   const [runtime, setRuntime] = useState<BrowserMindPptRuntime>()
   const [identity, setIdentity] = useState<MindPptFileIdentity>()
   const [error, setError] = useState<string>()
-  const editor = useRef<HTMLTextAreaElement>(null)
-  const writeTail = useRef<Promise<string>>(Promise.resolve(''))
-  const selectionTail = useRef<Promise<void>>(Promise.resolve())
-  const pendingWrites = useRef(0)
-  const editRevision = useRef(0)
   useEffect(() => {
     if (!file || content.kind !== 'renderer') return
     const controller = new AbortController()
@@ -57,11 +52,10 @@ export function MindPptDocument(props: MindPptDocumentProps) {
     setResources([])
     void (async () => {
       try {
-        const read = await readStable(
-          remote, file.sessionId, file.path,
-          writeTail, pendingWrites, editRevision, controller.signal,
+        const read = await readWholeSource(
+          remote, file.sessionId, file.path, controller.signal,
         )
-        if (!read) return
+        if (controller.signal.aborted) return
         const nextIdentity = { sessionId: file.sessionId, path: file.path }
         let nextRuntime = sameFile ? runtime : undefined
         if (!nextRuntime) {
@@ -74,7 +68,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
         } else {
           nextRuntime.setSource(read.source)
         }
-        writeTail.current = Promise.resolve(read.version)
         setIdentity(nextIdentity)
         setError(undefined)
         content.loaded(read.version)
@@ -99,7 +92,6 @@ export function MindPptDocument(props: MindPptDocumentProps) {
             path: identity.path, selectionId: tab.id,
           }),
     )
-    selectionTail.current = request
     void request.catch(cause => {
       if (activeTabId === tab.id) setError(message(cause))
     })
@@ -122,46 +114,11 @@ export function MindPptDocument(props: MindPptDocumentProps) {
   return (
     <AuthoringSurface
       runtime={runtime}
-      identity={identity}
       error={error}
-      editor={editor}
-      writeTail={writeTail}
-      selectionTail={selectionTail}
-      pendingWrites={pendingWrites}
-      editRevision={editRevision}
-      reload={content.reload}
-      onSaved={content.loaded}
       scrollportRef={scrollportRef}
-      onError={setError}
       view={view}
     />
   )
-}
-interface Cell<T> { current: T }
-async function readStable(
-  remote: WorkspaceFilesRemote,
-  sessionId: string,
-  path: string,
-  writeTail: Cell<Promise<string>>,
-  pendingWrites: Cell<number>,
-  editRevision: Cell<number>,
-  signal: AbortSignal,
-): Promise<{ source: string; version: string } | undefined> {
-  while (!signal.aborted) {
-    if (pendingWrites.current > 0) {
-      try {
-        await writeTail.current
-      } catch {
-        // A fresh read below is the recovery boundary after a failed write.
-      }
-      if (signal.aborted) return undefined
-    }
-    const revision = editRevision.current
-    const read = await readWholeSource(remote, sessionId, path, signal)
-    if (signal.aborted) return undefined
-    if (pendingWrites.current === 0 && editRevision.current === revision) return read
-  }
-  return undefined
 }
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)

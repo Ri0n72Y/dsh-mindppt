@@ -7,6 +7,8 @@ import { PreviewAction, previewPageUrl } from '../src/client/PreviewAction.tsx'
 import { PreviewStatus } from '../src/client/PreviewStatus.tsx'
 import { createDocumentViewCell, documentViewCell } from '../src/client/view-state.ts'
 
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => import('./dsh-ui-primitives.mock.tsx'))
+
 vi.mock('../src/client/Canvas.tsx', () => ({
   MindPptPanorama: (props: { elements: unknown[] }) => (
     <div
@@ -80,7 +82,15 @@ describe('MindPPT document UI contract', () => {
       content: { kind: 'renderer' as const },
       useTabInfo: () => ({ tab: { signal, navigation: { address } } }),
     }
-    expect(renderToStaticMarkup(<PreviewAction {...props} />)).toContain('Preview')
+    const preview = renderToStaticMarkup(<PreviewAction {...props} />)
+    expect(preview).toContain('Preview')
+    expect(preview).toContain('MindPPT view controls')
+    expect(preview).toContain('aria-haspopup="menu"')
+    expect(preview).toContain('aria-expanded="false"')
+    expect(preview).toContain('var(--dsw-alias-border-l3)')
+    expect(preview).toContain('data-mindppt-preview-split')
+    expect(preview).toContain('button:focus-visible')
+    expect(preview).toContain('box-shadow: inset 0 0 0 2px var(--dsw-alias-label-primary)')
     documentViewCell(signal, address).set('panorama')
     expect(renderToStaticMarkup(<PreviewAction {...props} />)).toContain('Code')
   })

@@ -27,7 +27,9 @@ export function PreviewAction({ content, useTabInfo }: PreviewActionProps) {
   if (content.kind !== 'renderer') return null
 
   return (
-    <Menu
+    <>
+      <style>{focusStyle}</style>
+      <Menu
       open={open}
       autoFocus
       portal
@@ -44,7 +46,7 @@ export function PreviewAction({ content, useTabInfo }: PreviewActionProps) {
         )
       }}
       anchor={(
-        <span role="group" aria-label="MindPPT view controls" style={splitStyle}>
+        <span role="group" aria-label="MindPPT view controls" data-mindppt-preview-split="" style={splitStyle}>
           <Button
             variant="ghost"
             size="sm"
@@ -69,9 +71,18 @@ export function PreviewAction({ content, useTabInfo }: PreviewActionProps) {
           </Button>
         </span>
       )}
-    />
+      />
+    </>
   )
 }
+
+const focusStyle = `
+[data-mindppt-preview-split] > button:focus-visible {
+  background: var(--dsw-alias-interactive-bg-hover);
+  box-shadow: inset 0 0 0 2px var(--dsw-alias-label-primary);
+  outline: none;
+}
+`
 
 const splitStyle = {
   display: 'inline-flex', alignItems: 'stretch', boxSizing: 'border-box',

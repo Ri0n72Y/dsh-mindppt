@@ -1,7 +1,13 @@
 # MindPPT Language v0
 
-Status: draft language contract aligned with the accepted v0 roadmap  
+Status: aspirational language design draft — **not the implemented parser grammar**  
 Runtime: Cordis plugins, React + TypeScript host UI, Excalidraw rendering
+
+**Implemented v0 source of truth:** [bundled `mindppt-authoring` grammar reference](../plugins/dsh-mindppt/assets/mindppt-authoring/references/v0-grammar.md), checked against [tokenizer](../plugins/code-parser/src/tokenizer.ts), [parser](../plugins/code-parser/src/parser.ts), [structured parser](../plugins/code-parser/src/structured-parser.ts), and [content parser](../plugins/code-parser/src/content-parser.ts). Use the [validated Skill example](../plugins/dsh-mindppt/assets/mindppt-authoring/examples/authoring-demo.mindppt) or the runnable repository fixtures when authoring files. Sections below preserve the **design direction**, and proposals must not be treated as accepted executable syntax.
+
+**Implemented now:** `mindppt` marker; zero or one primary `tree` (a tree is required for multi-slide documents); `slide`, `link`, `path`; `hero`, `title-content`, and `two-column` layouts with `left`/`right` slots; limited headings, paragraphs, lists, local image Markdown and fenced extension blocks; `table {` with `header`/`row` JSON arrays and one-series `chart bar {` with `labels`/`values` arrays. A `latex` fence can render through its active plugin; a `mermaid` fence has **generic fallback**, not a built-in diagram renderer.
+
+**Design-only / not runnable:** `deck {}`, named `table comparison {}` / `chart growth {}`, `chart line {}`, multi-series or radar charts, and standalone `//` comment lines. **Issue #13** is reserved for implementing `//` in a separate PR B *after* this documentation PR A is reviewed and merged; no comment support is added here.
 
 ## 1. Purpose
 
@@ -58,14 +64,14 @@ slide market {
 
 ### 2.2 Open Content, Closed Structure
 
-Core owns document structure:
+Core is intended to own document structure. The **current parser** implements `slide`, `tree`, `link`, and `path` (after the `mindppt` marker); `deck` remains a **design proposal**:
 
 ~~~text
-deck
 slide
 tree
 link
 path
+[proposed: deck]
 ~~~
 
 Third-party plugins may extend slide content, but they must not redefine slide ownership, primary-tree semantics, soft-link semantics, or path semantics.
@@ -103,7 +109,7 @@ A document starts with:
 mindppt
 ~~~
 
-A normal source file may then contain:
+The following **design sketch is not runnable** because `deck {}` and `...` placeholders are not supported. For a working file use the linked bundled Skill grammar/example above:
 
 ~~~mindppt
 mindppt
@@ -151,7 +157,7 @@ Arrays use square brackets where structured data requires them.
 
 Newlines separate statements. Semicolons are not required.
 
-Line comments may use // outside Markdown content and fenced blocks.
+**Proposed (not implemented):** standalone `//` line comments outside Markdown and fences. The current tokenizer does **not** skip them; a top-level `//` line fails parsing and a slide-body line becomes content. Issue #13 / PR B is reserved for future implementation.
 
 ## 5. Hybrid parsing boundary
 
@@ -181,7 +187,7 @@ The outer parser must not interpret those braces or arrows as MindPPT structure.
 
 ## 6. Deck
 
-The deck block defines presentation-wide defaults.
+**Design-only, not implemented:** a `deck {}` block would define presentation-wide defaults. The current `parser.ts` rejects it at document level.
 
 Target v0 shape:
 
@@ -469,6 +475,8 @@ Stable asset identity should be preserved across recompiles where practical.
 
 Tables are core structured presentation content rather than Markdown tables.
 
+**Future-design target, not implemented.** Current runnable tables use the unnamed `table { header [...] row [...] }` construct described in the bundled Skill reference.
+
 Target shape:
 
 ~~~mindppt
@@ -501,6 +509,8 @@ Deferred:
 ## 15. Charts
 
 Charts are core structured presentation content.
+
+**Future-design target, not implemented.** Current runnable charts use a **single-series** `chart bar { labels [...] values [...] }` block. Named blocks, `series` directives, line/radar charts and multi-series data are not recognized by the current parser.
 
 Target shape:
 
@@ -710,15 +720,15 @@ Semantic IDs must remain stable where the source structure is stable.
 Source ranges should exist from the first real parser milestone and later support:
 
 - diagnostics;
-- code-editor navigation;
-- guarded precise Agent patches;
+- standalone playground code-editor navigation;
+- optional legacy guarded Agent patches;
 - future refactoring tools.
 
 For M10, `SourceRange.start` and `SourceRange.end` are JavaScript string offsets into the source that produced that semantic structure. They are valid for precise Agent editing only when the inspected structure is current for the inspected source.
 
-Agent authoring edits source only. The M10 v0 patch operation is a guarded replacement or deletion of one existing non-empty contiguous source span. Before mutation or compilation, `start` and `end` must both be integers and satisfy `0 <= start < end <= currentSource.length`, and `currentSource.slice(start, end)` must exactly equal the supplied expected text. If any validation fails, the patch is rejected without mutation or compilation. `replacement` may be empty, so deletion remains valid. Pure insertion with `start === end` is outside M10 v0 and remains deferred until a concrete Agent authoring case requires it.
+**Current M10 preferred Agent authoring is ordinary DSH workspace read/edit/write on the real `.mindppt` file, as described by the bundled Skill.** The existing optional `mindppt_patch` API is kept for compatibility; its contract is a guarded replacement or deletion of one existing non-empty contiguous source span. Before mutation or compilation, `start` and `end` must both be integers and satisfy `0 <= start < end <= currentSource.length`, and `currentSource.slice(start, end)` must exactly equal the supplied expected text. If any validation fails, the patch is rejected without mutation or compilation. `replacement` may be empty, so deletion remains valid. Pure insertion with `start === end` is outside M10 v0 and remains deferred until a concrete Agent authoring case requires it.
 
-Accepted edits flow through the existing `mindpptEditor.setSource()` and compiler path. If an accepted edit creates invalid source, the invalid current source remains visible with current diagnostics while the last-successful semantic structure and last-good presentation remain available. Inspection must expose an explicit state equivalent to `structureCurrent: true | false` so an Agent never applies last-good ranges to invalid current source.
+The DSH integration no longer injects `mindpptEditor`; it reads the workspace file and compiles directly through `mindpptParser`. The compatibility guarded patch writes via the Host's guarded file-write route. If an edit creates invalid source, that source stays in the workspace file with current diagnostics while the last-successful semantic structure and last-good presentation remain available. Inspection must expose an explicit state equivalent to `structureCurrent: true | false` so an Agent never applies last-good ranges to invalid current source.
 
 Neither human nor Agent authoring uses raw Excalidraw JSON. Excalidraw remains a rendering projection, and model-facing authoring APIs do not expose direct canvas mutation.
 
@@ -756,6 +766,8 @@ Warnings may still publish a new structure.
 Errors that make semantics unreliable should preserve the last-good structure once live editing is implemented.
 
 ## 22. Complete hybrid example
+
+**Aspirational design example — not runnable by the current v0 parser.** It intentionally uses future `deck {}`, named table/chart blocks, a line/multi-series chart and a Mermaid fence without a built-in Mermaid renderer. Use the bundled Skill example for compilable v0 input; preserve this example only to discuss the future language direction.
 
 ~~~~mindppt
 mindppt
@@ -925,7 +937,7 @@ The language is sufficient for v0 when one project can express and render:
 - semantic layout;
 - local images;
 - one table;
-- one bar or line chart;
+- one implemented single-series bar chart (line charts remain future design);
 - one unknown extension through fallback;
 - one installed extension through a plugin;
 - one soft link;
@@ -942,4 +954,4 @@ Implementation order and delivery milestones are defined in docs/roadmap.md.
 
 DSH integration does not add a second language document model. The selected native Workspace `.mindppt` file is persistent truth; human and Agent mutations both change that file. Runtime parser/canvas state is a projection and may retain last-good semantics while the current file is temporarily invalid.
 
-Agent v0 mutation is deliberately source-level and guarded: one existing non-empty `[start, end)` span can be replaced or deleted only when its current text exactly equals `expected`. Pure insertion, AST editing, semantic-node mutation, multi-range edits, revision/hash protocols, OT, and CRDT remain outside Language v0.
+Preferred current Agent mutation is via **standard DSH workspace file read/edit/write**, guided by the bundled Skill, on that same file. The existing `mindppt_inspect`, `mindppt_patch` and `mindppt_guidance` APIs remain registered for **compatibility**, not as a mandatory authoring protocol. `mindppt_patch` still requires one existing non-empty `[start, end)` span whose contents exactly match `expected`; zero-width insertions are unsupported **by that API**, not by normal file-edit tools. No AST/semantic-node editing, collaborative revision protocols, OT or CRDT is introduced. Complete real Windows DSH/Agent E2E acceptance, including installed Skill catalog/loading and native file editing, remains **PENDING**.

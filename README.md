@@ -41,7 +41,7 @@ Web graphical interfaces are written in React + TypeScript. React owns host UI c
 
 ## Design documents
 
-- `docs/language-v0.md` — MindPPT Language v0 draft.
+- `docs/language-v0.md` — future language design, not the runnable parser contract. See the [bundled Skill grammar reference](plugins/dsh-mindppt/assets/mindppt-authoring/references/v0-grammar.md) for implemented v0 syntax.
 - `docs/code-parser.md` — compiler boundary, output model, source mapping, and stable identity.
 - `docs/roadmap.md` — accepted v0 implementation roadmap and milestone delivery contract.
 
@@ -153,36 +153,32 @@ The reference package `dsh-mindppt-latex` is a real Cordis plugin that claims on
 The standalone playground uses `examples/m9-content-plugin-latex.mindppt`, keeps the M6/M7/M8 integrated behaviors, and exposes only two lifecycle controls: Enable LaTeX and Disable LaTeX, plus the active renderer list. Independent review, merge, focused post-M9 fixes, and the integrated real-machine M7/M8/M9 acceptance pass are complete. M0-M9 is the accepted standalone baseline.
 
 
-## M10 implementation: DSH Workspace authoring + Preview
+## M10 implementation: DSH native Workspace, read-only views, and Agent authoring
 
-M10 implementation is present, with PR CI and the post-merge real-machine DSH acceptance gate still required before the milestone is marked complete. Runtime compatibility is declared as `>=0.2.0-rc.2`; `0.2.0-rc.2` remains the deterministic development baseline, while real acceptance must use whichever compatible DSH version is actually installed on the test machine.
+**Implementation merged; PR CI green. Complete Windows DSH / Agent end-to-end acceptance remains PENDING.** The plugin supports DSH `>=0.2.0-rc.2`; `0.2.0-rc.2` is the pinned *development/CI* baseline, not a claimed real-machine acceptance version. The reported Windows installation was `0.2.1-alpha.1`; record the actual compatible DSH version when testing.
 
-The persistent source of truth is the real `.mindppt` file selected from the native DSH Workspace. MindPPT does not add a file tree, document manager, tabs, database, or second workspace model. The right-side authoring surface is registered as an rc2 Document Preview renderer for `.mindppt`.
-
-The delivered flow is:
+A real Workspace `.mindppt` is the **single persistent source of truth**. The DSH plugin reuses native file selection, Document Preview and workspace reads; it adds no independent editor, file tree, or document store. DSH compiles with `mindpptParser` directly and does not load the standalone `code-editor` service.
 
 ~~~text
-native Workspace .mindppt
-  -> complete source read
-  -> MindPPT runtime projection
-  -> right-side read-only Code view or interactive Panorama Preview
-  -> same workspace file for human writes and Agent guarded patches
-  -> independent full Preview page
+DSH native Workspace .mindppt file
+  |--> human: external editor -> same file
+  |--> Agent: standard DSH read / edit / write -> same file
+  |--> Document Preview: read-only Code <-> view-only Panorama
+  |      (DSH-native Preview/Code split button; pan/zoom/whole-scene fit)
+  `--> dropdown "Preview on side": separate presentation page
+         (Camera / PresentationPath / SoftLink navigation;
+          read-only Code collapsed by default)
 ~~~
 
-The Host exposes only inspect, guarded patch, and concise language guidance. A guarded patch can replace or delete exactly one existing non-empty `[start, end)` span after integer/range/exact-`expected` validation; a rejected patch neither writes nor compiles. Inspection returns current source and diagnostics, `structureCurrent`, semantic IDs and embedded ranges, tree/SoftLinks/PresentationPaths, and active extension renderer types. It never returns raw Excalidraw JSON.
+Right-side Code is **read-only** and opens by default; the split-button primary action switches **Code ↔ Panorama** in the same tab. Its DSH-native anchored/portaled Menu opens the separate **Preview on side** page. Panorama displays the complete Excalidraw projection with pan/zoom, not element editing. The separate page presents the canvas full-width by default, with a collapsible read-only Show Code panel and Camera/Path/SoftLink navigation. Humans edit through their external editor, not either DSH Code view. The standalone playground retains its separate editable Code UI and Hide editor / Show editor controls.
 
-Compile failure intentionally leaves the invalid source in the workspace file while diagnostics describe that source and the runtime retains the last-successful semantic structure and preview. Repairing the file makes the structure current again.
+The Host registers the bundled `mindppt-authoring` Skill with DSH's `skills` service. Its [implemented grammar](plugins/dsh-mindppt/assets/mindppt-authoring/references/v0-grammar.md) and [runnable example](plugins/dsh-mindppt/assets/mindppt-authoring/examples/authoring-demo.mindppt) are published assets. Preferred Agent authoring uses **ordinary DSH workspace file read/edit/write on the same `.mindppt`**, then checks diagnostics and Preview. Real installed-profile visibility in `<available_skills>`, `skill({name:'mindppt-authoring'})` loading (with references) from a different workspace, and native Agent file writes **are not yet verified**. An active `dsh-tool-skill` consumer is needed to expose the Skill to the model; config-dump alone is insufficient.
 
-Client file reads, change observation, and document-relative local image bytes reuse DSH rc2 `workspaceFiles`. Actual writes use the narrow DSH Connection route and Host `ctx.fs`; no generic RPC or file-watcher framework is added.
+For compatibility, `mindppt_inspect` (selected-file semantic/diagnostic inspection), `mindppt_patch` (guarded replace/delete of an existing non-empty `[start,end)` span with exact expected-text and file-version checks), and `mindppt_guidance` **remain registered**. These are optional APIs, **not** the preferred Agent editing protocol or prerequisites for using the Skill. Guarded-patch/CAS CI tests do not prove a real Agent can use standard DSH read/edit/write. No raw Excalidraw JSON authoring is supported.
 
-The right-side Code view is read-only; humans edit the same workspace file through an external editor, and the Agent continues to use guarded patches. The in-tab Panorama Preview fits the complete scene and supports pan/zoom without element editing. Preview on side opens a separate DSH page that uses the existing Excalidraw + Camera + PresentationPath + SoftLink presentation behavior. Its Code panel is read-only, collapsible and closed by default, leaving the presentation canvas full-width. Show Code and Navigation are stacked at the upper-right; expanding Navigation exposes vertically arranged Camera, Path, and SoftLink controls. The DSH plugin compiles directly through `mindpptParser` without loading the standalone `code-editor` service. The standalone playground remains DSH-independent and now allows its editor panel to be hidden and restored for a presentation-style canvas.
+If a write makes the source invalid, the workspace file keeps it and diagnostics refer to that source. A previous successfully compiled scene remains visibly labeled **Last-good preview (outdated)**; a first invalid file instead shows **Compile failed — no preview**. Once repaired, the current projection returns. Local image paths are resolved relative to the `.mindppt` workspace file.
 
-M10 acceptance follow-up: Both Preview surfaces retain view-only Excalidraw and show compile-failure or last-good source diagnostics, including source line:column. The bundled `mindppt-authoring` Skill ships under `plugins/dsh-mindppt/assets` and registers through the Host `skills` service. Agents should use ordinary DSH workspace read/edit/write rather than numeric-offset `mindppt_patch`; existing MindPPT tools are retained for compatibility. Skill loading is only proven in a real model session when a DSH preset has `dsh-tool-skill` active.
-
-After rebuilding and redeploying, verify in a **different workspace** that the model catalog advertises `mindppt-authoring` and `skill({name:'mindppt-authoring'})` loads its body and relative references from the installed plugin. Also check preview creation/edit/paste/keyboard attempts after Zen cannot modify elements. Do not conflate this with automated CI or Windows sandbox ACL troubleshooting.
-
-Real DSH acceptance remains pending and is the final M10/v0 architecture proof.
+**Pending manual gates:** Windows DSH light/dark and split-button focus/menu behavior, two-surface view-only/pan/zoom, persisted external edits, model-visible installed Skill and its relative assets, standard Agent file-edit workflow, Camera/Path/SoftLink navigation and last-good/recovery. Windows sandbox ACL problems are upstream and separate; do not treat them as MindPPT parser defects or change permissions to pass these gates. Comprehensive M10 acceptance has **not** passed.
 
 ### Quick DSH deploy
 
@@ -213,20 +209,24 @@ Launch the default profile with the official rc2 profile shorthand:
 pnpm dsh mindppt
 ```
 
-### Real DSH 0.2.0-rc.2 acceptance flow
+### Real DSH acceptance flow (installed compatible version; PENDING)
 
-Run this as one continuous real-machine flow after `pnpm install` and `pnpm dsh:deploy`; it is intentionally not part of CI.
+Run the following on a real DSH installation after rebuilding/deploying; record the **actual** version, profile and current main SHA. The deploy helper uses the pinned rc2 development baseline, but that does not establish the version installed for manual acceptance. This gate is **not CI**.
 
-1. Prepare a DSH workspace containing `presentation.mindppt` plus `assets/customer.svg`: copy `examples/m9-content-plugin-latex.mindppt` to `presentation.mindppt` and preserve the existing relative `./assets/customer.svg` relationship. Start `pnpm dsh mindppt`, open that workspace, and select `presentation.mindppt` from the native Workspace sidebar. The right-side panel must show MindPPT, `Current`, read-only Code, and a `Preview` toggle. Switching to Panorama must show the complete scene with pan/zoom. Opening Preview on side must default to a full-width presentation with a collapsed Code panel. The projection must contain hero, agenda, problem, customer, analysis, summary, the customer SVG, the table, the bar chart, and specialized Euler-formula rendering.
+1. Open a DSH Workspace with `presentation.mindppt` copied from `examples/m9-content-plugin-latex.mindppt`, preserving `./assets/customer.svg`. Select the real file in native Workspace. Verify **read-only Code** opens by default; the native split primary button switches Code ↔ whole-scene Panorama with pan/zoom, and its menu opens **Preview on side** in a separate tab. Confirm local images, M7 table/bar, and M9 LaTeX render.
 
-2. Edit `# Analysis Flow` to `# Analysis Flow — Human Edit` in an external workspace editor without reloading the DSH page. The real workspace file and read-only Code/Preview projection must change while status remains `Current`; switch away and reopen the file and confirm the edit persists. Then ask the Agent: `Inspect the currently selected MindPPT document. Report the selected file, structureCurrent, structureBasis, active renderer types, and source range for: "The M9 slice reuses the existing presentation pipeline." Do not modify anything.` Confirm the selected `.mindppt`, `structureCurrent=true`, `structureBasis=current`, active LaTeX renderer, semantic source ranges, and no raw Excalidraw JSON.
+2. Edit `# Analysis Flow` to `# Analysis Flow — Human Edit` in an **external editor**. Without page reload, confirm the same file's Code and Panorama projection refresh; reopen the file and confirm the change persists. Neither DSH Code nor Excalidraw canvas should be editable.
 
-3. Ask the Agent to guarded-replace `The M9 slice reuses the existing presentation pipeline.` with `The M10 workspace slice reuses the existing presentation pipeline.` The workspace file, read-only Code view, and Panorama Preview must all change without a page reload. Then intentionally reuse the old expected text without refreshing the patch basis; the stale patch must be rejected with file and preview unchanged.
+3. From an Agent session with a preset that activates `dsh-tool-skill`, verify `mindppt-authoring` appears in `<available_skills>`. Load it with `skill({name:'mindppt-authoring'})` and open its grammar/example references from the **installed package**, using an unrelated workspace as the Agent current directory. A plugin config-dump or provider unit test cannot substitute for model-visible discovery.
 
-4. Re-inspect, then guarded-replace `values [184, 121, 96]` with the invalid `values [184, 121,`. The workspace file must keep the invalid source, diagnostics must appear, the header must show `Last-good preview`, and the static projection must stay on the last-good structure. Inspect again and confirm `structureCurrent=false`, `structureBasis=last-good`, with diagnostics for the current invalid source. Guarded-repair the text back to `values [184, 121, 96]`; diagnostics must clear and the structure must return to current.
+4. Use ordinary DSH workspace **read/edit/write** to change `The M9 slice reuses the existing presentation pipeline.` to `The M10 workspace slice reuses the existing presentation pipeline.` in the same selected file. Confirm the file, Code and Panorama reflect that edit without reload. This is the **primary Agent authoring gate**; do not require `mindppt_patch` offsets.
 
-5. Click `Preview`. The independent page/new tab must have no source editor and must show the full Excalidraw presentation with Camera controls. Exercise focus hero, hero → agenda, and parent → hero. Select path `main` and navigate hero → agenda → customer → analysis → customer → summary, confirming the repeated customer occurrence and Previous navigation. Focus customer and follow `Link: summary`; directed SoftLink follow must work, with no Back/history expectation. Select `short`, navigate to problem, and confirm `e^(iπ) + 1 = 0` remains specialized with the `iπ` superscript not vertically wrapped. Return to customer and confirm `customer.svg` is visible in full Preview.
+5. Through normal file editing, deliberately make `values [184, 121, 96]` invalid (for example, `values [184, 121,`). Confirm current-source diagnostics and a visibly labeled **Last-good preview** retain the earlier scene. Repair via normal file editing; verify diagnostics clear and the structure becomes current again. Separately open an invalid file without prior successful compilation and confirm a visible **Compile failed — no preview** message with location rather than an unexplained blank canvas.
 
-6. Finally run `pnpm dev` for the standalone playground with no DSH dependency. Click `Hide editor` and confirm the presentation canvas expands while Camera remains usable; click `Show editor` and confirm the editor returns without losing runtime/Camera state.
+6. As a **separate legacy compatibility check**, use `mindppt_inspect` and `mindppt_patch` if available: inspect current structure and source ranges, guard-replace one existing non-empty span, then deliberately repeat with stale `expected` content and confirm rejection without file or scene change. These APIs remain supported but do not establish the standard Agent file-edit gate above.
 
-If every stage passes, record `M10 real DSH 0.2.0-rc.2 acceptance = passed`; only then may M10 and the MindPPT v0 architecture be marked complete. On failure, record the exact stage, observed versus expected behavior, current main SHA, DSH version/profile, and whether the workspace file actually changed before changing architecture.
+7. In both in-tab Panorama and full-page Preview, try Excalidraw create/drag/resize/delete/paste/keyboard operations; confirm elements cannot be mutated while pan/zoom still work. Check the native split-button appearance in light and dark themes, visible Tab focus on both segments, narrow-sidebar portal placement, Escape/outside-click close and focus return as appropriate. Confirm independent Preview initially hides read-only Code and its Camera/Path/SoftLink controls work, including repeated path occurrences, previous/next and link follow (no Back/history expectation).
+
+8. Open the standalone playground (`pnpm dev`) separately; Hide editor / Show editor should preserve the standalone runtime and Camera state. This step does not imply DSH has an editable source panel.
+
+Only after **all required manual gates**, including Agent Skill discovery and native read/edit/write, have real evidence may M10 Windows DSH acceptance be recorded as passed. Until then record **PENDING**, together with failed stage, observed versus expected behavior, installed DSH version/profile and whether the workspace file changed. Do not infer M10 completion from merged implementation or green CI alone.

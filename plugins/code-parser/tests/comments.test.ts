@@ -82,7 +82,8 @@ describe('standalone // line comments', () => {
     const expected = compileSource(uncommented)
 
     const semantic = (key: string, value: unknown) =>
-      key === 'sourceRange' ? undefined : value
+      (key === 'sourceRange' || key.endsWith('SourceRange'))
+        ? undefined : value
     expect(JSON.stringify(compiled, semantic))
       .toBe(JSON.stringify(expected, semantic))
     expect(compiled.slides.map(slide => slide.id)).toEqual(['start', 'end'])
@@ -92,6 +93,16 @@ describe('standalone // line comments', () => {
       .toEqual(['start', 'end'])
 
     const start = compiled.slides[0]!
+    expect(start.sourceRange.start).toBe(source.indexOf('slide start {'))
+    const treeEdge = compiled.tree!.edges[0]!
+    expect(source.slice(treeEdge.sourceRange.start, treeEdge.sourceRange.end))
+      .toBe('  start --> end')
+    const link = compiled.links![0]!
+    expect(source.slice(link.sourceRange.start, link.sourceRange.end))
+      .toBe('link start -.-> end')
+    const pathOccurrence = compiled.paths![0]!.occurrences[1]!
+    expect(source.slice(pathOccurrence.sourceRange.start, pathOccurrence.sourceRange.end))
+      .toBe('  end')
     const table = start.elements.find(element => element.kind === 'table')
     const chart = start.elements.find(element => element.kind === 'bar-chart')
     const extension = start.elements.find(element => element.kind === 'extension')

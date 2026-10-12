@@ -56,10 +56,10 @@ describe('MindPPT slide PDF export', () => {
 
   it('rejects invalid, pending, and missing images instead of stale content', () => {
     const valid = { structureCurrent: true, structure: { slides }, assetStatus: 'ready' }
-    expect(() => assertExportable({ ...valid, structureCurrent: false } as BrowserSnapshot)).toThrow('does not compile')
-    expect(() => assertExportable({ ...valid, assetStatus: 'pending' } as BrowserSnapshot)).toThrow('still loading')
-    expect(() => assertExportable({ ...valid, assetStatus: 'failed' } as BrowserSnapshot)).toThrow('could not be loaded')
-    expect(() => assertExportable(valid as BrowserSnapshot)).not.toThrow()
+    expect(() => assertExportable({ ...valid, structureCurrent: false } as unknown as BrowserSnapshot)).toThrow('does not compile')
+    expect(() => assertExportable({ ...valid, assetStatus: 'pending' } as unknown as BrowserSnapshot)).toThrow('still loading')
+    expect(() => assertExportable({ ...valid, assetStatus: 'failed' } as unknown as BrowserSnapshot)).toThrow('could not be loaded')
+    expect(() => assertExportable(valid as unknown as BrowserSnapshot)).not.toThrow()
   })
 
   it('rejects changed source and aborted exports before returning bytes', async () => {

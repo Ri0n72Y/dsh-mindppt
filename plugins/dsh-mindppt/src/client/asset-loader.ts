@@ -1,4 +1,3 @@
-import type { BinaryFileData } from '@excalidraw/excalidraw/types'
 import type { MindPptDiagnostic } from 'dsh-mindppt-code-parser'
 import type { CanvasAssetRequest } from 'dsh-mindppt-canvas-excalidraw'
 

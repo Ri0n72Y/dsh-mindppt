@@ -31,9 +31,7 @@ export interface SlidePage {
   elements: SceneElement[]
 }
 
-export function assertExportable(snapshot: BrowserSnapshot): asserts snapshot is BrowserSnapshot & {
-  structure: NonNullable<BrowserSnapshot['structure']>
-} {
+export function assertExportable(snapshot: BrowserSnapshot): NonNullable<BrowserSnapshot['structure']> {
   if (!snapshot.structureCurrent || !snapshot.structure) {
     throw new Error('Cannot export: current MindPPT source does not compile')
   }
@@ -43,6 +41,7 @@ export function assertExportable(snapshot: BrowserSnapshot): asserts snapshot is
   if (snapshot.assetStatus === 'failed') {
     throw new Error('Cannot export: one or more local images could not be loaded')
   }
+  return snapshot.structure
 }
 
 export function selectSlidePage(
@@ -114,7 +113,7 @@ async function rasterizePage(
     exportingFrame: page.frame,
     exportPadding: 0,
     appState: { exportBackground: true, viewBackgroundColor: '#ffffff', exportWithDarkMode: false },
-    getDimensions(width, height) {
+    getDimensions(width: number, height: number) {
       if (Math.round(width) !== 1280 || Math.round(height) !== 720) {
         throw new Error('PDF crop must match the 1280×720 semantic slide box')
       }
@@ -124,7 +123,7 @@ async function rasterizePage(
   try {
     signal.throwIfAborted()
     const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(value => value ? resolve(value) : reject(new Error('PNG encoding failed')), 'image/png')
+      canvas.toBlob((value: Blob | null) => value ? resolve(value) : reject(new Error('PNG encoding failed')), 'image/png')
     })
     signal.throwIfAborted()
     if (blob.size > MAX_PNG_BYTES) throw new Error('Slide PNG exceeds 12 MiB')

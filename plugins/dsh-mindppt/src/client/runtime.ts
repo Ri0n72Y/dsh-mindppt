@@ -11,7 +11,7 @@ export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
 
 export interface BrowserSnapshot {
   revision: number
-  structure?: MindPptStructure
+  structure: MindPptStructure | undefined
   assetStatus: 'ready' | 'pending' | 'failed'
   source: string
   diagnostics: readonly MindPptDiagnostic[]
@@ -43,6 +43,7 @@ export class BrowserMindPptRuntime {
     private readonly readRelated?: ReadRelated,
   ) {
     this.snapshot = {
+      structure: undefined,
       revision: 0,
       assetStatus: 'ready',
       source: '',

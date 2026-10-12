@@ -35,8 +35,8 @@ export function PdfExportAction({ runtime, snapshot, filename, checkSource }: {
       const { assertExportable, createSlidesPdf } = await import('./pdf-export.ts')
       runtime.refreshElements() // remeasure labels with the final browser font metrics
       const ready = runtime.getSnapshot()
-      assertExportable(ready)
-      const { revision, source, structure, elements, files } = ready
+      const structure = assertExportable(ready)
+      const { revision, source, elements, files } = ready
       const ensureCurrent = async () => {
         controller.signal.throwIfAborted()
         const current = runtime.getSnapshot()

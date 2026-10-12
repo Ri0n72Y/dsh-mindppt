@@ -46,7 +46,8 @@
     "dsh-mindppt-camera": "workspace:*",
     "dsh-mindppt-canvas-excalidraw": "workspace:*",
     "dsh-mindppt-code-parser": "workspace:*",
-    "dsh-mindppt-latex": "workspace:*"
+    "dsh-mindppt-latex": "workspace:*",
+    "pdf-lib": "1.17.1"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.4",

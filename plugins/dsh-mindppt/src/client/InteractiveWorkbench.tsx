@@ -5,10 +5,12 @@ import { PresentationControls } from './Controls.tsx'
 import { PreviewStatus } from './PreviewStatus.tsx'
 import type { BrowserMindPptRuntime } from './runtime.ts'
 import { SourceText } from './SourceText.tsx'
+import { PdfExportAction, pdfFilename } from './PdfExportAction.tsx'
 
 export interface WorkbenchSession {
   identity: MindPptFileIdentity
   runtime: BrowserMindPptRuntime
+  checkSource(signal: AbortSignal): Promise<void>
 }
 
 export function InteractiveWorkbench({ session }: { session: WorkbenchSession }) {
@@ -37,6 +39,8 @@ export function InteractiveWorkbench({ session }: { session: WorkbenchSession })
         />
         <PreviewStatus snapshot={snapshot} />
         <div style={toolbarStyle} aria-label="MindPPT preview tools">
+          <PdfExportAction runtime={runtime} snapshot={snapshot}
+            filename={pdfFilename(session.identity.path)} checkSource={session.checkSource} />
           <button
             type="button"
             style={toolStyle}

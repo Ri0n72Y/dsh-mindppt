@@ -49,6 +49,7 @@ export function tokenize(source: string): Token[] {
       tokens.push({ kind: 'blank', range })
       continue
     }
+    if (text.startsWith('//')) continue
     if (text.startsWith('```')) {
       const fenceStart = start
       const type = text.slice(3).trim()
@@ -99,6 +100,7 @@ export function tokenize(source: string): Token[] {
           closed = true
           break
         }
+        if (next.trimStart().startsWith('//')) continue
         structuredLines.push({
           text: next.trim(),
           range: { start: nextStart, end: nextEnd },

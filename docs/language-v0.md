@@ -5,9 +5,9 @@ Runtime: Cordis plugins, React + TypeScript host UI, Excalidraw rendering
 
 **Implemented v0 source of truth:** [bundled `mindppt-authoring` grammar reference](../plugins/dsh-mindppt/assets/mindppt-authoring/references/v0-grammar.md), checked against [tokenizer](../plugins/code-parser/src/tokenizer.ts), [parser](../plugins/code-parser/src/parser.ts), [structured parser](../plugins/code-parser/src/structured-parser.ts), and [content parser](../plugins/code-parser/src/content-parser.ts). Use the [validated Skill example](../plugins/dsh-mindppt/assets/mindppt-authoring/examples/authoring-demo.mindppt) or the runnable repository fixtures when authoring files. Sections below preserve the **design direction**, and proposals must not be treated as accepted executable syntax.
 
-**Implemented now:** `mindppt` marker; zero or one primary `tree` (a tree is required for multi-slide documents); `slide`, `link`, `path`; `hero`, `title-content`, and `two-column` layouts with `left`/`right` slots; limited headings, paragraphs, lists, local image Markdown and fenced extension blocks; `table {` with `header`/`row` JSON arrays and one-series `chart bar {` with `labels`/`values` arrays. A `latex` fence can render through its active plugin; a `mermaid` fence has **generic fallback**, not a built-in diagram renderer.
+**Implemented now:** standalone `//` comments (only when `//` begins at the first non-whitespace character of a line, outside fenced extensions); `mindppt` marker; zero or one primary `tree` (a tree is required for multi-slide documents); `slide`, `link`, `path`; `hero`, `title-content`, and `two-column` layouts with `left`/`right` slots; limited headings, paragraphs, lists, local image Markdown and fenced extension blocks; `table {` with `header`/`row` JSON arrays and one-series `chart bar {` with `labels`/`values` arrays. A `latex` fence can render through its active plugin; a `mermaid` fence has **generic fallback**, not a built-in diagram renderer.
 
-**Design-only / not runnable:** `deck {}`, named `table comparison {}` / `chart growth {}`, `chart line {}`, multi-series or radar charts, and standalone `//` comment lines. **Issue #13** is reserved for implementing `//` in a separate PR B *after* this documentation PR A is reviewed and merged; no comment support is added here.
+**Design-only / not runnable:** `deck {}`, named `table comparison {}` / `chart growth {}`, `chart line {}`, and multi-series or radar charts. The narrow standalone `//` line-comment form is implemented under Issue #13; inline/trailing comments and preprocessing remain unsupported.
 
 ## 1. Purpose
 
@@ -157,7 +157,7 @@ Arrays use square brackets where structured data requires them.
 
 Newlines separate statements. Semicolons are not required.
 
-**Proposed (not implemented):** standalone `//` line comments outside Markdown and fences. The current tokenizer does **not** skip them; a top-level `//` line fails parsing and a slide-body line becomes content. Issue #13 / PR B is reserved for future implementation.
+**Implemented (Issue #13):** a line whose first non-whitespace characters are `//` is an author-only, non-rendering comment. This also works inside `tree`, `path`, `slide`, two-column slots, `table {` and `chart bar {`. For example, `  // Explain this slide's data source` creates no content. The source file remains unchanged; `SourceRange` offsets still index its original UTF-16 text. Inline `//` such as `# Title // note` and URLs are **not** treated as comments. Triple-backtick fenced extension payloads remain opaque and preserve all `//` lines verbatim.
 
 ## 5. Hybrid parsing boundary
 

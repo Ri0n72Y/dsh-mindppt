@@ -4,6 +4,7 @@ A file begins with `mindppt` and may contain one tree, slides, soft links and pa
 
 ```text
 mindppt
+// Author note: this line is not rendered.
 tree LR {
   intro --> analysis
 }
@@ -34,6 +35,7 @@ path main {
 }
 ```
 
+- Comments: only standalone lines whose first non-whitespace characters are `//` are ignored (including inside tree/path/slide/slots/table/chart bar). They remain in the source; no comment AST/render node is created. Inline/trailing `//` text and URLs are not stripped. Inside a triple-backtick fence, `//` is preserved verbatim as extension payload.
 - Tree directions: `LR`, `RL`, `TB`, `TD`, `BT`. Primary relations use `-->`. Soft links use `link a -.-> b`. Path occurrences are slide IDs, one per line.
 - Layouts: `hero`, `title-content`, `two-column`. Only `two-column` takes `left { ... }` and `right { ... }` slots.
 - Markdown content: `# Title`, `## Subtitle`, paragraphs, bullet/numbered lists, `![alt](./assets/picture.png)`, fenced extensions.

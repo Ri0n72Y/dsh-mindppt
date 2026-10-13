@@ -100,7 +100,7 @@ function renderContent(
 
   const heading = element.kind === 'title' || element.kind === 'subtitle'
   const centered = slide.layout === 'hero'
-    || (slide.elements.length === 1 && element.kind === 'title')
+    || (!slide.layout && slide.elements.length === 1 && element.kind === 'title')
 
   return [{
     type: 'rectangle',

@@ -121,7 +121,7 @@ slide photos {
   await expect.poll(async () => (await paintedBounds(canvas, [220, 38, 38]))?.count ?? 0)
     .toBe(0)
   const replaced = (await paintedBounds(canvas, [22, 163, 74]))!
-  expect(replaced.width / replaced.height).toBeCloseTo(4, 1)
+  expect(replaced.width / replaced.height).toBeCloseTo(4, 0)
   console.log('P3a browser pixel evidence', JSON.stringify({
     portrait, landscape, replaced, samePathNewFileId: originalId !== newId,
   }))

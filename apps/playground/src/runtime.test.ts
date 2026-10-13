@@ -63,6 +63,60 @@ describe('playground snapshot asset consistency', () => {
     )
   })
 
+
+  it('discards older decoded image sizes after same-path source revision changes', async () => {
+    const pending: Array<{ complete: () => void }> = []
+    vi.stubGlobal('Image', class {
+      src = ''
+      naturalWidth = 0
+      naturalHeight = 0
+      decode() {
+        return new Promise<void>(resolve => {
+          const source = this.src
+          pending.push({ complete: () => {
+            const portrait = source.includes('version-1')
+            this.naturalWidth = portrait ? 100 : 400
+            this.naturalHeight = portrait ? 400 : 100
+            resolve()
+          } })
+        })
+      }
+    })
+    const files = {
+      [PATH]: {
+        mimeType: 'image/svg+xml' as const,
+        dataURL: 'data:image/svg+xml,version-1',
+      },
+    }
+    try {
+      const currentSource = source('asset', './assets/customer.svg')
+      const runtime = await createPlaygroundRuntime(currentSource, {
+        documentPath: 'examples/asset.mindppt', files,
+      })
+      expect(pending).toHaveLength(1)
+      files[PATH] = {
+        mimeType: 'image/svg+xml',
+        dataURL: 'data:image/svg+xml,version-2',
+      }
+      runtime.setSource(currentSource)
+      expect(pending).toHaveLength(2)
+      const nextFileId = runtime.getSnapshot().elements
+        .find(e => e.type === 'image')!.fileId
+
+      pending[1]!.complete()
+      await vi.waitFor(() => {
+        expect(runtime.getSnapshot().elements.find(e => e.type === 'image'))
+          .toMatchObject({ x: 664, y: 306, width: 520, height: 130 })
+      })
+      pending[0]!.complete()
+      await Promise.resolve()
+      expect(runtime.getSnapshot().elements.find(e => e.type === 'image'))
+        .toMatchObject({ x: 664, y: 306, width: 520, height: 130, fileId: nextFileId })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('publishes malformed asset paths as one warning-consistent logical version', async () => {
     const runtime = await createPlaygroundRuntime(
       source('before', './assets/customer.svg'),

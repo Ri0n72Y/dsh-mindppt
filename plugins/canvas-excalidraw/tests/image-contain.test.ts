@@ -36,16 +36,13 @@ describe('P3a contained image projection', () => {
     })
     const fitted = scene[0]!
     expect(fitted).toMatchObject({
-      id: original.id,
-      fileId: 'test-file',
-      scale: [1, 1],
-      x: expect.closeTo(x, 5),
-      y: expect.closeTo(y, 5),
-      width: expect.closeTo(width, 5),
-      height: expect.closeTo(height, 5),
+      id: original.id, fileId: 'test-file', scale: [1, 1],
     })
-    expect((fitted as typeof original).width / (fitted as typeof original).height)
-      .toBeCloseTo(sourceW / sourceH, 8)
+    expect(fitted.x).toBeCloseTo(x, 5)
+    expect(fitted.y).toBeCloseTo(y, 5)
+    expect(fitted.width).toBeCloseTo(width, 5)
+    expect(fitted.height).toBeCloseTo(height, 5)
+    expect(fitted.width / fitted.height).toBeCloseTo(sourceW / sourceH, 8)
     expect(semantic).toMatchObject({
       id: 'slide:asset/left/image:0',
       x: 96, y: 176, width: 520, height: 390,

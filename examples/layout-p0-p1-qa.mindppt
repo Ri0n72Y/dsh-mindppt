@@ -1,0 +1,148 @@
+mindppt
+
+// Layout P0/P1 QA: eight slide-local cases; screenshot/typography judgment is separate.
+tree LR {
+  hero-fit --> hero-overflow
+  hero-overflow --> title-overflow
+  title-overflow --> slot-overflow
+  slot-overflow --> cjk-long
+  cjk-long --> image-ratios
+  image-ratios --> dense-data
+  dense-data --> extensions
+}
+
+slide hero-fit {
+  layout hero
+
+  # Focused message
+
+  ## Supporting evidence
+
+  A short statement fits the assigned semantic boxes.
+}
+
+// 🧭 Original UTF-16 source spans must survive a preceding emoji/comment.
+slide hero-overflow {
+  layout hero
+
+  # Hero overflow
+
+  ## Too many blocks
+
+  A title, paragraph, image and list exceed the allotted slide height.
+
+  ![Landscape reference](./assets/customer.svg)
+
+  - Hero item one
+  - Hero item two
+  - Hero item three
+  - Hero item four
+}
+
+slide title-overflow {
+  layout title-content
+
+  # Body overflow
+
+  Introductory paragraph.
+
+  ![Landscape reference](./assets/customer.svg)
+
+  - Body item one
+  - Body item two
+  - Body item three
+  - Body item four
+}
+
+slide slot-overflow {
+  layout two-column
+
+  # Left slot overflow
+
+  left {
+    Introductory text in the left slot.
+
+    ![Landscape reference](./assets/customer.svg)
+
+    - Left item one
+    - Left item two
+    - Left item three
+    - Left item four
+  }
+
+  right {
+    Short content fits.
+
+    ![Landscape reference](./assets/customer.svg)
+  }
+}
+
+slide cjk-long {
+  layout title-content
+
+  # 中文与长文本
+
+  这是一段较长的中文演示文稿内容，用于说明语义文本盒即使位于页面边界以内，也不意味着浏览器真实字形一定不会发生换行或视觉溢出，必须由独立浏览器视觉验收判断。
+
+  - 字体尺寸和换行不由编译器预测
+  - 语义盒合规并不等于字形视觉验收通过
+}
+
+slide image-ratios {
+  layout two-column
+
+  # Portrait versus landscape (P3 only)
+
+  left {
+    ![Tall illustration](./assets/layout-portrait.svg)
+  }
+
+  right {
+    ![Landscape illustration](./assets/customer.svg)
+  }
+}
+
+slide dense-data {
+  layout two-column
+
+  # Dense data (P3 only)
+
+  left {
+    table {
+      header ["Segment", "Revenue"]
+      row ["A", 130]
+      row ["B", 125]
+      row ["C", 119]
+      row ["D", 111]
+      row ["E", 108]
+      row ["F", 103]
+      row ["G", 99]
+      row ["H", 94]
+      row ["I", 90]
+      row ["J", 84]
+      row ["K", 78]
+      row ["L", 70]
+    }
+  }
+
+  right {
+    chart bar {
+      labels ["Very long first label", "Second long label", "Third category", "Fourth category"]
+      values [13, 17, 11, 20]
+    }
+  }
+}
+
+slide extensions {
+  layout title-content
+
+  # Extension fallback (M9)
+
+  ```latex
+  e^{i\pi} + 1 = 0
+  ```
+
+  ```not-installed
+  Raw extension payload remains visible as fallback.
+  ```
+}

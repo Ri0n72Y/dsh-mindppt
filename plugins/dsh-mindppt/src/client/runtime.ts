@@ -126,7 +126,6 @@ export class BrowserMindPptRuntime {
     }
     return compiled
   }
-
   refreshElements = (): void => {
     if (!this.snapshot.structureCurrent) return
     this.publish({ ...this.snapshot, elements: this.compileElements() })
@@ -143,7 +142,6 @@ export class BrowserMindPptRuntime {
   private camera(action: () => boolean): void {
     if (action()) this.publish({ ...this.snapshot, camera: this.cameraService.view })
   }
-
   private async resolveAssets(revision: number, controller: AbortController): Promise<void> {
     if (!this.readRelated) throw new Error('Asset reader unavailable')
     const files: BinaryFiles = {}
@@ -179,13 +177,11 @@ export class BrowserMindPptRuntime {
       elements: this.compileElements(),
     })
   }
-
   private resetAssetsAndCompile(): CompiledElements {
     this.assetIds = {}
     this.imageDimensions = {}
     return this.compileElements()
   }
-
   private compileElements(): CompiledElements {
     const scene = containImages(this.canvas.scene, this.imageDimensions).map(element => {
       if (element.type !== 'image' || !element.id) return element
@@ -194,7 +190,6 @@ export class BrowserMindPptRuntime {
     })
     return convertToExcalidrawElements(scene, { regenerateIds: false })
   }
-
   private publish(next: BrowserSnapshot): void {
     this.snapshot = next
     this.listeners.forEach(listener => listener())

@@ -2,9 +2,12 @@ import { PDFDocument } from 'pdf-lib'
 import { describe, expect, it, vi } from 'vitest'
 import { assertExportable, createSlidesPdf, selectSlidePage } from '../src/client/pdf-export.ts'
 import { pdfFilename } from '../src/client/PdfExportAction.tsx'
-import type { BrowserSnapshot } from '../src/client/runtime.ts'
+import { BrowserMindPptRuntime, type BrowserSnapshot } from '../src/client/runtime.ts'
 
-vi.mock('@excalidraw/excalidraw', () => ({ exportToCanvas: vi.fn() }))
+vi.mock('@excalidraw/excalidraw', () => ({
+  exportToCanvas: vi.fn(),
+  convertToExcalidrawElements: (scene: unknown[]) => scene,
+}))
 
 const png = new Uint8Array(Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8//8/AwMDEwMDAwMDAwMDAwAkBgMB/DXemwAAAABJRU5ErkJggg==',
@@ -60,6 +63,74 @@ describe('MindPPT slide PDF export', () => {
     expect(() => assertExportable({ ...valid, assetStatus: 'pending' } as unknown as BrowserSnapshot)).toThrow('still loading')
     expect(() => assertExportable({ ...valid, assetStatus: 'failed' } as unknown as BrowserSnapshot)).toThrow('could not be loaded')
     expect(() => assertExportable(valid as unknown as BrowserSnapshot)).not.toThrow()
+  })
+
+
+  it('blocks PDF export when read-successful PNG/SVG bytes fail browser decoding', async () => {
+    const decoded: string[] = []
+    vi.stubGlobal('FileReader', class {
+      result = ''
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+
+      readAsDataURL(blob: Blob) {
+        void blob.arrayBuffer().then(bytes => {
+          this.result = `data:${blob.type};base64,${Buffer.from(bytes).toString('base64')}`
+          this.onload?.()
+        })
+      }
+    })
+    vi.stubGlobal('Image', class {
+      src = ''
+      decode() {
+        decoded.push(this.src)
+        return Promise.reject(new Error('Browser cannot decode image'))
+      }
+    })
+
+    try {
+      for (const [path, mimeType, data] of [
+        ['./broken.png', 'image/png', new Uint8Array([0, 1, 2, 3])],
+        ['./broken.svg', 'image/svg+xml', new TextEncoder().encode('<svg><bad>')],
+      ] as const) {
+        const readRelated = vi.fn(async () => ({ data, mimeType }))
+        const runtime = await BrowserMindPptRuntime.create(
+          `mindppt\nslide demo {\n  ![broken](${path})\n}\n`,
+          readRelated,
+        )
+        const settled = await new Promise<BrowserSnapshot>(resolve => {
+          const initial = runtime.getSnapshot()
+          if (initial.assetStatus !== 'pending') {
+            resolve(initial)
+            return
+          }
+          const unsubscribe = runtime.subscribe(() => {
+            const next = runtime.getSnapshot()
+            if (next.assetStatus !== 'pending') {
+              unsubscribe()
+              resolve(next)
+            }
+          })
+        })
+
+        expect(readRelated).toHaveBeenCalledOnce()
+        expect(settled.structureCurrent).toBe(true)
+        expect(settled.assetStatus).toBe('failed')
+        expect(settled.diagnostics).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            severity: 'error',
+            message: expect.stringContaining('Local image could not be decoded: ' + path),
+          }),
+        ]))
+        // PdfExportAction checks this before rasterization or browser download.
+        expect(() => assertExportable(settled)).toThrow('could not be loaded')
+      }
+      expect(decoded).toHaveLength(2)
+      expect(decoded[0]).toMatch(/^data:image\/png;base64,/)
+      expect(decoded[1]).toMatch(/^data:image\/svg\+xml;base64,/)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('rejects changed source and aborted exports before returning bytes', async () => {

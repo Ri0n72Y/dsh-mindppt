@@ -162,6 +162,13 @@ export class BrowserMindPptRuntime {
       }
       const id = fileId(request.source, asset.data) as BinaryFileData['id']
       const dataURL = await bytesToDataUrl(asset.data, asset.mimeType)
+      const image = new Image()
+      image.src = dataURL
+      try {
+        await image.decode()
+      } catch {
+        throw new Error('Local image could not be decoded: ' + request.source)
+      }
       files[id] = { id, dataURL: dataURL as DataURL, mimeType: asset.mimeType, created: 0 }
       for (const elementId of request.elementIds) ids[elementId] = id
     }

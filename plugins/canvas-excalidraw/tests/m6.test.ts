@@ -101,6 +101,28 @@ describe('M6 Excalidraw image lowering', () => {
           y: 234,
           width: 960,
           height: 84,
+          label: expect.objectContaining({
+            textAlign: 'center', fontSize: 48, strokeColor: '#0f172a',
+          }),
+        }))
+        expect(scene.find(element =>
+          element.id === 'slide:hero/subtitle:0/box'
+        )).toEqual(expect.objectContaining({
+          label: expect.objectContaining({
+            textAlign: 'center', fontSize: 30, strokeColor: '#475569',
+          }),
+        }))
+        expect(scene.find(element =>
+          element.id === 'slide:agenda/title:0/box'
+        )).toEqual(expect.objectContaining({
+          label: expect.objectContaining({
+            textAlign: 'left', fontSize: 48, strokeColor: '#0f172a',
+          }),
+        }))
+        expect(scene.find(element =>
+          element.id === 'slide:customer/title:0/box'
+        )).toEqual(expect.objectContaining({
+          label: expect.objectContaining({ textAlign: 'left' }),
         }))
 
         expect(scene.find(

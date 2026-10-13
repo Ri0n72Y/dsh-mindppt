@@ -31,8 +31,11 @@ describe('M7.1 Excalidraw lowering', () => {
           element.id === 'slide:analysis/left/table:0/header:0/box'
         )).toEqual(expect.objectContaining({
           type: 'rectangle',
-          backgroundColor: '#eef2ff',
-          label: expect.objectContaining({ text: 'Channel' }),
+          backgroundColor: '#f1f5f9',
+          strokeColor: '#cbd5e1',
+          label: expect.objectContaining({
+            text: 'Channel', strokeColor: '#0f172a',
+          }),
         }))
 
         const bars = first.filter((element) =>
@@ -41,6 +44,15 @@ describe('M7.1 Excalidraw lowering', () => {
           && element.id.endsWith('/box')
         )
         expect(bars).toHaveLength(3)
+        expect(bars[0]).toEqual(expect.objectContaining({
+          backgroundColor: '#6366f1',
+          strokeColor: '#4f46e5',
+        }))
+        expect(first.find(element =>
+          element.id === 'slide:analysis/right/bar-chart:0/bar:0/label'
+        )).toEqual(expect.objectContaining({
+          label: expect.objectContaining({ strokeColor: '#475569' }),
+        }))
         expect(bars.map((bar) => bar.id)).toEqual([
           'slide:analysis/right/bar-chart:0/bar:0/box',
           'slide:analysis/right/bar-chart:0/bar:1/box',

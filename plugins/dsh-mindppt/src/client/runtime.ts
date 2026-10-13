@@ -3,7 +3,9 @@ import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { BinaryFileData, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
 import { assetWarning, fileId, bytesToDataUrl } from './asset-loader.ts'
 import MindPptCameraService, { type CameraView } from 'dsh-mindppt-camera'
-import MindPptCanvasService from 'dsh-mindppt-canvas-excalidraw'
+import MindPptCanvasService, {
+  containImages, validSize, type ImageDimensions,
+} from 'dsh-mindppt-canvas-excalidraw'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
 import MindPptParserService, { MindPptCompileError, type MindPptDiagnostic, type MindPptStructure } from 'dsh-mindppt-code-parser'
 
@@ -35,6 +37,7 @@ export class BrowserMindPptRuntime {
   private revision = 0
   private assetController?: AbortController
   private assetIds: Readonly<Record<string, BinaryFileData['id']>> = {}
+  private imageDimensions: Readonly<Record<string, ImageDimensions>> = {}
 
   private constructor(
     private readonly parser: MindPptParserService,
@@ -150,6 +153,7 @@ export class BrowserMindPptRuntime {
     if (!this.readRelated) throw new Error('Asset reader unavailable')
     const files: BinaryFiles = {}
     const ids: Record<string, BinaryFileData['id']> = {}
+    const dimensions: Record<string, ImageDimensions> = {}
     const diagnostics = [...this.parser.diagnostics]
     let missing = false
     for (const request of this.canvas.assetRequests) {
@@ -169,11 +173,20 @@ export class BrowserMindPptRuntime {
       } catch {
         throw new Error('Local image could not be decoded: ' + request.source)
       }
+      if (!validSize(image.naturalWidth, image.naturalHeight)) {
+        throw new Error('Invalid intrinsic image dimensions: ' + request.source)
+      }
       files[id] = { id, dataURL: dataURL as DataURL, mimeType: asset.mimeType, created: 0 }
-      for (const elementId of request.elementIds) ids[elementId] = id
+      for (const elementId of request.elementIds) {
+        ids[elementId] = id
+        dimensions[elementId] = {
+          width: image.naturalWidth, height: image.naturalHeight,
+        }
+      }
     }
     if (revision !== this.revision) return
     this.assetIds = ids
+    this.imageDimensions = dimensions
     this.publish({
       ...this.snapshot,
       diagnostics,
@@ -185,11 +198,12 @@ export class BrowserMindPptRuntime {
 
   private resetAssetsAndCompile(): CompiledElements {
     this.assetIds = {}
+    this.imageDimensions = {}
     return this.compileElements()
   }
 
   private compileElements(): CompiledElements {
-    const scene = this.canvas.scene.map(element => {
+    const scene = containImages(this.canvas.scene, this.imageDimensions).map(element => {
       if (element.type !== 'image' || !element.id) return element
       const fileId = this.assetIds[element.id]
       return fileId ? { ...element, fileId } : element

@@ -4,7 +4,9 @@ import type { BinaryFiles } from '@excalidraw/excalidraw/types'
 import MindPptCameraService, {
   type CameraView,
 } from 'dsh-mindppt-camera'
-import MindPptCanvasService from 'dsh-mindppt-canvas-excalidraw'
+import MindPptCanvasService, {
+  containImages, validSize, type ImageDimensions,
+} from 'dsh-mindppt-canvas-excalidraw'
 import MindPptEditorService from 'dsh-mindppt-code-editor'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
 import MindPptParserService, {
@@ -77,6 +79,8 @@ export async function createPlaygroundRuntime(
   const listeners = new Set<() => void>()
   const resolveAssets = createCanvasAssetResolver(assetContext)
   let resolvedAssets: ResolvedAssets | undefined
+  let imageDimensions: Readonly<Record<string, ImageDimensions>> = {}
+  let sourceRevision = 0
   let disposeLatex: (() => Promise<void>) | undefined
   let snapshot: PlaygroundSnapshot = {
     source: '',
@@ -93,34 +97,53 @@ export async function createPlaygroundRuntime(
   const publishProjection = () => {
     publish({
       ...snapshot,
-      elements: compileElements(canvasService, resolvedAssets),
+      elements: compileElements(canvasService, resolvedAssets, imageDimensions),
       extensionRendererTypes: canvasService.extensionRendererTypes,
     })
   }
   const setSource = (source: string) => {
+    const revision = ++sourceRevision
     const compiled = editorService.setSource(source)
     const assets = compiled
       ? resolveAssets(canvasService.assetRequests)
       : undefined
-    if (compiled) resolvedAssets = assets
+    if (compiled) {
+      resolvedAssets = assets
+      imageDimensions = {}
+    }
     publish({
       source: editorService.source,
       diagnostics: compiled
         ? [...parserService.diagnostics, ...(assets?.diagnostics ?? [])]
         : [...parserService.diagnostics],
       elements: compiled
-        ? compileElements(canvasService, assets)
+        ? compileElements(canvasService, assets, imageDimensions)
         : snapshot.elements,
       files: compiled ? (assets?.files ?? {}) : snapshot.files,
       camera: cameraService.view,
       extensionRendererTypes: canvasService.extensionRendererTypes,
     })
+    if (compiled && assets && typeof Image !== 'undefined') {
+      void decodeImageDimensions(assets).then(dimensions => {
+        if (revision !== sourceRevision) return
+        imageDimensions = dimensions
+        publish({ ...snapshot,
+          elements: compileElements(canvasService, assets, dimensions),
+        })
+      }).catch(error => {
+        if (revision !== sourceRevision) return
+        publish({ ...snapshot, diagnostics: [...snapshot.diagnostics, {
+          severity: 'error',
+          message: 'Local image could not be decoded: ' + String(error),
+        }] })
+      })
+    }
   }
   const refreshElements = () => {
     if (!snapshot.elements.length) return
     publish({
       ...snapshot,
-      elements: compileElements(canvasService, resolvedAssets),
+      elements: compileElements(canvasService, resolvedAssets, imageDimensions),
     })
   }
   const enableLatex = async () => {
@@ -182,11 +205,36 @@ export async function createPlaygroundRuntime(
 function compileElements(
   canvasService: MindPptCanvasService,
   assets: ResolvedAssets | undefined,
+  dimensions: Readonly<Record<string, ImageDimensions>>,
 ): CompiledElements {
-  const scene = canvasService.scene.map((element) => {
+  const scene = containImages(canvasService.scene, dimensions).map((element) => {
     if (element.type !== 'image' || !element.id) return element
     const fileId = assets?.elementFileIds[element.id]
     return fileId ? { ...element, fileId } : element
   })
   return convertToExcalidrawElements(scene, { regenerateIds: false })
+}
+
+async function decodeImageDimensions(
+  assets: ResolvedAssets,
+): Promise<Readonly<Record<string, ImageDimensions>>> {
+  const dimensions: Record<string, ImageDimensions> = {}
+  const decoded = new Map<string, ImageDimensions>()
+  for (const [elementId, fileId] of Object.entries(assets.elementFileIds)) {
+    let size = decoded.get(fileId)
+    if (!size) {
+      const data = assets.files[fileId]
+      if (!data) continue
+      const image = new Image()
+      image.src = data.dataURL
+      await image.decode()
+      if (!validSize(image.naturalWidth, image.naturalHeight)) {
+        throw new Error('Invalid intrinsic image dimensions: ' + fileId)
+      }
+      size = { width: image.naturalWidth, height: image.naturalHeight }
+      decoded.set(fileId, size)
+    }
+    dimensions[elementId] = size
+  }
+  return dimensions
 }

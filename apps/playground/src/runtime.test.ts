@@ -63,7 +63,6 @@ describe('playground snapshot asset consistency', () => {
     )
   })
 
-
   it('discards older decoded image sizes after same-path source revision changes', async () => {
     const pending: Array<{ complete: () => void }> = []
     vi.stubGlobal('Image', class {
@@ -116,7 +115,6 @@ describe('playground snapshot asset consistency', () => {
       vi.unstubAllGlobals()
     }
   })
-
   it('publishes malformed asset paths as one warning-consistent logical version', async () => {
     const runtime = await createPlaygroundRuntime(
       source('before', './assets/customer.svg'),
@@ -151,7 +149,6 @@ describe('playground snapshot asset consistency', () => {
       (element) => element.id === 'slide:before/surface',
     )).toBe(false)
   })
-
   it('keeps elements, files, and camera last-good on compile failure', async () => {
     const initialSource = source('before', './assets/customer.svg')
     const runtime = await createPlaygroundRuntime(initialSource, {
@@ -175,7 +172,6 @@ describe('playground snapshot asset consistency', () => {
     expect(failed.files).toBe(lastGood.files)
     expect(failed.camera).toEqual(lastGood.camera)
   })
-
   it('refreshes converted elements without changing source files or camera', async () => {
     const initialSource = source('asset', './assets/customer.svg')
     const runtime = await createPlaygroundRuntime(initialSource, {

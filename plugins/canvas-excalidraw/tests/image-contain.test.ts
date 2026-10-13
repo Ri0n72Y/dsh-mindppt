@@ -1,11 +1,28 @@
-import { describe, expect, it } from 'vitest'
-import { containImages } from '../src/image-contain.ts'
-import { compileSource } from 'dsh-mindppt-code-parser'
+import { Context } from '@deepseek-ai/cordis'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import MindPptParserService, { type ImageNode } from 'dsh-mindppt-code-parser'
 import type { ExcalidrawElementSkeleton } from '@excalidraw/excalidraw/data/transform'
+import { containImages } from '../src/image-contain.ts'
 
 const source = 'mindppt\nslide asset {\n  layout two-column\n  # Photo\n  left {\n    ![P](./p.svg)\n  }\n}\n'
-const structure = compileSource(source)
-const semantic = structure.slides[0]!.elements.find(e => e.kind === 'image')!
+const ctx = new Context()
+let semantic!: ImageNode
+
+beforeAll(async () => {
+  await ctx.plugin(MindPptParserService)
+  await ctx.plugin({
+    name: 'mindppt-image-contain-test',
+    inject: ['mindpptParser'],
+    apply(child: Context) {
+      semantic = child.mindpptParser.compile(source).slides[0]!
+        .elements.find((element): element is ImageNode => element.kind === 'image')!
+    },
+  })
+})
+
+afterAll(async () => {
+  await ctx.fiber.dispose()
+})
 
 function image(): ExcalidrawElementSkeleton {
   return {
@@ -42,6 +59,9 @@ describe('P3a contained image projection', () => {
     expect(fitted.y).toBeCloseTo(y, 5)
     expect(fitted.width).toBeCloseTo(width, 5)
     expect(fitted.height).toBeCloseTo(height, 5)
+    if (fitted.width === undefined || fitted.height === undefined) {
+      throw new Error('Contained image must have concrete dimensions')
+    }
     expect(fitted.width / fitted.height).toBeCloseTo(sourceW / sourceH, 8)
     expect(semantic).toMatchObject({
       id: 'slide:asset/left/image:0',

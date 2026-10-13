@@ -1,10 +1,10 @@
 import { Context } from '@deepseek-ai/cordis'
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { BinaryFileData, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
-import { assetWarning, fileId, bytesToDataUrl } from './asset-loader.ts'
+import { assetWarning, fileId, bytesToDataUrl, decodeAssetImage } from './asset-loader.ts'
 import MindPptCameraService, { type CameraView } from 'dsh-mindppt-camera'
 import MindPptCanvasService, {
-  containImages, validSize, type ImageDimensions,
+  containImages, type ImageDimensions,
 } from 'dsh-mindppt-canvas-excalidraw'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
 import MindPptParserService, { MindPptCompileError, type MindPptDiagnostic, type MindPptStructure } from 'dsh-mindppt-code-parser'
@@ -166,22 +166,11 @@ export class BrowserMindPptRuntime {
       }
       const id = fileId(request.source, asset.data) as BinaryFileData['id']
       const dataURL = await bytesToDataUrl(asset.data, asset.mimeType)
-      const image = new Image()
-      image.src = dataURL
-      try {
-        await image.decode()
-      } catch {
-        throw new Error('Local image could not be decoded: ' + request.source)
-      }
-      if (!validSize(image.naturalWidth, image.naturalHeight)) {
-        throw new Error('Invalid intrinsic image dimensions: ' + request.source)
-      }
+      const size = await decodeAssetImage(dataURL, request.source)
       files[id] = { id, dataURL: dataURL as DataURL, mimeType: asset.mimeType, created: 0 }
       for (const elementId of request.elementIds) {
         ids[elementId] = id
-        dimensions[elementId] = {
-          width: image.naturalWidth, height: image.naturalHeight,
-        }
+        dimensions[elementId] = size
       }
     }
     if (revision !== this.revision) return

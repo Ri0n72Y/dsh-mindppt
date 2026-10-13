@@ -1,5 +1,5 @@
 import type { MindPptDiagnostic } from 'dsh-mindppt-code-parser'
-import type { CanvasAssetRequest } from 'dsh-mindppt-canvas-excalidraw'
+import { validSize, type ImageDimensions, type CanvasAssetRequest } from 'dsh-mindppt-canvas-excalidraw'
 
 export function assetWarning(request: CanvasAssetRequest): MindPptDiagnostic {
   return {
@@ -23,4 +23,20 @@ export function bytesToDataUrl(data: Uint8Array<ArrayBuffer>, mimeType: string):
     reader.onload = () => resolve(String(reader.result))
     reader.readAsDataURL(new Blob([data], { type: mimeType }))
   })
+}
+
+export async function decodeAssetImage(
+  dataURL: string, source: string,
+): Promise<ImageDimensions> {
+  const image = new Image()
+  image.src = dataURL
+  try {
+    await image.decode()
+  } catch {
+    throw new Error('Local image could not be decoded: ' + source)
+  }
+  if (!validSize(image.naturalWidth, image.naturalHeight)) {
+    throw new Error('Invalid intrinsic image dimensions: ' + source)
+  }
+  return { width: image.naturalWidth, height: image.naturalHeight }
 }

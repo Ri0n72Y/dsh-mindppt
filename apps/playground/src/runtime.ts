@@ -1,23 +1,15 @@
 import { Context } from '@deepseek-ai/cordis'
-import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { BinaryFiles } from '@excalidraw/excalidraw/types'
-import MindPptCameraService, {
-  type CameraView,
-} from 'dsh-mindppt-camera'
-import MindPptCanvasService, {
-  containImages, validSize, type ImageDimensions,
-} from 'dsh-mindppt-canvas-excalidraw'
+import MindPptCameraService, { type CameraView } from 'dsh-mindppt-camera'
+import MindPptCanvasService, { type ImageDimensions } from 'dsh-mindppt-canvas-excalidraw'
 import MindPptEditorService from 'dsh-mindppt-code-editor'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
 import MindPptParserService, {
   type MindPptDiagnostic,
 } from 'dsh-mindppt-code-parser'
-import {
-  createCanvasAssetResolver,
-  type PlaygroundAssetContext,
-  type ResolvedAssets,
-} from './assets.ts'
-export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
+import { createCanvasAssetResolver, type PlaygroundAssetContext, type ResolvedAssets } from './assets.ts'
+import { compileElements, decodeImageDimensions, type CompiledElements } from './image-projection.ts'
+export type { CompiledElements } from './image-projection.ts'
 export interface PlaygroundSnapshot {
   source: string
   diagnostics: readonly MindPptDiagnostic[]
@@ -201,40 +193,4 @@ export async function createPlaygroundRuntime(
       applyCameraAction(() => cameraService.followSoftLink(linkId))
     },
   }
-}
-function compileElements(
-  canvasService: MindPptCanvasService,
-  assets: ResolvedAssets | undefined,
-  dimensions: Readonly<Record<string, ImageDimensions>>,
-): CompiledElements {
-  const scene = containImages(canvasService.scene, dimensions).map((element) => {
-    if (element.type !== 'image' || !element.id) return element
-    const fileId = assets?.elementFileIds[element.id]
-    return fileId ? { ...element, fileId } : element
-  })
-  return convertToExcalidrawElements(scene, { regenerateIds: false })
-}
-
-async function decodeImageDimensions(
-  assets: ResolvedAssets,
-): Promise<Readonly<Record<string, ImageDimensions>>> {
-  const dimensions: Record<string, ImageDimensions> = {}
-  const decoded = new Map<string, ImageDimensions>()
-  for (const [elementId, fileId] of Object.entries(assets.elementFileIds)) {
-    let size = decoded.get(fileId)
-    if (!size) {
-      const data = assets.files[fileId]
-      if (!data) continue
-      const image = new Image()
-      image.src = data.dataURL
-      await image.decode()
-      if (!validSize(image.naturalWidth, image.naturalHeight)) {
-        throw new Error('Invalid intrinsic image dimensions: ' + fileId)
-      }
-      size = { width: image.naturalWidth, height: image.naturalHeight }
-      decoded.set(fileId, size)
-    }
-    dimensions[elementId] = size
-  }
-  return dimensions
 }

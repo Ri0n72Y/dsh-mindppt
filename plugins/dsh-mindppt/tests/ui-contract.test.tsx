@@ -28,6 +28,8 @@ vi.mock('../src/client/Canvas.tsx', () => ({
 function runtime() {
   const snapshot = {
     source: 'mindppt\nslide root {\n  # Root\n}\n',
+    revision: 1, assetStatus: 'ready',
+    structure: { version: 0, slides: [{ id: 'root', x: 0, y: 0, width: 1280, height: 720 }] },
     diagnostics: [], structureCurrent: true,
     elements: [{ id: 'root' }, { id: 'child' }], files: {},
     camera: {
@@ -169,9 +171,11 @@ describe('MindPPT document UI contract', () => {
         session={{
           identity: { sessionId: 's', path: 'deck.mindppt' },
           runtime: model as never,
+          checkSource: async () => {},
         }}
       />,
     )
+    expect(html).toContain('Export as PDF')
     expect(html).toContain('Show Code')
     expect(html).toContain('aria-expanded="false"')
     expect(html).not.toContain('<aside')

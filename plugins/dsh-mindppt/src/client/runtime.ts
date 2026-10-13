@@ -1,14 +1,18 @@
 import { Context } from '@deepseek-ai/cordis'
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { BinaryFileData, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
+import { assetWarning, fileId, bytesToDataUrl } from './asset-loader.ts'
 import MindPptCameraService, { type CameraView } from 'dsh-mindppt-camera'
-import MindPptCanvasService, { type CanvasAssetRequest } from 'dsh-mindppt-canvas-excalidraw'
+import MindPptCanvasService from 'dsh-mindppt-canvas-excalidraw'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
-import MindPptParserService, { MindPptCompileError, type MindPptDiagnostic } from 'dsh-mindppt-code-parser'
+import MindPptParserService, { MindPptCompileError, type MindPptDiagnostic, type MindPptStructure } from 'dsh-mindppt-code-parser'
 
 export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
 
 export interface BrowserSnapshot {
+  revision: number
+  structure: MindPptStructure | undefined
+  assetStatus: 'ready' | 'pending' | 'failed'
   source: string
   diagnostics: readonly MindPptDiagnostic[]
   structureCurrent: boolean
@@ -29,6 +33,7 @@ export class BrowserMindPptRuntime {
   private snapshot: BrowserSnapshot
   private readonly listeners = new Set<() => void>()
   private revision = 0
+  private assetController?: AbortController
   private assetIds: Readonly<Record<string, BinaryFileData['id']>> = {}
 
   private constructor(
@@ -38,6 +43,9 @@ export class BrowserMindPptRuntime {
     private readonly readRelated?: ReadRelated,
   ) {
     this.snapshot = {
+      structure: undefined,
+      revision: 0,
+      assetStatus: 'ready',
       source: '',
       diagnostics: [],
       structureCurrent: false,
@@ -79,6 +87,7 @@ export class BrowserMindPptRuntime {
   }
 
   setSource(source: string): boolean {
+    this.assetController?.abort()
     const currentRevision = ++this.revision
     let compiled = true
     try {
@@ -87,8 +96,12 @@ export class BrowserMindPptRuntime {
       if (!(error instanceof MindPptCompileError)) throw error
       compiled = false
     }
+    const requests = compiled ? this.canvas.assetRequests : []
     this.publish({
       ...this.snapshot,
+      revision: currentRevision,
+      structure: compiled ? this.parser.structure : undefined,
+      assetStatus: requests.length > 0 ? 'pending' : 'ready',
       source: this.parser.source,
       diagnostics: [...this.parser.diagnostics],
       structureCurrent: compiled,
@@ -97,8 +110,20 @@ export class BrowserMindPptRuntime {
       camera: this.cameraService.view,
       rendererTypes: this.canvas.extensionRendererTypes,
     })
-    if (compiled && this.readRelated) {
-      void this.resolveAssets(currentRevision)
+    if (compiled && requests.length > 0) {
+      const controller = new AbortController()
+      this.assetController = controller
+      void this.resolveAssets(currentRevision, controller).catch(error => {
+        if (currentRevision !== this.revision) return
+        this.publish({
+          ...this.snapshot,
+          assetStatus: 'failed',
+          diagnostics: [...this.snapshot.diagnostics, {
+            severity: 'error',
+            message: 'Unable to load PDF image assets: ' + String(error),
+          }],
+        })
+      })
     }
     return compiled
   }
@@ -121,21 +146,29 @@ export class BrowserMindPptRuntime {
     this.publish({ ...this.snapshot, camera: this.cameraService.view })
   }
 
-  private async resolveAssets(revision: number): Promise<void> {
-    if (!this.readRelated) return
-    const controller = new AbortController()
+  private async resolveAssets(revision: number, controller: AbortController): Promise<void> {
+    if (!this.readRelated) throw new Error('Asset reader unavailable')
     const files: BinaryFiles = {}
     const ids: Record<string, BinaryFileData['id']> = {}
     const diagnostics = [...this.parser.diagnostics]
+    let missing = false
     for (const request of this.canvas.assetRequests) {
       const asset = await this.readRelated(request.source, controller.signal)
       if (revision !== this.revision) return
       if (!asset) {
+        missing = true
         diagnostics.push(assetWarning(request))
         continue
       }
       const id = fileId(request.source, asset.data) as BinaryFileData['id']
       const dataURL = await bytesToDataUrl(asset.data, asset.mimeType)
+      const image = new Image()
+      image.src = dataURL
+      try {
+        await image.decode()
+      } catch {
+        throw new Error('Local image could not be decoded: ' + request.source)
+      }
       files[id] = { id, dataURL: dataURL as DataURL, mimeType: asset.mimeType, created: 0 }
       for (const elementId of request.elementIds) ids[elementId] = id
     }
@@ -144,6 +177,7 @@ export class BrowserMindPptRuntime {
     this.publish({
       ...this.snapshot,
       diagnostics,
+      assetStatus: missing ? 'failed' : 'ready',
       files,
       elements: this.compileElements(),
     })
@@ -169,26 +203,3 @@ export class BrowserMindPptRuntime {
   }
 }
 
-function assetWarning(request: CanvasAssetRequest): MindPptDiagnostic {
-  return {
-    severity: 'warning',
-    message: 'Local asset unavailable: ' + request.source,
-    sourceRange: request.sourceRange,
-  }
-}
-
-function fileId(source: string, data: Uint8Array<ArrayBuffer>): string {
-  let hash = 2166136261
-  for (const char of source) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619)
-  for (const byte of data) hash = Math.imul(hash ^ byte, 16777619)
-  return (hash >>> 0).toString(16).padStart(8, '0').repeat(5)
-}
-
-function bytesToDataUrl(data: Uint8Array<ArrayBuffer>, mimeType: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(reader.error)
-    reader.onload = () => resolve(String(reader.result))
-    reader.readAsDataURL(new Blob([data], { type: mimeType }))
-  })
-}

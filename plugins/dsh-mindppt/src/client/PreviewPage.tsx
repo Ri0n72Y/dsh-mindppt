@@ -24,7 +24,15 @@ export function PreviewPage({ resourceAddress, remote }: {
           relatedReader(remote, file.sessionId, file.path),
         )
         if (!controller.signal.aborted) {
-          setSession({ identity, runtime })
+          setSession({
+            identity, runtime,
+            async checkSource(signal) {
+              const current = await readWholeSource(remote, file.sessionId, file.path, signal)
+              if (current.version !== read.version || current.source !== read.source) {
+                throw new Error('Workspace MindPPT file changed during PDF export')
+              }
+            },
+          })
           setError(undefined)
         }
       } catch (cause) {

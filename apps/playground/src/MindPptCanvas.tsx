@@ -33,8 +33,9 @@ export function MindPptCanvas({
   useEffect(() => {
     if (!api) return
 
-    replaceMountedFiles(api, files)
+    // Excalidraw addFiles loads images referenced by its current scene.
     api.updateScene({ elements })
+    replaceMountedFiles(api, files)
     transitionRef.current?.reconcileScene()
   }, [api, elements, files])
 

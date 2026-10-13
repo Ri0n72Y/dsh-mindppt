@@ -10,6 +10,7 @@ import type { ExtensionRenderer } from './extension-renderer.ts'
 import { renderSoftLinkScene } from './soft-link-scene.ts'
 import { renderBarChart, renderTable } from './structured-scene.ts'
 import { renderTreeScene } from './tree-scene.ts'
+import { neutral, typeSize } from './visual-style.ts'
 
 export type ExcalidrawScene = ExcalidrawElementSkeleton[]
 
@@ -37,8 +38,8 @@ function renderSlide(
     y: slide.y,
     width: slide.width,
     height: slide.height,
-    backgroundColor: '#ffffff',
-    strokeColor: '#d0d0d0',
+    backgroundColor: neutral.surface,
+    strokeColor: neutral.border,
     fillStyle: 'solid',
     strokeWidth: 1,
     roughness: 0,
@@ -97,6 +98,10 @@ function renderContent(
   if (element.kind === 'table') return renderTable(slide, element)
   if (element.kind === 'bar-chart') return renderBarChart(slide, element)
 
+  const heading = element.kind === 'title' || element.kind === 'subtitle'
+  const centered = slide.layout === 'hero'
+    || (!slide.layout && slide.elements.length === 1 && element.kind === 'title')
+
   return [{
     type: 'rectangle',
     id: element.id + '/box',
@@ -111,15 +116,11 @@ function renderContent(
     label: {
       text: contentText(element),
       fontSize: contentFontSize(element),
-      textAlign:
-        element.kind === 'title' || element.kind === 'subtitle'
-          ? 'center'
-          : 'left',
-      verticalAlign:
-        element.kind === 'title' || element.kind === 'subtitle'
-          ? 'middle'
-          : 'top',
-      strokeColor: '#1b1b1f',
+      textAlign: heading && centered ? 'center' : 'left',
+      verticalAlign: heading ? 'middle' : 'top',
+      strokeColor: element.kind === 'title'
+        ? neutral.title
+        : element.kind === 'subtitle' ? neutral.secondary : neutral.body,
     },
   }]
 }
@@ -135,8 +136,8 @@ function renderExtensionFallback(
     y: slide.y + element.y,
     width: element.width,
     height: element.height,
-    backgroundColor: '#f8f9fa',
-    strokeColor: '#adb5bd',
+    backgroundColor: neutral.panel,
+    strokeColor: neutral.border,
     strokeStyle: 'dashed',
     fillStyle: 'solid',
     roughness: 0,
@@ -145,7 +146,7 @@ function renderExtensionFallback(
       fontSize: contentFontSize(element),
       textAlign: 'left',
       verticalAlign: 'top',
-      strokeColor: '#1b1b1f',
+      strokeColor: neutral.body,
     },
   }]
 }
@@ -171,17 +172,17 @@ function contentText(element: ContentNode): string {
 function contentFontSize(element: ContentNode): number {
   switch (element.kind) {
     case 'title':
-      return 48
+      return typeSize.title
     case 'subtitle':
-      return 30
+      return typeSize.subtitle
     case 'text':
     case 'list':
     case 'image':
-      return 24
+      return typeSize.body
     case 'extension':
-      return 22
+      return typeSize.extension
     case 'table':
     case 'bar-chart':
-      return 17
+      return typeSize.data
   }
 }

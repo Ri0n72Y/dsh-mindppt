@@ -5,6 +5,8 @@ import type {
   TableNode,
 } from 'dsh-mindppt-code-parser'
 
+import { neutral, typeSize } from './visual-style.ts'
+
 export function renderTable(
   slide: SlideNode,
   table: TableNode,
@@ -17,17 +19,17 @@ export function renderTable(
     y: slide.y + cell.y,
     width: cell.width,
     height: cell.height,
-    backgroundColor: headerIds.has(cell.id) ? '#eef2ff' : '#ffffff',
-    strokeColor: '#a8a8b3',
+    backgroundColor: headerIds.has(cell.id) ? neutral.header : neutral.surface,
+    strokeColor: neutral.border,
     fillStyle: 'solid',
     strokeWidth: 1,
     roughness: 0,
     label: {
       text: String(cell.value),
-      fontSize: 17,
+      fontSize: typeSize.data,
       textAlign: 'center',
       verticalAlign: 'middle',
-      strokeColor: '#1b1b1f',
+      strokeColor: headerIds.has(cell.id) ? neutral.title : neutral.body,
     },
   }))
 }
@@ -45,7 +47,7 @@ export function renderBarChart(
       [0, 0],
       [chart.plotWidth, 0],
     ],
-    strokeColor: '#6b7280',
+    strokeColor: neutral.muted,
     strokeWidth: 1,
     roughness: 0,
   }
@@ -58,8 +60,8 @@ export function renderBarChart(
       y: slide.y + bar.y,
       width: bar.width,
       height: bar.height,
-      backgroundColor: '#6366f1',
-      strokeColor: '#4f46e5',
+      backgroundColor: neutral.accent,
+      strokeColor: neutral.accentBorder,
       fillStyle: 'solid',
       strokeWidth: 1,
       roughness: 0,
@@ -77,10 +79,10 @@ export function renderBarChart(
       roughness: 0,
       label: {
         text: bar.label,
-        fontSize: 16,
+        fontSize: typeSize.category,
         textAlign: 'center',
         verticalAlign: 'middle',
-        strokeColor: '#1b1b1f',
+        strokeColor: neutral.secondary,
       },
     },
     {
@@ -96,10 +98,10 @@ export function renderBarChart(
       roughness: 0,
       label: {
         text: String(bar.value),
-        fontSize: 15,
+        fontSize: typeSize.value,
         textAlign: 'center',
         verticalAlign: 'middle',
-        strokeColor: '#374151',
+        strokeColor: neutral.body,
       },
     },
   ])

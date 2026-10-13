@@ -70,11 +70,7 @@ export class BrowserMindPptRuntime {
       name: 'dsh-mindppt-browser-capture',
       inject: ['mindpptParser', 'mindpptCanvas', 'mindpptCamera'],
       apply(runtime: Context) {
-        services = [
-          runtime.mindpptParser,
-          runtime.mindpptCanvas,
-          runtime.mindpptCamera,
-        ]
+        services = [runtime.mindpptParser, runtime.mindpptCanvas, runtime.mindpptCamera]
       },
     })
     if (!services) throw new Error('MindPPT browser runtime unavailable')
@@ -145,8 +141,7 @@ export class BrowserMindPptRuntime {
   followSoftLink(id: string) { this.camera(() => this.cameraService.followSoftLink(id)) }
 
   private camera(action: () => boolean): void {
-    if (!action()) return
-    this.publish({ ...this.snapshot, camera: this.cameraService.view })
+    if (action()) this.publish({ ...this.snapshot, camera: this.cameraService.view })
   }
 
   private async resolveAssets(revision: number, controller: AbortController): Promise<void> {
@@ -202,7 +197,7 @@ export class BrowserMindPptRuntime {
 
   private publish(next: BrowserSnapshot): void {
     this.snapshot = next
-    for (const listener of this.listeners) listener()
+    this.listeners.forEach(listener => listener())
   }
 }
 

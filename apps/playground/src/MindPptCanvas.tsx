@@ -110,7 +110,7 @@ export function MindPptCanvas({
         initialData={{
           elements,
           files,
-          scrollToContent: true,
+          // The host applies one fit after mount; avoid Excalidraw's later auto-fit.
           appState: {
             zenModeEnabled: true,
             frameRendering: {

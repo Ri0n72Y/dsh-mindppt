@@ -44,14 +44,13 @@ export async function decodeImageDimensions(
 }
 
 export function retainImageDimensions(
-  previous: ResolvedAssets | undefined,
-  next: ResolvedAssets | undefined,
-  dimensions: Readonly<Record<string, ImageDimensions>>,
+  assets: ResolvedAssets | undefined,
+  knownSizes: ReadonlyMap<string, ImageDimensions>,
 ): Readonly<Record<string, ImageDimensions>> {
   return Object.fromEntries(
-    Object.entries(next?.elementFileIds ?? {}).flatMap(([id, fileId]) => {
-      const size = dimensions[id]
-      return size && previous?.elementFileIds[id] === fileId ? [[id, size]] : []
+    Object.entries(assets?.elementFileIds ?? {}).flatMap(([id, fileId]) => {
+      const size = knownSizes.get(fileId)
+      return size ? [[id, size]] : []
     }),
   )
 }

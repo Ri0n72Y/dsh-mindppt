@@ -72,6 +72,7 @@ export async function createPlaygroundRuntime(
   const resolveAssets = createCanvasAssetResolver(assetContext)
   let resolvedAssets: ResolvedAssets | undefined
   let imageDimensions: Readonly<Record<string, ImageDimensions>> = {}
+  const decodedSizes = new Map<string, ImageDimensions>()
   let sourceRevision = 0
   let disposeLatex: (() => Promise<void>) | undefined
   let snapshot: PlaygroundSnapshot = {
@@ -100,9 +101,7 @@ export async function createPlaygroundRuntime(
       ? resolveAssets(canvasService.assetRequests)
       : undefined
     if (compiled) {
-      imageDimensions = retainImageDimensions(
-        resolvedAssets, assets, imageDimensions,
-      )
+      imageDimensions = retainImageDimensions(assets, decodedSizes)
       resolvedAssets = assets
     }
     publish({
@@ -117,9 +116,14 @@ export async function createPlaygroundRuntime(
       camera: cameraService.view,
       extensionRendererTypes: canvasService.extensionRendererTypes,
     })
-    if (compiled && assets && typeof Image !== 'undefined') {
+    if (compiled && assets && typeof Image !== 'undefined'
+      && Object.keys(imageDimensions).length !== Object.keys(assets.elementFileIds).length) {
       void decodeImageDimensions(assets).then(dimensions => {
         if (revision !== sourceRevision) return
+        for (const [elementId, size] of Object.entries(dimensions)) {
+          const fileId = assets.elementFileIds[elementId]
+          if (fileId) decodedSizes.set(fileId, size)
+        }
         imageDimensions = dimensions
         publish({ ...snapshot,
           elements: compileElements(canvasService, assets, dimensions),

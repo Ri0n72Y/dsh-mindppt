@@ -34,6 +34,9 @@ async function paintedBounds(
 
 test('portrait SVG and landscape PNG paint centered contain; same-path orientation changes', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
+  page.on('console', msg => {
+    if (msg.text().startsWith('P3A_')) console.log(msg.text())
+  })
   await page.goto('/')
   await page.evaluate(async () => {
     const { mountAssetBrowserHarness } = await import('/src/asset-browser-harness.tsx')

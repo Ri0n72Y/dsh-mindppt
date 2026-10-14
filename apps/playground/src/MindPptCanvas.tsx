@@ -37,6 +37,14 @@ export function MindPptCanvas({
     // Excalidraw addFiles loads images referenced by its current scene.
     api.updateScene({ elements })
     replaceMountedFiles(api, files)
+    const state = api.getAppState()
+    console.log('P3A_MOUNT', JSON.stringify({
+      width: state.width, height: state.height,
+      scrollX: state.scrollX, scrollY: state.scrollY,
+      zoom: state.zoom.value, mounted: Object.keys(api.getFiles()),
+      images: api.getSceneElements().filter(e => e.type === 'image')
+        .map(e => ({ id: e.id, fileId: (e as any).fileId, x: e.x, y: e.y, width: e.width, height: e.height })),
+    }))
     // Initial Excalidraw scrollToContent can precede host viewport sizing.
     // Fit actual semantic slides once; subsequent Camera requests own navigation.
     if (needsInitialFit.current) {
@@ -44,9 +52,17 @@ export function MindPptCanvas({
         element => element.id.startsWith('slide:') && element.id.endsWith('/surface'),
       )
       if (surfaces.length > 0) {
+        console.log('P3A_FIT_BEFORE', JSON.stringify({
+          app: { width: state.width, height: state.height, scrollX: state.scrollX, scrollY: state.scrollY, zoom: state.zoom.value },
+          surfaces: surfaces.map(e => ({x:e.x,y:e.y,width:e.width,height:e.height})),
+        }))
         needsInitialFit.current = false
         api.scrollToContent(surfaces, {
           fitToViewport: true, viewportZoomFactor: 0.85, animate: false,
+        })
+        requestAnimationFrame(() => {
+          const after = api.getAppState()
+          console.log('P3A_FIT_RAF', JSON.stringify({ width: after.width, height: after.height, scrollX: after.scrollX, scrollY: after.scrollY, zoom: after.zoom.value }))
         })
       }
     }

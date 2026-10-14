@@ -64,6 +64,9 @@ async function countFixturePixels(canvas: Locator): Promise<number> {
 
 test('M6 layouts and image pipeline preserve live authoring and M5 camera navigation', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
+  page.on('console', msg => {
+    if (msg.text().startsWith('P3A_')) console.log(msg.text())
+  })
   await page.goto('/')
 
   const editor = page.getByRole('textbox', { name: 'MindPPT source editor' })
@@ -135,7 +138,15 @@ test('M6 layouts and image pipeline preserve live authoring and M5 camera naviga
   await editor.fill(recovered)
   await expect(page.getByText('Compiled', { exact: true })).toBeVisible()
   await expect(page.locator('.diagnostic')).toHaveCount(0)
-  await expect.poll(() => countFixturePixels(canvas)).toBeGreaterThan(100)
+  try {
+    await expect.poll(() => countFixturePixels(canvas)).toBeGreaterThan(100)
+  } catch (err) {
+    console.log('P3A_LIVE_CANVAS', JSON.stringify(await canvas.evaluate(el => ({
+      width: (el as HTMLCanvasElement).width, height: (el as HTMLCanvasElement).height,
+      rect: el.getBoundingClientRect().toJSON(),
+    }))))
+    throw err
+  }
 
   await editor.fill(M4)
   await expect(page.getByText('Compiled', { exact: true })).toBeVisible()

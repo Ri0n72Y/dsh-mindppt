@@ -34,6 +34,9 @@ async function countColorPixels(
 
 test('same-path asset replacement changes binary identity and visible bytes', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
+  page.on('console', msg => {
+    if (msg.text().startsWith('P3A_')) console.log(msg.text())
+  })
   await page.goto('/')
 
   await page.evaluate(async () => {

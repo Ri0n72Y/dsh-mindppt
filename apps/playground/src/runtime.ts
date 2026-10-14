@@ -100,8 +100,15 @@ export async function createPlaygroundRuntime(
       ? resolveAssets(canvasService.assetRequests)
       : undefined
     if (compiled) {
+      const previousIds = resolvedAssets?.elementFileIds
+      const previousSizes = imageDimensions
+      imageDimensions = Object.fromEntries(
+        Object.entries(assets?.elementFileIds ?? {}).flatMap(([id, fileId]) => {
+          const size = previousSizes[id]
+          return size && previousIds?.[id] === fileId ? [[id, size]] : []
+        }),
+      )
       resolvedAssets = assets
-      imageDimensions = {}
     }
     publish({
       source: editorService.source,

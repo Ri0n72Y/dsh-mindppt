@@ -29,6 +29,7 @@ export function MindPptCanvas({
 }: MindPptCanvasProps) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
   const transitionRef = useRef<CameraTransitionController | null>(null)
+  const needsInitialFit = useRef(true)
 
   useEffect(() => {
     if (!api) return
@@ -36,6 +37,19 @@ export function MindPptCanvas({
     // Excalidraw addFiles loads images referenced by its current scene.
     api.updateScene({ elements })
     replaceMountedFiles(api, files)
+    // Initial Excalidraw scrollToContent can precede host viewport sizing.
+    // Fit actual semantic slides once; subsequent Camera requests own navigation.
+    if (needsInitialFit.current) {
+      const surfaces = api.getSceneElements().filter(
+        element => element.id.startsWith('slide:') && element.id.endsWith('/surface'),
+      )
+      if (surfaces.length > 0) {
+        needsInitialFit.current = false
+        api.scrollToContent(surfaces, {
+          fitToViewport: true, viewportZoomFactor: 0.85, animate: false,
+        })
+      }
+    }
     transitionRef.current?.reconcileScene()
   }, [api, elements, files])
 

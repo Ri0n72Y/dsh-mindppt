@@ -28,7 +28,7 @@ async function paintedBounds(
         count += 1
       }
     }
-    return count ? { width: right - left + 2, height: bottom - top + 2, count } : null
+    return count ? { x: left, y: top, width: right - left + 2, height: bottom - top + 2, count } : null
   }, rgb)
 }
 
@@ -96,6 +96,22 @@ slide photos {
     .toBeGreaterThan(100)
   const portrait = (await paintedBounds(canvas, [220, 38, 38]))!
   const landscape = (await paintedBounds(canvas, [37, 99, 235]))!
+  console.log('P3A_PAINT_DIAGNOSTIC', JSON.stringify({
+    portrait, landscape,
+    viewport: await page.evaluate(() => {
+      const api = (window as any).__contain.harness.getApi()
+      const canvas = document.querySelector('#contain-harness canvas.static') as HTMLCanvasElement
+      const snapshot = (window as any).__contain.harness.runtime.getSnapshot()
+      const app = api?.getAppState()
+      return {
+        camera: app && { scrollX: app.scrollX, scrollY: app.scrollY, zoom: app.zoom },
+        canvas: canvas && { width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() },
+        images: snapshot.elements.filter((element: any) => element.type === 'image')
+          .map((e: any) => ({ id: e.id, x: e.x, y: e.y, width: e.width, height: e.height, status: e.status, fileId: e.fileId })),
+        mounted: Object.keys((window as any).__contain.harness.getMountedFiles()),
+      }
+    }),
+  }))
   expect(portrait.width / portrait.height).toBeCloseTo(80 / 240, 1)
   expect(landscape.width / landscape.height).toBeCloseTo(320 / 100, 1)
 

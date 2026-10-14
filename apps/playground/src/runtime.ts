@@ -8,7 +8,7 @@ import MindPptParserService, {
   type MindPptDiagnostic,
 } from 'dsh-mindppt-code-parser'
 import { createCanvasAssetResolver, type PlaygroundAssetContext, type ResolvedAssets } from './assets.ts'
-import { compileElements, decodeImageDimensions, type CompiledElements } from './image-projection.ts'
+import { compileElements, decodeImageDimensions, retainImageDimensions, type CompiledElements } from './image-projection.ts'
 export type { CompiledElements } from './image-projection.ts'
 export interface PlaygroundSnapshot {
   source: string
@@ -100,13 +100,8 @@ export async function createPlaygroundRuntime(
       ? resolveAssets(canvasService.assetRequests)
       : undefined
     if (compiled) {
-      const previousIds = resolvedAssets?.elementFileIds
-      const previousSizes = imageDimensions
-      imageDimensions = Object.fromEntries(
-        Object.entries(assets?.elementFileIds ?? {}).flatMap(([id, fileId]) => {
-          const size = previousSizes[id]
-          return size && previousIds?.[id] === fileId ? [[id, size]] : []
-        }),
+      imageDimensions = retainImageDimensions(
+        resolvedAssets, assets, imageDimensions,
       )
       resolvedAssets = assets
     }

@@ -9,7 +9,9 @@ import MindPptParserService, {
 } from 'dsh-mindppt-code-parser'
 import { createCanvasAssetResolver, type PlaygroundAssetContext, type ResolvedAssets } from './assets.ts'
 import { compileElements, decodeImageDimensions, retainImageDimensions, type CompiledElements } from './image-projection.ts'
+
 export type { CompiledElements } from './image-projection.ts'
+
 export interface PlaygroundSnapshot {
   source: string
   diagnostics: readonly MindPptDiagnostic[]
@@ -85,7 +87,7 @@ export async function createPlaygroundRuntime(
   }
   const publish = (next: PlaygroundSnapshot) => {
     snapshot = next
-    for (const listener of listeners) listener()
+    listeners.forEach(listener => listener())
   }
   const publishProjection = () => {
     publish({
@@ -160,11 +162,7 @@ export async function createPlaygroundRuntime(
     publishProjection()
   }
   const applyCameraAction = (action: () => boolean) => {
-    if (!action()) return
-    publish({
-      ...snapshot,
-      camera: cameraService.view,
-    })
+    if (action()) publish({ ...snapshot, camera: cameraService.view })
   }
   setSource(initialSource)
   return {

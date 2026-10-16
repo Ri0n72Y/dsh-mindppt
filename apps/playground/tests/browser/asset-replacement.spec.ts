@@ -34,9 +34,6 @@ async function countColorPixels(
 
 test('same-path asset replacement changes binary identity and visible bytes', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
-  page.on('console', msg => {
-    if (msg.text().startsWith('P3A_')) console.log(msg.text())
-  })
   await page.goto('/')
 
   await page.evaluate(async () => {
@@ -96,30 +93,10 @@ slide asset {
 
   const canvas = page.locator('#asset-replacement-harness canvas.static')
   await expect(canvas).toBeVisible()
-  try {
-    await expect.poll(
-      () => countColorPixels(canvas, [220, 38, 38]),
-      { timeout: 5_000 },
-    ).toBeGreaterThan(100)
-  } catch (error) {
-    const evidence = await page.evaluate(() => {
-      const state = (window as any).__assetReplacement
-      const api = state.harness.getApi()
-      const snapshot = state.harness.runtime.getSnapshot()
-      const el = snapshot.elements.find((element: any) => element.type === 'image')
-      const canvas = document.querySelector('#asset-replacement-harness canvas.static') as HTMLCanvasElement
-      return {
-        image: el && { id: el.id, x: el.x, y: el.y, width: el.width, height: el.height, fileId: el.fileId, status: el.status },
-        files: Object.keys(snapshot.files),
-        mounted: Object.keys(state.harness.getMountedFiles()),
-        camera: api && { scrollX: api.getAppState().scrollX, scrollY: api.getAppState().scrollY, zoom: api.getAppState().zoom },
-        canvas: canvas && { width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() },
-        sceneImage: api?.getSceneElements().find((element: any) => element.type === 'image'),
-      }
-    })
-    console.log('P3A_ASSET_DIAGNOSTIC', JSON.stringify(evidence))
-    throw error
-  }
+  await expect.poll(
+    () => countColorPixels(canvas, [220, 38, 38]),
+    { timeout: 5_000 },
+  ).toBeGreaterThan(100)
 
   const first = await page.evaluate(() => {
     const state = (window as any).__assetReplacement

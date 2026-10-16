@@ -34,9 +34,6 @@ async function paintedBounds(
 
 test('portrait SVG and landscape PNG paint centered contain; same-path orientation changes', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
-  page.on('console', msg => {
-    if (msg.text().startsWith('P3A_')) console.log(msg.text())
-  })
   await page.goto('/')
   await page.evaluate(async () => {
     const { mountAssetBrowserHarness } = await import('/src/asset-browser-harness.tsx')
@@ -84,6 +81,10 @@ slide photos {
   })
   const canvas = page.locator('#contain-harness canvas.static')
   await expect(canvas).toBeVisible()
+  // The host fits slide surfaces after Excalidraw finishes loading.
+  await expect.poll(async () => page.evaluate(() =>
+    (window as any).__contain.harness.getApi()?.getAppState().zoom.value,
+  )).toBeLessThan(1)
   await expect.poll(async () => page.evaluate(() => {
     const { harness } = (window as any).__contain
     return harness.runtime.getSnapshot().elements.filter(
@@ -99,22 +100,6 @@ slide photos {
     .toBeGreaterThan(100)
   const portrait = (await paintedBounds(canvas, [220, 38, 38]))!
   const landscape = (await paintedBounds(canvas, [37, 99, 235]))!
-  console.log('P3A_PAINT_DIAGNOSTIC', JSON.stringify({
-    portrait, landscape,
-    viewport: await page.evaluate(() => {
-      const api = (window as any).__contain.harness.getApi()
-      const canvas = document.querySelector('#contain-harness canvas.static') as HTMLCanvasElement
-      const snapshot = (window as any).__contain.harness.runtime.getSnapshot()
-      const app = api?.getAppState()
-      return {
-        camera: app && { scrollX: app.scrollX, scrollY: app.scrollY, zoom: app.zoom },
-        canvas: canvas && { width: canvas.width, height: canvas.height, rect: canvas.getBoundingClientRect().toJSON() },
-        images: snapshot.elements.filter((element: any) => element.type === 'image')
-          .map((e: any) => ({ id: e.id, x: e.x, y: e.y, width: e.width, height: e.height, status: e.status, fileId: e.fileId })),
-        mounted: Object.keys((window as any).__contain.harness.getMountedFiles()),
-      }
-    }),
-  }))
   expect(portrait.width / portrait.height).toBeCloseTo(80 / 240, 1)
   expect(landscape.width / landscape.height).toBeCloseTo(320 / 100, 1)
 

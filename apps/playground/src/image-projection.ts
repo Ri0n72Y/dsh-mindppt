@@ -11,36 +11,51 @@ export function compileElements(
   assets: ResolvedAssets | undefined,
   dimensions: Readonly<Record<string, ImageDimensions>>,
 ): CompiledElements {
-  const scene = containImages(canvasService.scene, dimensions).map((element) => {
-    if (element.type !== 'image' || !element.id) return element
+  const scene = containImages(canvasService.scene, dimensions).flatMap(element => {
+    if (element.type !== 'image' || !element.id) return [element]
     const fileId = assets?.elementFileIds[element.id]
-    return fileId ? { ...element, fileId } : element
+    const size = dimensions[element.id]
+    // Unknown/failed images must never paint stretched in their semantic slot.
+    return fileId && size && validSize(size.width, size.height)
+      ? [{ ...element, fileId }] : []
   })
   return convertToExcalidrawElements(scene, { regenerateIds: false })
 }
 
+export type ImageDecodeResult =
+  | { size: ImageDimensions; error?: never }
+  | { error: string; size?: never }
+
 export async function decodeImageDimensions(
   assets: ResolvedAssets,
-): Promise<Readonly<Record<string, ImageDimensions>>> {
-  const dimensions: Record<string, ImageDimensions> = {}
-  const decoded = new Map<string, ImageDimensions>()
-  for (const [elementId, fileId] of Object.entries(assets.elementFileIds)) {
-    let size = decoded.get(fileId)
-    if (!size) {
-      const data = assets.files[fileId]
-      if (!data) continue
-      const image = new Image()
-      image.src = data.dataURL
-      await image.decode()
-      if (!validSize(image.naturalWidth, image.naturalHeight)) {
-        throw new Error('Invalid intrinsic image dimensions: ' + fileId)
-      }
-      size = { width: image.naturalWidth, height: image.naturalHeight }
-      decoded.set(fileId, size)
+  onResult: (elementId: string, fileId: string, result: ImageDecodeResult) => void,
+): Promise<void> {
+  const pending = new Map<string, Promise<ImageDimensions>>()
+  await Promise.all(Object.entries(assets.elementFileIds).map(async ([id, fileId]) => {
+    const data = assets.files[fileId]
+    if (!data) return
+    let decoded = pending.get(fileId)
+    if (!decoded) {
+      decoded = decodeImage(data.dataURL, fileId)
+      pending.set(fileId, decoded)
     }
-    dimensions[elementId] = size
+    try {
+      const size = await decoded
+      onResult(id, fileId, { size })
+    } catch (error) {
+      onResult(id, fileId, { error: String(error) })
+    }
+  }))
+}
+
+async function decodeImage(dataURL: string, fileId: string): Promise<ImageDimensions> {
+  const image = new Image()
+  image.src = dataURL
+  await image.decode()
+  if (!validSize(image.naturalWidth, image.naturalHeight)) {
+    throw new Error('Invalid intrinsic image dimensions: ' + fileId)
   }
-  return dimensions
+  return { width: image.naturalWidth, height: image.naturalHeight }
 }
 
 export function retainImageDimensions(

@@ -1,40 +1,17 @@
 import { Context } from '@deepseek-ai/cordis'
-import type { BinaryFiles } from '@excalidraw/excalidraw/types'
-import MindPptCameraService, { type CameraView } from 'dsh-mindppt-camera'
+import MindPptCameraService from 'dsh-mindppt-camera'
 import MindPptCanvasService, { type ImageDimensions } from 'dsh-mindppt-canvas-excalidraw'
 import MindPptEditorService from 'dsh-mindppt-code-editor'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
-import MindPptParserService, {
-  type MindPptDiagnostic,
-} from 'dsh-mindppt-code-parser'
+import MindPptParserService from 'dsh-mindppt-code-parser'
 import { createCanvasAssetResolver, type PlaygroundAssetContext, type ResolvedAssets } from './assets.ts'
 import { compileElements, decodeImageDimensions, retainImageDimensions, type CompiledElements } from './image-projection.ts'
+import type { PlaygroundRuntime, PlaygroundSnapshot } from './runtime-types.ts'
 
 export type { CompiledElements } from './image-projection.ts'
 
-export interface PlaygroundSnapshot {
-  source: string
-  diagnostics: readonly MindPptDiagnostic[]
-  elements: CompiledElements
-  files: BinaryFiles
-  camera: CameraView
-  extensionRendererTypes: readonly string[]
-}
-export interface PlaygroundRuntime {
-  getSnapshot: () => PlaygroundSnapshot
-  subscribe: (listener: () => void) => () => void
-  setSource: (source: string) => void
-  refreshElements: () => void
-  enableLatex: () => Promise<void>
-  disableLatex: () => Promise<void>
-  focusSlide: (slideId: string) => void
-  focusParent: () => void
-  focusChild: (slideId: string) => void
-  selectPath: (pathId: string) => void
-  pathPrevious: () => void
-  pathNext: () => void
-  followSoftLink: (linkId: string) => void
-}
+export type { PlaygroundSnapshot, PlaygroundRuntime } from './runtime-types.ts'
+
 export async function createPlaygroundRuntime(
   initialSource: string,
   assetContext?: PlaygroundAssetContext,
@@ -120,22 +97,21 @@ export async function createPlaygroundRuntime(
     })
     if (compiled && assets && typeof Image !== 'undefined'
       && Object.keys(imageDimensions).length !== Object.keys(assets.elementFileIds).length) {
-      void decodeImageDimensions(assets).then(dimensions => {
+      void decodeImageDimensions(assets, (id, fileId, result) => {
         if (revision !== sourceRevision) return
-        for (const [elementId, size] of Object.entries(dimensions)) {
-          const fileId = assets.elementFileIds[elementId]
-          if (fileId) decodedSizes.set(fileId, size)
+        if (result.size) {
+          decodedSizes.set(fileId, result.size)
+          imageDimensions = { ...imageDimensions, [id]: result.size }
+          publishProjection()
+        } else {
+          const request = canvasService.assetRequests.find(r => r.elementIds.includes(id))
+          publish({ ...snapshot, diagnostics: [...snapshot.diagnostics, {
+            severity: 'error',
+            message: 'Local image could not be decoded: '
+              + (request?.source ?? fileId) + ': ' + result.error,
+            sourceRange: request?.sourceRange,
+          }] })
         }
-        imageDimensions = dimensions
-        publish({ ...snapshot,
-          elements: compileElements(canvasService, assets, dimensions),
-        })
-      }).catch(error => {
-        if (revision !== sourceRevision) return
-        publish({ ...snapshot, diagnostics: [...snapshot.diagnostics, {
-          severity: 'error',
-          message: 'Local image could not be decoded: ' + String(error),
-        }] })
       })
     }
   }

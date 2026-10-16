@@ -114,7 +114,7 @@ slide asset {
   })
   expect(unchanged).toEqual(first)
 
-  const replaced = await page.evaluate(() => {
+  const replacementId = await page.evaluate(() => {
     const state = (window as any).__assetReplacement
     state.files['examples/assets/replacement.svg'] = {
       mimeType: 'image/svg+xml',
@@ -122,17 +122,23 @@ slide asset {
     }
     state.harness.runtime.setSource(state.source)
     const snapshot = state.harness.runtime.getSnapshot()
+    // BinaryFile identity changes synchronously; painting waits for decode.
+    return Object.keys(snapshot.files)[0]
+  })
+  expect(replacementId).not.toBe(first.fileId)
+  await expect.poll(() => page.evaluate(() => {
+    const snapshot = (window as any).__assetReplacement.harness.runtime.getSnapshot()
     const image = snapshot.elements.find((element: any) => element.type === 'image')
-    return {
+    return image && {
       id: image.id,
       fileId: image.fileId,
       dataURL: snapshot.files[image.fileId]?.dataURL,
     }
+  })).toEqual({
+    id: first.id,
+    fileId: replacementId,
+    dataURL: expect.stringContaining('%2316a34a'),
   })
-
-  expect(replaced.id).toBe(first.id)
-  expect(replaced.fileId).not.toBe(first.fileId)
-  expect(replaced.dataURL).toContain('%2316a34a')
   await expect.poll(
     () => countColorPixels(canvas, [22, 163, 74]),
     { timeout: 5_000 },

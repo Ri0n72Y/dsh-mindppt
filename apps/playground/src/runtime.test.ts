@@ -37,7 +37,9 @@ describe('playground snapshot asset consistency', () => {
       files,
     })
     const first = runtime.getSnapshot()
-    const firstImage = first.elements.find((element) => element.type === 'image')
+    const firstFileId = Object.keys(first.files)[0]
+    expect(firstFileId).toBeDefined()
+    expect(first.elements.some(element => element.type === 'image')).toBe(false)
 
     files[PATH] = {
       mimeType: 'image/svg+xml',
@@ -46,21 +48,10 @@ describe('playground snapshot asset consistency', () => {
     runtime.setSource(initialSource)
 
     const replaced = runtime.getSnapshot()
-    const replacedImage = replaced.elements.find(
-      (element) => element.type === 'image',
-    )
-    expect(firstImage?.type).toBe('image')
-    expect(replacedImage?.type).toBe('image')
-    if (firstImage?.type !== 'image' || replacedImage?.type !== 'image') return
-
-    expect(replacedImage.id).toBe(firstImage.id)
-    expect(replacedImage.fileId).not.toBe(firstImage.fileId)
-    expect(replacedImage.fileId).not.toBeNull()
-    if (!replacedImage.fileId) return
-
-    expect(replaced.files[replacedImage.fileId]?.dataURL).toBe(
-      'data:image/svg+xml,version-2',
-    )
+    const replacedFileId = Object.keys(replaced.files)[0]!
+    expect(replacedFileId).not.toBe(firstFileId)
+    expect(replaced.elements.some(element => element.type === 'image')).toBe(false)
+    expect(replaced.files[replacedFileId]?.dataURL).toBe('data:image/svg+xml,version-2')
   })
 
   it('discards older decoded image sizes after same-path source revision changes', async () => {
@@ -99,8 +90,8 @@ describe('playground snapshot asset consistency', () => {
       }
       runtime.setSource(currentSource)
       expect(pending).toHaveLength(2)
-      const nextFileId = runtime.getSnapshot().elements
-        .find(e => e.type === 'image')!.fileId
+      const nextFileId = Object.keys(runtime.getSnapshot().files)[0]!
+      expect(runtime.getSnapshot().elements.some(e => e.type === 'image')).toBe(false)
 
       pending[1]!.complete()
       await vi.waitFor(() => {

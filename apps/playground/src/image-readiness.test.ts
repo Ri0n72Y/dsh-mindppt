@@ -70,6 +70,8 @@ describe('P3a mixed-asset decode readiness (Reviewer M1)', () => {
     const initial = runtime.getSnapshot()
     expect(Object.keys(initial.files)).toHaveLength(2)
     expect(initial.elements.filter(e => e.type === 'image')).toHaveLength(0)
+    expect(initial.elements.find(e => e.type === 'frame')?.children)
+      .not.toContain('slide:mixed/left/image:0')
     expect(pending).toHaveLength(2)
 
     pending.find(entry => entry.src.includes('portrait'))!.succeed(100, 200)

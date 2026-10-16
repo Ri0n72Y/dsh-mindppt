@@ -11,15 +11,24 @@ export function compileElements(
   assets: ResolvedAssets | undefined,
   dimensions: Readonly<Record<string, ImageDimensions>>,
 ): CompiledElements {
+  const pending = new Set<string>()
   const scene = containImages(canvasService.scene, dimensions).flatMap(element => {
     if (element.type !== 'image' || !element.id) return [element]
     const fileId = assets?.elementFileIds[element.id]
     const size = dimensions[element.id]
-    // Unknown/failed images must never paint stretched in their semantic slot.
-    return fileId && size && validSize(size.width, size.height)
-      ? [{ ...element, fileId }] : []
+    if (fileId && size && validSize(size.width, size.height)) {
+      return [{ ...element, fileId }]
+    }
+    // Omit unready paint, and remove its temporary frame reference below.
+    pending.add(element.id)
+    return []
   })
-  return convertToExcalidrawElements(scene, { regenerateIds: false })
+  const mountedScene = scene.map(element =>
+    element.type === 'frame' && element.children
+      ? { ...element, children: element.children.filter(id => !pending.has(id)) }
+      : element,
+  )
+  return convertToExcalidrawElements(mountedScene, { regenerateIds: false })
 }
 
 export type ImageDecodeResult =

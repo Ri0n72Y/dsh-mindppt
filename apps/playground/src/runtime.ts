@@ -5,7 +5,7 @@ import MindPptEditorService from 'dsh-mindppt-code-editor'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
 import MindPptParserService from 'dsh-mindppt-code-parser'
 import { createCanvasAssetResolver, type PlaygroundAssetContext, type ResolvedAssets } from './assets.ts'
-import { compileElements, decodeImageDimensions, retainImageDimensions, type CompiledElements } from './image-projection.ts'
+import { compileElements, decodeImageDimensions, retainImageDimensions } from './image-projection.ts'
 import type { PlaygroundRuntime, PlaygroundSnapshot } from './runtime-types.ts'
 
 export type { CompiledElements } from './image-projection.ts'
@@ -109,7 +109,7 @@ export async function createPlaygroundRuntime(
             severity: 'error',
             message: 'Local image could not be decoded: '
               + (request?.source ?? fileId) + ': ' + result.error,
-            sourceRange: request?.sourceRange,
+            ...(request?.sourceRange ? { sourceRange: request.sourceRange } : {}),
           }] })
         }
       })

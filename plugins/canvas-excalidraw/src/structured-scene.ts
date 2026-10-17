@@ -59,7 +59,8 @@ export function renderBarChart(
       x: slide.x + bar.x,
       y: slide.y + bar.y,
       width: bar.width,
-      height: bar.height,
+      // Excalidraw 0.18 converts a zero-height rectangle to DEFAULT_DIMENSION.
+      height: Math.max(1, bar.height),
       backgroundColor: neutral.accent,
       strokeColor: neutral.accentBorder,
       fillStyle: 'solid',

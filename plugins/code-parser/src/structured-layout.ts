@@ -61,14 +61,12 @@ export function layoutBarChart(
   const values = block.values.map((entry) => entry.value)
   const domainMin = Math.min(0, ...values)
   const domainMax = Math.max(0, ...values)
-  const domainScale = Math.max(
-    Math.abs(domainMin),
-    Math.abs(domainMax),
-  ) || 1
-  const normalizedMin = domainMin / domainScale
-  const normalizedMax = domainMax / domainScale
-  const domainSpan = normalizedMax - normalizedMin || 1
-  const baselineY = plotY + (normalizedMax / domainSpan) * plotHeight
+  // Keep signed value labels outside bars, including the negative extreme.
+  const valueGutter = 26
+  const usableHeight = plotHeight - 2 * valueGutter
+  const domainSpan = domainMax - domainMin || 1
+  const baselineY = plotY + valueGutter
+    + domainMax / domainSpan * usableHeight
   const categoryWidth = plotWidth / block.labels.length
   const barWidth = categoryWidth * 0.56
   const labelY = plotY + plotHeight + 12
@@ -76,14 +74,12 @@ export function layoutBarChart(
 
   const bars = block.labels.map((label, index) => {
     const value = block.values[index]!
-    const valueHeight = Math.abs(
-      (value.value / domainScale) / domainSpan,
-    ) * plotHeight
+    const valueHeight = Math.abs(value.value) / domainSpan * usableHeight
     const x = plotX + index * categoryWidth + (categoryWidth - barWidth) / 2
     const y = value.value >= 0 ? baselineY - valueHeight : baselineY
     const valueLabelY = value.value >= 0
-      ? Math.max(plotY, y - 26)
-      : Math.min(plotY + plotHeight - 22, y + valueHeight + 4)
+      ? Math.max(plotY, y - 24)
+      : Math.min(plotY + plotHeight - 24, y + valueHeight + 2)
 
     return {
       id: placement.id + '/bar:' + index,

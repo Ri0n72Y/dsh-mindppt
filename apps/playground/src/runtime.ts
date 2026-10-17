@@ -1,44 +1,17 @@
 import { Context } from '@deepseek-ai/cordis'
-import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
-import type { BinaryFiles } from '@excalidraw/excalidraw/types'
-import MindPptCameraService, {
-  type CameraView,
-} from 'dsh-mindppt-camera'
-import MindPptCanvasService from 'dsh-mindppt-canvas-excalidraw'
+import MindPptCameraService from 'dsh-mindppt-camera'
+import MindPptCanvasService, { type ImageDimensions } from 'dsh-mindppt-canvas-excalidraw'
 import MindPptEditorService from 'dsh-mindppt-code-editor'
 import MindPptLatexPlugin from 'dsh-mindppt-latex'
-import MindPptParserService, {
-  type MindPptDiagnostic,
-} from 'dsh-mindppt-code-parser'
-import {
-  createCanvasAssetResolver,
-  type PlaygroundAssetContext,
-  type ResolvedAssets,
-} from './assets.ts'
-export type CompiledElements = ReturnType<typeof convertToExcalidrawElements>
-export interface PlaygroundSnapshot {
-  source: string
-  diagnostics: readonly MindPptDiagnostic[]
-  elements: CompiledElements
-  files: BinaryFiles
-  camera: CameraView
-  extensionRendererTypes: readonly string[]
-}
-export interface PlaygroundRuntime {
-  getSnapshot: () => PlaygroundSnapshot
-  subscribe: (listener: () => void) => () => void
-  setSource: (source: string) => void
-  refreshElements: () => void
-  enableLatex: () => Promise<void>
-  disableLatex: () => Promise<void>
-  focusSlide: (slideId: string) => void
-  focusParent: () => void
-  focusChild: (slideId: string) => void
-  selectPath: (pathId: string) => void
-  pathPrevious: () => void
-  pathNext: () => void
-  followSoftLink: (linkId: string) => void
-}
+import MindPptParserService from 'dsh-mindppt-code-parser'
+import { createCanvasAssetResolver, type PlaygroundAssetContext, type ResolvedAssets } from './assets.ts'
+import { compileElements, decodeImageDimensions, retainImageDimensions } from './image-projection.ts'
+import type { PlaygroundRuntime, PlaygroundSnapshot } from './runtime-types.ts'
+
+export type { CompiledElements } from './image-projection.ts'
+
+export type { PlaygroundSnapshot, PlaygroundRuntime } from './runtime-types.ts'
+
 export async function createPlaygroundRuntime(
   initialSource: string,
   assetContext?: PlaygroundAssetContext,
@@ -77,6 +50,9 @@ export async function createPlaygroundRuntime(
   const listeners = new Set<() => void>()
   const resolveAssets = createCanvasAssetResolver(assetContext)
   let resolvedAssets: ResolvedAssets | undefined
+  let imageDimensions: Readonly<Record<string, ImageDimensions>> = {}
+  const decodedSizes = new Map<string, ImageDimensions>()
+  let sourceRevision = 0
   let disposeLatex: (() => Promise<void>) | undefined
   let snapshot: PlaygroundSnapshot = {
     source: '',
@@ -88,39 +64,62 @@ export async function createPlaygroundRuntime(
   }
   const publish = (next: PlaygroundSnapshot) => {
     snapshot = next
-    for (const listener of listeners) listener()
+    listeners.forEach(listener => listener())
   }
   const publishProjection = () => {
     publish({
       ...snapshot,
-      elements: compileElements(canvasService, resolvedAssets),
+      elements: compileElements(canvasService, resolvedAssets, imageDimensions),
       extensionRendererTypes: canvasService.extensionRendererTypes,
     })
   }
   const setSource = (source: string) => {
+    const revision = ++sourceRevision
     const compiled = editorService.setSource(source)
     const assets = compiled
       ? resolveAssets(canvasService.assetRequests)
       : undefined
-    if (compiled) resolvedAssets = assets
+    if (compiled) {
+      imageDimensions = retainImageDimensions(assets, decodedSizes)
+      resolvedAssets = assets
+    }
     publish({
       source: editorService.source,
       diagnostics: compiled
         ? [...parserService.diagnostics, ...(assets?.diagnostics ?? [])]
         : [...parserService.diagnostics],
       elements: compiled
-        ? compileElements(canvasService, assets)
+        ? compileElements(canvasService, assets, imageDimensions)
         : snapshot.elements,
       files: compiled ? (assets?.files ?? {}) : snapshot.files,
       camera: cameraService.view,
       extensionRendererTypes: canvasService.extensionRendererTypes,
     })
+    if (compiled && assets && typeof Image !== 'undefined'
+      && Object.keys(imageDimensions).length !== Object.keys(assets.elementFileIds).length) {
+      void decodeImageDimensions(assets, (id, fileId, result) => {
+        if (revision !== sourceRevision) return
+        if (result.size) {
+          decodedSizes.set(fileId, result.size)
+          imageDimensions = { ...imageDimensions, [id]: result.size }
+          publishProjection()
+        } else {
+          const request = canvasService.assetRequests.find(r => r.elementIds.includes(id))
+          publish({ ...snapshot, diagnostics: [...snapshot.diagnostics, {
+            severity: 'error',
+            message: 'Local image could not be decoded: '
+              + (request?.source ?? fileId) + ': ' + result.error,
+            ...(request?.sourceRange ? { sourceRange: request.sourceRange } : {}),
+          }] })
+        }
+      })
+    }
   }
   const refreshElements = () => {
     if (!snapshot.elements.length) return
     publish({
       ...snapshot,
-      elements: compileElements(canvasService, resolvedAssets),
+      elements: compileElements(canvasService, resolvedAssets, imageDimensions),
     })
   }
   const enableLatex = async () => {
@@ -139,11 +138,7 @@ export async function createPlaygroundRuntime(
     publishProjection()
   }
   const applyCameraAction = (action: () => boolean) => {
-    if (!action()) return
-    publish({
-      ...snapshot,
-      camera: cameraService.view,
-    })
+    if (action()) publish({ ...snapshot, camera: cameraService.view })
   }
   setSource(initialSource)
   return {
@@ -178,15 +173,4 @@ export async function createPlaygroundRuntime(
       applyCameraAction(() => cameraService.followSoftLink(linkId))
     },
   }
-}
-function compileElements(
-  canvasService: MindPptCanvasService,
-  assets: ResolvedAssets | undefined,
-): CompiledElements {
-  const scene = canvasService.scene.map((element) => {
-    if (element.type !== 'image' || !element.id) return element
-    const fileId = assets?.elementFileIds[element.id]
-    return fileId ? { ...element, fileId } : element
-  })
-  return convertToExcalidrawElements(scene, { regenerateIds: false })
 }

@@ -36,8 +36,9 @@ export function MindPptCanvas({
 
   useEffect(() => {
     if (!api) return
-    replaceMountedFiles(api, files)
+    // Mount updated element references before Excalidraw scans image files.
     api.updateScene({ elements })
+    replaceMountedFiles(api, files)
     transition.current?.reconcileScene()
   }, [api, elements, files])
 
@@ -70,8 +71,9 @@ export function MindPptPanorama({
 
   useEffect(() => {
     if (!api) return
-    replaceMountedFiles(api, files)
+    // Mount updated element references before Excalidraw scans image files.
     api.updateScene({ elements })
+    replaceMountedFiles(api, files)
     fitWholeScene(api, elements)
   }, [api, elements, files])
 

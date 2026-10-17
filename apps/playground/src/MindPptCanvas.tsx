@@ -29,6 +29,8 @@ export function MindPptCanvas({
 }: MindPptCanvasProps) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
   const transitionRef = useRef<CameraTransitionController | null>(null)
+  const needsInitialFit = useRef(true)
+  const apiRef = useRef<ExcalidrawImperativeAPI | null>(null)
 
   useEffect(() => {
     if (!api) return
@@ -74,13 +76,26 @@ export function MindPptCanvas({
     <section className="canvas-panel">
       <Excalidraw
         excalidrawAPI={(nextApi) => {
+          apiRef.current = nextApi
           setApi(nextApi)
           onApi?.(nextApi)
+        }}
+        onChange={() => {
+          if (!needsInitialFit.current) return
+          const current = apiRef.current
+          if (!current || current.getAppState().isLoading) return
+          const surfaces = current.getSceneElements().filter(
+            element => element.id.startsWith('slide:') && element.id.endsWith('/surface'),
+          )
+          if (!surfaces.length) return
+          needsInitialFit.current = false
+          current.scrollToContent(surfaces, {
+            fitToViewport: true, viewportZoomFactor: 0.85, animate: false,
+          })
         }}
         initialData={{
           elements,
           files,
-          scrollToContent: true,
           appState: {
             zenModeEnabled: true,
             frameRendering: {

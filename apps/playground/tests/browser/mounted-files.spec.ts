@@ -75,11 +75,14 @@ slide asset {
       dataURL: state.svg('#16a34a'),
     }
     state.harness.runtime.setSource(state.source('a'))
-    const image = state.harness.runtime.getSnapshot().elements
-      .find((element: any) => element.type === 'image')
-    return image.fileId
+    // File revision changes synchronously; the new image paints after decode.
+    return Object.keys(state.harness.runtime.getSnapshot().files)[0]
   })
   expect(replacedId).not.toBe(firstId)
+  await expect.poll(() => page.evaluate(() => {
+    const snapshot = (window as any).__m6Files.harness.runtime.getSnapshot()
+    return snapshot.elements.find((element: any) => element.type === 'image')?.fileId
+  })).toBe(replacedId)
   await expect.poll(() => page.evaluate((expected) => {
     const state = (window as any).__m6Files
     return Object.keys(state.harness.getMountedFiles()).sort()
@@ -89,10 +92,12 @@ slide asset {
   const bId = await page.evaluate(() => {
     const state = (window as any).__m6Files
     state.harness.runtime.setSource(state.source('b'))
-    const image = state.harness.runtime.getSnapshot().elements
-      .find((element: any) => element.type === 'image')
-    return image.fileId
+    return Object.keys(state.harness.runtime.getSnapshot().files)[0]
   })
+  await expect.poll(() => page.evaluate(() => {
+    const snapshot = (window as any).__m6Files.harness.runtime.getSnapshot()
+    return snapshot.elements.find((element: any) => element.type === 'image')?.fileId
+  })).toBe(bId)
   await expect.poll(() => page.evaluate((expected) => {
     const state = (window as any).__m6Files
     return Object.keys(state.harness.getMountedFiles()).sort()

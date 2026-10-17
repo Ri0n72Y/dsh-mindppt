@@ -12,6 +12,8 @@ import {
 } from './scene.ts'
 
 export type { CanvasAssetRequest, ExcalidrawScene }
+export { containImages, validSize } from './image-contain.ts'
+export type { ImageDimensions } from './image-contain.ts'
 export {
   CAMERA_TARGET_ZOOM_FACTOR,
   CAMERA_TRAVEL_DURATION,

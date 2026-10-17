@@ -61,14 +61,16 @@ export function layoutBarChart(
   const values = block.values.map((entry) => entry.value)
   const domainMin = Math.min(0, ...values)
   const domainMax = Math.max(0, ...values)
-  const domainScale = Math.max(
-    Math.abs(domainMin),
-    Math.abs(domainMax),
-  ) || 1
-  const normalizedMin = domainMin / domainScale
+  // Normalize first: raw (max - min) overflows for opposite-sign 1e308 values.
+  const domainScale = Math.max(Math.abs(domainMin), Math.abs(domainMax)) || 1
   const normalizedMax = domainMax / domainScale
+  const normalizedMin = domainMin / domainScale
   const domainSpan = normalizedMax - normalizedMin || 1
-  const baselineY = plotY + (normalizedMax / domainSpan) * plotHeight
+  // Keep signed value labels outside bars, including the negative extreme.
+  const valueGutter = 32
+  const usableHeight = plotHeight - 2 * valueGutter
+  const baselineY = plotY + valueGutter
+    + normalizedMax / domainSpan * usableHeight
   const categoryWidth = plotWidth / block.labels.length
   const barWidth = categoryWidth * 0.56
   const labelY = plotY + plotHeight + 12
@@ -76,14 +78,13 @@ export function layoutBarChart(
 
   const bars = block.labels.map((label, index) => {
     const value = block.values[index]!
-    const valueHeight = Math.abs(
-      (value.value / domainScale) / domainSpan,
-    ) * plotHeight
+    const valueHeight = Math.abs((value.value / domainScale) / domainSpan)
+      * usableHeight
     const x = plotX + index * categoryWidth + (categoryWidth - barWidth) / 2
     const y = value.value >= 0 ? baselineY - valueHeight : baselineY
     const valueLabelY = value.value >= 0
-      ? Math.max(plotY, y - 26)
-      : Math.min(plotY + plotHeight - 22, y + valueHeight + 4)
+      ? Math.max(plotY, y - 30)
+      : Math.min(plotY + plotHeight - 30, y + valueHeight + 2)
 
     return {
       id: placement.id + '/bar:' + index,
@@ -100,7 +101,7 @@ export function layoutBarChart(
       valueLabelX: plotX + index * categoryWidth,
       valueLabelY,
       valueLabelWidth: categoryWidth,
-      valueLabelHeight: 24,
+      valueLabelHeight: 30,
       labelSourceRange: label.range,
       valueSourceRange: value.range,
     }

@@ -1,6 +1,7 @@
 import { MindPptCompileError } from './errors.ts'
 import { layoutSlideContent } from './content-layout.ts'
 import { contentOverflowWarnings } from './layout-overflow.ts'
+import { dataReadabilityWarnings } from './structured-warnings.ts'
 import {
   resolvePresentationPaths,
   resolveSoftLinks,
@@ -91,6 +92,7 @@ export function compileSource(
   })
 
   diagnostics.push(...contentOverflowWarnings(slides))
+  diagnostics.push(...dataReadabilityWarnings(slides))
 
   const structure: MindPptStructure = { version: 0, slides }
   if (tree) structure.tree = tree

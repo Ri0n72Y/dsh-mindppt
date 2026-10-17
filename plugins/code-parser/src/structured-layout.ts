@@ -67,7 +67,7 @@ export function layoutBarChart(
   const normalizedMin = domainMin / domainScale
   const domainSpan = normalizedMax - normalizedMin || 1
   // Keep signed value labels outside bars, including the negative extreme.
-  const valueGutter = 26
+  const valueGutter = 32
   const usableHeight = plotHeight - 2 * valueGutter
   const baselineY = plotY + valueGutter
     + normalizedMax / domainSpan * usableHeight
@@ -83,8 +83,8 @@ export function layoutBarChart(
     const x = plotX + index * categoryWidth + (categoryWidth - barWidth) / 2
     const y = value.value >= 0 ? baselineY - valueHeight : baselineY
     const valueLabelY = value.value >= 0
-      ? Math.max(plotY, y - 24)
-      : Math.min(plotY + plotHeight - 24, y + valueHeight + 2)
+      ? Math.max(plotY, y - 30)
+      : Math.min(plotY + plotHeight - 30, y + valueHeight + 2)
 
     return {
       id: placement.id + '/bar:' + index,
@@ -101,7 +101,7 @@ export function layoutBarChart(
       valueLabelX: plotX + index * categoryWidth,
       valueLabelY,
       valueLabelWidth: categoryWidth,
-      valueLabelHeight: 24,
+      valueLabelHeight: 30,
       labelSourceRange: label.range,
       valueSourceRange: value.range,
     }

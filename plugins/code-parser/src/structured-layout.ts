@@ -61,12 +61,16 @@ export function layoutBarChart(
   const values = block.values.map((entry) => entry.value)
   const domainMin = Math.min(0, ...values)
   const domainMax = Math.max(0, ...values)
+  // Normalize first: raw (max - min) overflows for opposite-sign 1e308 values.
+  const domainScale = Math.max(Math.abs(domainMin), Math.abs(domainMax)) || 1
+  const normalizedMax = domainMax / domainScale
+  const normalizedMin = domainMin / domainScale
+  const domainSpan = normalizedMax - normalizedMin || 1
   // Keep signed value labels outside bars, including the negative extreme.
   const valueGutter = 26
   const usableHeight = plotHeight - 2 * valueGutter
-  const domainSpan = domainMax - domainMin || 1
   const baselineY = plotY + valueGutter
-    + domainMax / domainSpan * usableHeight
+    + normalizedMax / domainSpan * usableHeight
   const categoryWidth = plotWidth / block.labels.length
   const barWidth = categoryWidth * 0.56
   const labelY = plotY + plotHeight + 12
@@ -74,7 +78,8 @@ export function layoutBarChart(
 
   const bars = block.labels.map((label, index) => {
     const value = block.values[index]!
-    const valueHeight = Math.abs(value.value) / domainSpan * usableHeight
+    const valueHeight = Math.abs((value.value / domainScale) / domainSpan)
+      * usableHeight
     const x = plotX + index * categoryWidth + (categoryWidth - barWidth) / 2
     const y = value.value >= 0 ? baselineY - valueHeight : baselineY
     const valueLabelY = value.value >= 0

@@ -57,7 +57,9 @@ export function renderBarChart(
       type: 'rectangle',
       id: bar.id + '/box',
       x: slide.x + bar.x,
-      y: slide.y + bar.y,
+      // The 1px floor must stay on the positive side of the zero baseline.
+      y: slide.y + (bar.value > 0 && bar.height < 1
+        ? chart.baselineY - 1 : bar.y),
       width: bar.width,
       // Excalidraw 0.18 converts a zero-height rectangle to DEFAULT_DIMENSION.
       height: Math.max(1, bar.height),

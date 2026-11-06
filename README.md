@@ -33,7 +33,7 @@ Current standalone runtime:
 - `canvas-excalidraw` — subscribes to compiled structures and lowers them to Excalidraw elements.
 - `camera` — controls presentation navigation and viewport transitions.
 
-M10 adds one optional DSH integration package, `dsh-mindppt-plugin` in `plugins/dsh-mindppt`. Its minimum supported DSH runtime is `>=0.2.0-rc.2`; development dependencies remain pinned to `0.2.0-rc.2` as the deterministic compatibility baseline. DSH `0.2.2-rc.1` has been reviewed for source/API compatibility, but actual installation, Host/Client activation and Windows DSH/Agent runtime acceptance are not yet verified. DSH 0.2.2 uses Cordis Core 4.1.0 and requires Node.js >=24.9.0. MindPPT requires the same Node.js minimum for all development and runtime tasks. The pinned development dependency versions remain Cordis 4.0.4 and DSH 0.2.0-rc.2 until an independently reviewed update. The package binds the accepted MindPPT runtime to the native Workspace, Agent tools, right-side Document Preview surface, and independent full Preview page. The Host/Client split follows the DSH product architecture established by that baseline.
+M10 adds one optional DSH integration package, `dsh-mindppt-plugin` in `plugins/dsh-mindppt`. Its supported DSH runtime starts at `0.2.2-rc.1`, and its development dependencies use the same DSH UI release and the matching Cordis 4.1 series. DSH `0.2.2-rc.1` has been reviewed for source/API compatibility, but actual installation, Host/Client activation and Windows DSH/Agent runtime acceptance are not yet verified. DSH 0.2.2 uses Cordis Core 4.1.0 and requires Node.js >=24.9.0. MindPPT requires the same Node.js minimum for all development and runtime tasks. MindPPT now develops and tests against Cordis `~4.1.0` and DSH UI `0.2.2-rc.1`, consistent with the targeted DSH release. The package binds the accepted MindPPT runtime to the native Workspace, Agent tools, right-side Document Preview surface, and independent full Preview page. The Host/Client split follows the DSH product architecture established by that baseline.
 
 The standalone web host runs the existing Cordis plugins without requiring DSH.
 
@@ -155,7 +155,7 @@ The standalone playground uses `examples/m9-content-plugin-latex.mindppt`, keeps
 
 ## M10 implementation: DSH native Workspace, read-only views, and Agent authoring
 
-**Implementation merged; PR CI green. Complete Windows DSH / Agent end-to-end acceptance remains PENDING.** The plugin supports DSH `>=0.2.0-rc.2`; `0.2.0-rc.2` is the pinned *development/CI* baseline, not a claimed real-machine acceptance version. The reported Windows installation was `0.2.1-alpha.1`; record the actual compatible DSH version when testing.
+**Implementation merged; PR CI green. Complete Windows DSH / Agent end-to-end acceptance remains PENDING.** The plugin targets DSH `>=0.2.2-rc.1` with Cordis `~4.1.0`; the development dependencies align to those versions. Source-level compatibility does not imply real DSH installation acceptance. The reported Windows installation was `0.2.1-alpha.1`; record the actual compatible DSH version when testing.
 
 A real Workspace `.mindppt` is the **single persistent source of truth**. The DSH plugin reuses native file selection, Document Preview and workspace reads; it adds no independent editor, file tree, or document store. DSH compiles with `mindpptParser` directly and does not load the standalone `code-editor` service.
 
@@ -182,7 +182,7 @@ If a write makes the source invalid, the workspace file keeps it and diagnostics
 
 ### Quick DSH deploy
 
-The development dependency baseline remains DSH `0.2.0-rc.2`, but **all MindPPT development and runtime environments require Node `>=24.9.0`**, matching DSH `0.2.2-rc.1`. Node 22 is no longer supported by this project. The deployment helper does not reject newer compatible DSH versions. Before deployment, verify that the DSH CLI is available and reports the intended version (the repository does not bundle the DSH CLI). From the repository root:
+The development dependency baseline is DSH UI `0.2.2-rc.1` and Cordis `~4.1.0`. **All MindPPT development and runtime environments require Node `>=24.9.0`**, matching DSH `0.2.2-rc.1`. Node 22 is no longer supported by this project. The deployment helper does not reject newer compatible DSH versions. Before deployment, verify that the DSH CLI is available and reports the intended version (the repository does not bundle the DSH CLI). From the repository root:
 
 ```sh
 pnpm install
@@ -220,7 +220,7 @@ pnpm dsh mindppt
 
 ### Real DSH acceptance flow (installed compatible version; PENDING)
 
-Run the following on a real DSH installation after rebuilding/deploying; record the **actual** version, profile and current main SHA. The deploy helper uses the pinned rc2 development baseline, but that does not establish the version installed for manual acceptance. This gate is **not CI**.
+Run the following on a real DSH installation after rebuilding/deploying; record the **actual** version, profile and current main SHA. Development dependencies now target the rc.1 release, but that does not establish the DSH version installed for manual acceptance. This gate is **not CI**.
 
 1. Open a DSH Workspace with `presentation.mindppt` copied from `examples/m9-content-plugin-latex.mindppt`, preserving `./assets/customer.svg`. Select the real file in native Workspace. Verify **read-only Code** opens by default; the native split primary button switches Code ↔ whole-scene Panorama with pan/zoom, and its menu opens **Preview on side** in a separate tab. Confirm local images, M7 table/bar, and M9 LaTeX render.
 

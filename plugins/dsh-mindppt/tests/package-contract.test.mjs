@@ -5,19 +5,21 @@ const packageUrl = new URL('../package.json', import.meta.url)
 const patchUrl = new URL('../cordis.patch.yml', import.meta.url)
 
 describe('DSH package compatibility contract', () => {
-  it('keeps package identity and runtime compatibility distinct from the dev baseline', async () => {
+  it('aligns Cordis and DSH client UI dependencies with the targeted DSH release', async () => {
     const manifest = JSON.parse(await readFile(packageUrl, 'utf8'))
 
     expect(manifest.name).toBe('dsh-mindppt-plugin')
     expect(manifest.engines.node).toBe('>=24.9.0')
-    expect(manifest.peerDependencies['@deepseek-ai/cordis']).toBe('~4.0.4 || ~4.1.0')
-    expect(manifest.devDependencies['@deepseek-ai/cordis']).toBe('4.0.4')
+    expect(manifest.peerDependencies['@deepseek-ai/cordis']).toBe('~4.1.0')
+    expect(manifest.devDependencies['@deepseek-ai/cordis']).toBe('~4.1.0')
     // DSH exposes the Skill registry through the Host's injected 'skills' service.
     expect(manifest.files).toContain('assets')
     expect(manifest.peerDependencies['@deepseek-ai/dsh-client-ui-sidebar-right'])
-      .toBe('>=0.2.0-rc.2')
+      .toBe('>=0.2.2-rc.1')
     expect(manifest.devDependencies['@deepseek-ai/dsh-client-ui-sidebar-right'])
-      .toBe('0.2.0-rc.2')
+      .toBe('0.2.2-rc.1')
+    expect(manifest.peerDependencies['@deepseek-ai/dsh-client-ui-primitives']).toBe('>=0.2.2-rc.1')
+    expect(manifest.devDependencies['@deepseek-ai/dsh-client-ui-primitives']).toBe('0.2.2-rc.1')
   })
 
   it('mounts the renamed package exactly once on the stable mindppt row', async () => {

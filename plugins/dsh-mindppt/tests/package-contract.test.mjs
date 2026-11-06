@@ -9,7 +9,7 @@ describe('DSH package compatibility contract', () => {
     const manifest = JSON.parse(await readFile(packageUrl, 'utf8'))
 
     expect(manifest.name).toBe('dsh-mindppt-plugin')
-    expect(manifest.engines.node).toBe('^22.19.0 || >=24.9.0')
+    expect(manifest.engines.node).toBe('>=24.9.0')
     expect(manifest.peerDependencies['@deepseek-ai/cordis']).toBe('~4.0.4 || ~4.1.0')
     expect(manifest.devDependencies['@deepseek-ai/cordis']).toBe('4.0.4')
     // DSH exposes the Skill registry through the Host's injected 'skills' service.

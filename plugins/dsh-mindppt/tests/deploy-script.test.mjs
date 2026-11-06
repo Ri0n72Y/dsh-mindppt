@@ -70,7 +70,7 @@ describe('DSH deploy process flow', () => {
 
   it('does not replace a profile when its config cannot be inspected', () => {
     const spawn = vi.fn()
-      .mockReturnValueOnce(result(0, '0.2.1-rc.5\n'))
+      .mockReturnValueOnce(result(0, '0.2.2-rc.1\n'))
       .mockReturnValueOnce(result(7, '', 'config unreadable\n'))
 
     expect(main([], spawn, runner)).toBe(7)
@@ -81,7 +81,7 @@ describe('DSH deploy process flow', () => {
 
   it('does not replace or install into a non-Web profile', () => {
     const spawn = vi.fn()
-      .mockReturnValueOnce(result(0, '0.2.1-rc.5\n'))
+      .mockReturnValueOnce(result(0, '0.2.2-rc.1\n'))
       .mockReturnValueOnce(result(0, '- id: connection\n'))
 
     expect(main([], spawn, runner)).toBe(1)
@@ -90,7 +90,7 @@ describe('DSH deploy process flow', () => {
 
   it('accepts a newer compatible DSH version without a wrapper exemption', () => {
     const spawn = vi.fn()
-      .mockReturnValueOnce(result(0, '0.2.1-rc.5\\n'))
+      .mockReturnValueOnce(result(0, '0.2.2-rc.1\\n'))
       .mockReturnValueOnce(result(0, webDump))
       .mockReturnValueOnce(result(0))
       .mockReturnValueOnce(result(0, activeDump))

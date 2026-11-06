@@ -50,7 +50,7 @@
     "pdf-lib": "1.17.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/cordis": "~4.0.4 || ~4.1.0",
     "@deepseek-ai/dsh-client-ui-primitives": ">=0.2.0-rc.2",
     "@deepseek-ai/dsh-client-ui-sidebar-right": ">=0.2.0-rc.2",
     "react": ">=18.2.0 <20",
@@ -79,7 +79,7 @@
   },
   "packageManager": "pnpm@11.7.0",
   "engines": {
-    "node": "^22.19.0"
+    "node": "^22.19.0 || >=24.9.0"
   },
   "files": [
     "lib",

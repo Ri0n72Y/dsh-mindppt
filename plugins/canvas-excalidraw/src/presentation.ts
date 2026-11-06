@@ -31,118 +31,140 @@ export function replaceMountedFiles(
   api.addFiles(Object.values(files))
 }
 
+interface Viewport {
+  x: number
+  y: number
+  zoom: number
+}
+
+interface Motion {
+  from: Viewport
+  to: Viewport
+  duration: number
+  zoomDip: number
+  elapsed: number
+  startedAt?: number
+}
+
+function actualViewport(api: ExcalidrawImperativeAPI): Viewport {
+  const state = api.getAppState()
+  return {
+    x: state.width / (2 * state.zoom.value) - state.scrollX,
+    y: state.height / (2 * state.zoom.value) - state.scrollY,
+    zoom: state.zoom.value,
+  }
+}
+
+function targetViewport(
+  api: ExcalidrawImperativeAPI,
+  slideId: string,
+): Viewport | undefined {
+  const surface = api.getSceneElements().find(
+    element => element.id === 'slide:' + slideId + '/surface',
+  )
+  if (!surface || surface.width <= 0 || surface.height <= 0) return undefined
+  const { width, height } = api.getAppState()
+  if (width <= 0 || height <= 0) return undefined
+
+  // Match Excalidraw 0.18 fit-to-viewport normalization for a slide surface.
+  const fit = Math.min(width / surface.width, height / surface.height)
+    * CAMERA_TARGET_ZOOM_FACTOR
+  const zoom = Math.max(0.1, Math.min(30, Math.floor(fit / 0.1 + 1e-8) * 0.1))
+  return {
+    x: surface.x + surface.width / 2,
+    y: surface.y + surface.height / 2,
+    zoom,
+  }
+}
+
+function smoothstep(t: number): number {
+  return t * t * t * (t * (t * 6 - 15) + 10)
+}
+
 export function runCameraTransition(
   api: ExcalidrawImperativeAPI,
   request: CanvasFocusRequest,
 ): CameraTransitionController {
-  type Phase = 'zoom-out' | 'travel' | 'zoom-in' | 'done' | 'cancelled'
-  type SceneElement = ReturnType<ExcalidrawImperativeAPI['getSceneElements']>[number]
-  let phase: Phase = 'done'
-  let pendingTimer: ReturnType<typeof setTimeout> | undefined
-  let pendingAnimationFrame: number | undefined
-  let activeSurface: SceneElement | undefined
+  let frame: number | undefined
+  let motion: Motion | undefined
 
-  const clearPending = () => {
-    if (pendingTimer !== undefined) clearTimeout(pendingTimer)
-    if (pendingAnimationFrame !== undefined) cancelAnimationFrame(pendingAnimationFrame)
-    pendingTimer = undefined
-    pendingAnimationFrame = undefined
-  }
-  const resolveSurface = (slideId: string) =>
-    api.getSceneElements().find(element => element.id === `slide:${slideId}/surface`)
-  const interrupt = () => {
-    if (!activeSurface) return
-    const { scrollX, scrollY, zoom } = api.getAppState()
-    api.scrollToContent(activeSurface, { animate: false })
-    api.updateScene({ appState: { scrollX, scrollY, zoom } })
-  }
   const cancel = () => {
-    if (phase === 'cancelled' || phase === 'done') return
-    phase = 'cancelled'
-    clearPending()
-    interrupt()
-  }
-  const after = (duration: number, next: () => void) => {
-    clearPending()
-    pendingAnimationFrame = requestAnimationFrame(() => {
-      pendingAnimationFrame = undefined
-      if (phase === 'cancelled') return
-      pendingTimer = setTimeout(() => {
-        pendingTimer = undefined
-        if (phase === 'cancelled') return
-        pendingAnimationFrame = requestAnimationFrame(() => {
-          pendingAnimationFrame = undefined
-          if (phase !== 'cancelled') next()
-        })
-      }, duration)
-    })
-  }
-  const finish = () => {
-    if (phase === 'cancelled') return
-    phase = 'done'
-    activeSurface = undefined
-  }
-  const zoomIn = () => {
-    const target = resolveSurface(request.slideId)
-    if (!target || phase === 'cancelled') return cancel()
-    phase = 'zoom-in'
-    activeSurface = target
-    api.scrollToContent(target, {
-      fitToViewport: true,
-      viewportZoomFactor: CAMERA_TARGET_ZOOM_FACTOR,
-      animate: true,
-      duration: CAMERA_ZOOM_IN_DURATION,
-    })
-    after(CAMERA_ZOOM_IN_DURATION, finish)
-  }
-  const travel = () => {
-    const target = resolveSurface(request.slideId)
-    if (!target || phase === 'cancelled') return cancel()
-    phase = 'travel'
-    activeSurface = target
-    api.scrollToContent(target, {
-      animate: true,
-      duration: CAMERA_TRAVEL_DURATION,
-    })
-    after(CAMERA_TRAVEL_DURATION, zoomIn)
-  }
-  const reconcileScene = () => {
-    if (phase !== 'zoom-in') return
-    const target = resolveSurface(request.slideId)
-    if (!target) return cancel()
-    activeSurface = target
-    api.scrollToContent(target, {
-      fitToViewport: true,
-      viewportZoomFactor: CAMERA_TARGET_ZOOM_FACTOR,
-      animate: true,
-      duration: CAMERA_ZOOM_IN_DURATION,
-    })
-    after(CAMERA_ZOOM_IN_DURATION, finish)
+    if (frame !== undefined) cancelAnimationFrame(frame)
+    frame = undefined
+    motion = undefined
   }
 
-  const controller = { cancel, reconcileScene }
-  if (request.fromSlideId === request.slideId) {
-    zoomIn()
-    return controller
+  const animate = (time: number) => {
+    frame = undefined
+    const current = motion
+    if (!current) return
+
+    if (current.startedAt === undefined) current.startedAt = time
+    current.elapsed = Math.min(current.duration, time - current.startedAt)
+    const t = current.duration > 0 ? current.elapsed / current.duration : 1
+    const progress = smoothstep(t)
+    const zoom = Math.max(0.1, Math.exp(
+      Math.log(current.from.zoom)
+      + (Math.log(current.to.zoom) - Math.log(current.from.zoom)) * progress
+      - current.zoomDip * Math.sin(Math.PI * t) ** 2,
+    ))
+    const x = current.from.x + (current.to.x - current.from.x) * progress
+    const y = current.from.y + (current.to.y - current.from.y) * progress
+    const state = api.getAppState()
+    api.updateScene({
+      appState: {
+        zoom: { value: zoom as typeof state.zoom.value },
+        scrollX: state.width / (2 * zoom) - x,
+        scrollY: state.height / (2 * zoom) - y,
+      },
+    })
+
+    if (t < 1) frame = requestAnimationFrame(animate)
+    else motion = undefined
   }
-  if (!resolveSurface(request.slideId)) return controller
-  if (!request.fromSlideId) {
-    travel()
-    return controller
+
+  const begin = (to: Viewport, duration: number) => {
+    const from = actualViewport(api)
+    const flyOver = request.fromSlideId !== undefined
+      && request.fromSlideId !== request.slideId
+    const overview = Math.max(0.1, Math.min(
+      from.zoom,
+      to.zoom,
+      to.zoom * CAMERA_ZOOM_OUT_FACTOR / CAMERA_TARGET_ZOOM_FACTOR,
+    ))
+    motion = {
+      from,
+      to,
+      duration,
+      elapsed: 0,
+      // One smooth zoom-out/travel/zoom-in curve, not three restarted RAFs.
+      zoomDip: flyOver
+        ? Math.max(0, Math.log(Math.sqrt(from.zoom * to.zoom) / overview))
+        : 0,
+    }
+    frame = requestAnimationFrame(animate)
   }
-  const source = resolveSurface(request.fromSlideId)
-  if (!source) {
-    travel()
-    return controller
+
+  const reconcileScene = () => {
+    if (!motion) return
+    const next = targetViewport(api, request.slideId)
+    if (!next) return cancel()
+    if (next.x === motion.to.x && next.y === motion.to.y
+      && next.zoom === motion.to.zoom) return
+
+    const remaining = Math.max(1, motion.duration - motion.elapsed)
+    if (frame !== undefined) cancelAnimationFrame(frame)
+    begin(next, remaining)
   }
-  phase = 'zoom-out'
-  activeSurface = source
-  api.scrollToContent(source, {
-    fitToViewport: true,
-    viewportZoomFactor: CAMERA_ZOOM_OUT_FACTOR,
-    animate: true,
-    duration: CAMERA_ZOOM_OUT_DURATION,
-  })
-  after(CAMERA_ZOOM_OUT_DURATION, travel)
-  return controller
+
+  const target = targetViewport(api, request.slideId)
+  if (target) {
+    const duration = request.fromSlideId === request.slideId
+      ? CAMERA_ZOOM_IN_DURATION
+      : request.fromSlideId === undefined
+        ? CAMERA_TRAVEL_DURATION + CAMERA_ZOOM_IN_DURATION
+        : CAMERA_ZOOM_OUT_DURATION + CAMERA_TRAVEL_DURATION + CAMERA_ZOOM_IN_DURATION
+    begin(target, duration)
+  }
+  return { cancel, reconcileScene }
 }

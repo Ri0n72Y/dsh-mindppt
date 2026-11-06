@@ -11,7 +11,7 @@
     "test:browser": "playwright test"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/cordis": "~4.1.0",
     "@excalidraw/excalidraw": "0.18.0",
     "dsh-mindppt-camera": "workspace:*",
     "dsh-mindppt-canvas-excalidraw": "workspace:*",

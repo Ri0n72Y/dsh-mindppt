@@ -68,7 +68,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.scope.outputs.runtime == 'true'
         with:
-          node-version: 24
+          node-version: 22.19.0
 
       - name: Enable Corepack
         if: steps.scope.outputs.runtime == 'true'

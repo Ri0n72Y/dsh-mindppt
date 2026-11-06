@@ -33,7 +33,7 @@ Current standalone runtime:
 - `canvas-excalidraw` — subscribes to compiled structures and lowers them to Excalidraw elements.
 - `camera` — controls presentation navigation and viewport transitions.
 
-M10 adds one optional DSH integration package, `dsh-mindppt-plugin` in `plugins/dsh-mindppt`. Its minimum supported DSH runtime is `>=0.2.0-rc.2`; development and automated tests remain pinned to `0.2.0-rc.2` as the deterministic compatibility baseline. The package binds the accepted MindPPT runtime to the native Workspace, Agent tools, right-side Document Preview surface, and independent full Preview page. The Host/Client split follows the DSH product architecture established by that baseline.
+M10 adds one optional DSH integration package, `dsh-mindppt-plugin` in `plugins/dsh-mindppt`. Its minimum supported DSH runtime is `>=0.2.0-rc.2`; development dependencies remain pinned to `0.2.0-rc.2` as the deterministic compatibility baseline. DSH `0.2.1-rc.5` has been reviewed for source/API compatibility, but actual installation and Windows DSH/Agent runtime acceptance are not yet verified. The package binds the accepted MindPPT runtime to the native Workspace, Agent tools, right-side Document Preview surface, and independent full Preview page. The Host/Client split follows the DSH product architecture established by that baseline.
 
 The standalone web host runs the existing Cordis plugins without requiring DSH.
 
@@ -182,28 +182,37 @@ If a write makes the source invalid, the workspace file keeps it and diagnostics
 
 ### Quick DSH deploy
 
-The deployment helper is intentionally pinned to DSH `0.2.0-rc.2`. From the repository root:
+The development dependency baseline is DSH `0.2.0-rc.2`, but the deployment helper does not reject newer compatible DSH versions. Use Node `^22.19.0`. From the repository root:
 
 ```sh
 pnpm install
 pnpm dsh:deploy
 ```
 
-The default target is the `mindppt` profile. If the profile does not exist, the helper initializes it through the official rc2 Web template, verifies the Web Workspace/Document Preview surface, installs the current local `plugins/dsh-mindppt` checkout through `dsh plugin`, then performs a boot-free config-dump smoke check that the MindPPT Bundle is active. An existing profile is never rebuilt; if it is not Web-backed, deployment fails instead of rewriting DSH profile storage.
+The default target is the `mindppt` profile. The helper verifies the existing Web Workspace/Document Preview surface, installs the current local `plugins/dsh-mindppt` checkout through `dsh plugin`, then checks that the MindPPT Bundle is active. If profile inspection fails or the profile is not Web-backed, deployment stops without rebuilding it.
 
-Use another profile with the rc2 selector:
+For a **confirmed new** profile only, initialize the Web profile explicitly before deployment:
+
+```sh
+pnpm dsh --profile mindppt --from-default-profile web --dump-default-config
+pnpm dsh:deploy
+```
+
+**Warning:** DSH `0.2.1-rc.5` treats `--from-default-profile` as **replacement**. Running it for an existing profile deletes that profile's previous configuration and dependencies. Never run it as a recovery command for a failed inspection; use a fresh profile name or investigate the error first.
+
+Use another existing Web-backed profile:
 
 ```sh
 pnpm dsh:deploy -- --profile review
 ```
 
-Additional pnpm arguments for the rc2 plugin operation are forwarded in order:
+Additional pnpm arguments for the plugin operation are forwarded in order:
 
 ```sh
 pnpm dsh:deploy -- --profile review --offline
 ```
 
-Launch the default profile with the official rc2 profile shorthand:
+Launch the default profile with the DSH profile shorthand:
 
 ```sh
 pnpm dsh mindppt

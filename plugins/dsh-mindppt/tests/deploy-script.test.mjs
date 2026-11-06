@@ -68,24 +68,29 @@ describe('DSH deploy process flow', () => {
     expect(spawn).toHaveBeenCalledTimes(1)
   })
 
-  it('creates a missing profile from the official web template', () => {
+  it('does not replace a profile when its config cannot be inspected', () => {
     const spawn = vi.fn()
-      .mockReturnValueOnce(result(0, '0.2.0-rc.2\n'))
-      .mockReturnValueOnce(result(1, '', 'profile missing\n'))
-      .mockReturnValueOnce(result(0, webDump))
-      .mockReturnValueOnce(result(0))
-      .mockReturnValueOnce(result(0, activeDump))
+      .mockReturnValueOnce(result(0, '0.2.1-rc.5\n'))
+      .mockReturnValueOnce(result(7, '', 'config unreadable\n'))
 
-    expect(main([], spawn, runner)).toBe(0)
-    expect(spawn.mock.calls[2]?.[1]).toEqual([
-      'dsh', '--profile', 'mindppt', '--from-default-profile', 'web',
-      '--dump-default-config',
-    ])
+    expect(main([], spawn, runner)).toBe(7)
+    expect(spawn).toHaveBeenCalledTimes(2)
+    expect(spawn.mock.calls.flatMap(call => call[1]))
+      .not.toContain('--from-default-profile')
+  })
+
+  it('does not replace or install into a non-Web profile', () => {
+    const spawn = vi.fn()
+      .mockReturnValueOnce(result(0, '0.2.1-rc.5\n'))
+      .mockReturnValueOnce(result(0, '- id: connection\n'))
+
+    expect(main([], spawn, runner)).toBe(1)
+    expect(spawn).toHaveBeenCalledTimes(2)
   })
 
   it('accepts a newer compatible DSH version without a wrapper exemption', () => {
     const spawn = vi.fn()
-      .mockReturnValueOnce(result(0, '0.2.1-alpha.1\\n'))
+      .mockReturnValueOnce(result(0, '0.2.1-rc.5\\n'))
       .mockReturnValueOnce(result(0, webDump))
       .mockReturnValueOnce(result(0))
       .mockReturnValueOnce(result(0, activeDump))

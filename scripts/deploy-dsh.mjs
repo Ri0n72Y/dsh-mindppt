@@ -80,33 +80,22 @@ function hasRows(source, rows) {
   return rows.every(row => source.includes(`id: ${row}`))
 }
 
-function dumpProfile(profile, spawn, runner, fromWeb = false) {
-  return runDsh([
-    '--profile', profile,
-    ...(fromWeb ? ['--from-default-profile', 'web'] : []),
-    '--dump-default-config',
-  ], spawn, runner, 'pipe')
+function dumpProfile(profile, spawn, runner) {
+  return runDsh(['--profile', profile, '--dump-default-config'], spawn, runner, 'pipe')
 }
 
 function ensureWebProfile(profile, spawn, runner) {
   const existing = dumpProfile(profile, spawn, runner)
-  if (exitCode(existing) === 0) {
-    if (hasRows(existing.stdout ?? '', WEB_ROWS)) return 0
-    process.stderr.write(
-      `dsh: profile ${JSON.stringify(profile)} is not Web-backed; MindPPT requires the Web profile surface\n`,
-    )
-    return 1
-  }
-
-  const created = dumpProfile(profile, spawn, runner, true)
-  if (exitCode(created) !== 0) {
+  if (exitCode(existing) !== 0) {
     replayFailure(existing)
-    replayFailure(created)
-    return exitCode(created)
+    process.stderr.write(
+      `dsh: cannot inspect profile ${JSON.stringify(profile)}; refusing to replace it. Initialize a new Web-backed profile explicitly before deploying.\n`,
+    )
+    return exitCode(existing)
   }
-  if (hasRows(created.stdout ?? '', WEB_ROWS)) return 0
+  if (hasRows(existing.stdout ?? '', WEB_ROWS)) return 0
   process.stderr.write(
-    `dsh: profile ${JSON.stringify(profile)} was created without the required Web surface\n`,
+    `dsh: profile ${JSON.stringify(profile)} is not Web-backed; MindPPT requires the Web profile surface\n`,
   )
   return 1
 }

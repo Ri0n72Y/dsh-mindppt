@@ -91,6 +91,7 @@ export function runCameraTransition(
   const cancel = () => {
     if (frame !== undefined) cancelAnimationFrame(frame)
     frame = undefined
+    if (motion) api.updateScene({ appState: { shouldCacheIgnoreZoom: false } })
     motion = undefined
   }
 
@@ -114,6 +115,7 @@ export function runCameraTransition(
     api.updateScene({
       appState: {
         zoom: { value: zoom as typeof state.zoom.value },
+        shouldCacheIgnoreZoom: t < 1,
         scrollX: state.width / (2 * zoom) - x,
         scrollY: state.height / (2 * zoom) - y,
       },

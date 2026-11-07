@@ -15,7 +15,7 @@ function cameraHarness() {
   // Physical viewport begins far from the previously focused slide a.
   const state = {
     width: 1600, height: 900, scrollX: -1550, scrollY: -135,
-    zoom: { value: 2 },
+    zoom: { value: 2 }, shouldCacheIgnoreZoom: false,
   }
   const api = {
     getSceneElements: () => surfaces,
@@ -65,10 +65,12 @@ describe('Camera continuous viewport transition', () => {
     expect(h.center().x).toBeGreaterThan(initial.x)
     expect(h.center().x).toBeLessThan(4640)
     expect(h.state.zoom.value).toBeLessThan(1)
+    expect(h.state.shouldCacheIgnoreZoom).toBe(true)
     h.step(780)
     expect(h.center().x).toBeCloseTo(4640)
     expect(h.center().y).toBeCloseTo(360)
     expect(h.state.zoom.value).toBeCloseTo(1)
+    expect(h.state.shouldCacheIgnoreZoom).toBe(false)
     expect(CAMERA_TARGET_ZOOM_FACTOR).toBe(0.85)
     expect(h.callbacks.size).toBe(0)
     expect(h.api.scrollToContent).not.toHaveBeenCalled()
@@ -85,6 +87,7 @@ describe('Camera continuous viewport transition', () => {
     const interrupted = h.center()
     const interruptedZoom = h.state.zoom.value
     first.cancel()
+    expect(h.state.shouldCacheIgnoreZoom).toBe(false)
 
     const second = runCameraTransition(h.api, {
       revision: 2, fromSlideId: 'b', slideId: 'c',
@@ -126,5 +129,6 @@ describe('Camera continuous viewport transition', () => {
     h.step(1600)
     expect(h.center()).toEqual(frozen)
     expect(h.callbacks.size).toBe(0)
+    expect(h.state.shouldCacheIgnoreZoom).toBe(false)
   })
 })
